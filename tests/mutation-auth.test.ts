@@ -96,3 +96,18 @@ describe("store performance entry scope (Part P)", () => {
     expect(() => assertRecordInScope(analyst, "sales.create", { brandId: A, countryId: AE }, [...DIMS])).toThrow(ForbiddenError);
   });
 });
+
+describe("social publishing scope (Part L/M)", () => {
+  // Marketing employee can plan/publish in Brand A / Kuwait only.
+  const emp = principal([assignment("marketing_employee", { brandId: A, countryId: KW })]);
+  it("can create a publishing item inside scope", () => {
+    expect(can(emp, "social.create", { brandId: A, countryId: KW })).toBe(true);
+  });
+  it("cannot create in another brand", () => {
+    expect(can(emp, "social.create", { brandId: B, countryId: KW })).toBe(false);
+  });
+  it("blocks editing (IDOR) a publishing item outside scope", () => {
+    expect(() => assertRecordInScope(emp, "social.edit", { brandId: A, countryId: KW }, ["brandId", "countryId"])).not.toThrow();
+    expect(() => assertRecordInScope(emp, "social.edit", { brandId: B, countryId: KW }, ["brandId", "countryId"])).toThrow(ForbiddenError);
+  });
+});
