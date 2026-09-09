@@ -1,23 +1,33 @@
 import type { Metadata } from "next";
 import { Fragment } from "react";
-import { Check, ShieldCheck, UserCheck } from "lucide-react";
+import { Check, ShieldCheck, UserCheck, KeyRound, Users } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
-import { getPermissionMatrix, describeUserAccess, listSelectableUsers } from "@/domain/permissions-admin";
+import {
+  getPermissionMatrix, describeUserAccess, listSelectableUsers,
+  listRolesFull, listAssignments,
+} from "@/domain/permissions-admin";
+import { getScopedOptions } from "@/domain/options";
 import { MODULES } from "@/lib/permissions/catalog";
-import { Panel, PanelHeader, PanelBody, PageHeader, TabBar, Badge, Avatar, type TabItem } from "@/components/ui";
+import { Panel, PanelHeader, PanelBody, PageHeader, TabBar, Badge, Avatar, DataTable, type TabItem } from "@/components/ui";
 import { TesterUserPicker } from "@/components/admin/permission-tester";
+import { RoleForm } from "@/components/admin/role-form";
+import { AssignRoleButton, RemoveAssignmentButton } from "@/components/admin/assign-form";
+import { UserChip } from "@/components/entity-chips";
+import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Permissions" };
 
 export default async function PermissionsPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
-  const { locale, denied } = await pageGuard("permissions.manage");
+  const { principal, locale, denied } = await pageGuard("permissions.manage");
   if (denied) return <AccessDenied locale={locale} />;
 
   const sp = await searchParams;
   const tab = sp.tab ?? "matrix";
   const tabs: TabItem[] = [
     { key: "matrix", label: "Permission Matrix" },
+    { key: "roles", label: "Roles" },
+    { key: "assignments", label: "Assignments" },
     { key: "tester", label: "Permission Tester" },
   ];
 
@@ -25,11 +35,78 @@ export default async function PermissionsPage({ searchParams }: { searchParams: 
     <>
       <PageHeader
         title="Permissions"
-        description="Roles are configurable bundles of permissions; access is granted within a scope (company · brand · country · department · team)."
+        description="Roles are configurable bundles of permissions; access is granted within a scope (company · brand · country · department · team). Every change is audited."
       />
       <TabBar tabs={tabs} current={tab} className="mb-4" />
-      {tab === "matrix" ? <Matrix /> : <Tester selected={sp.user} />}
+      {tab === "matrix" && <Matrix />}
+      {tab === "roles" && <Roles />}
+      {tab === "assignments" && <Assignments principal={principal} locale={locale} />}
+      {tab === "tester" && <Tester selected={sp.user} />}
     </>
+  );
+}
+
+async function Roles() {
+  const roles = await listRolesFull();
+  return (
+    <Panel>
+      <PanelHeader
+        title="Roles"
+        icon={<KeyRound className="h-4 w-4" />}
+        description="Create and edit reusable permission bundles."
+        action={<RoleForm mode="create" />}
+      />
+      <ul className="divide-y divide-line">
+        {roles.map((r) => (
+          <li key={r.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-medium text-ink">{r.name}</span>
+                <span className="font-mono text-[11px] text-ink-3">{r.key}</span>
+                {r.isSystem && <Badge category="neutral">System</Badge>}
+              </div>
+              <div className="text-xs text-ink-3">{r.permissions.includes("*") ? "All permissions" : `${r.permissions.length} permissions`} · {r.assignments} assignments</div>
+            </div>
+            {r.key !== "super_admin" && <RoleForm mode="edit" defaults={{ id: r.id, name: r.name, description: r.description, permissions: r.permissions }} />}
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+}
+
+async function Assignments({ principal, locale }: { principal: import("@/lib/permissions/engine").Principal; locale: "en" | "ar" }) {
+  const [rows, roles, users, options] = await Promise.all([
+    listAssignments(),
+    listRolesFull(),
+    listSelectableUsers(),
+    getScopedOptions(principal, "permissions.manage"),
+  ]);
+  const roleOptions = roles.map((r) => ({ id: r.id, label: r.name }));
+  const userOptions = users.map((u) => ({ id: u.id, label: `${u.name} — ${u.email}` }));
+
+  return (
+    <Panel>
+      <PanelHeader
+        title="Role assignments"
+        icon={<Users className="h-4 w-4" />}
+        description="Who has which role, in which scope. You can only grant within your own administration scope."
+        action={<AssignRoleButton users={userOptions} roles={roleOptions} brands={options.brands} countries={options.countries} companies={options.companies} />}
+      />
+      <DataTable
+        columns={[
+          { key: "user", header: "User", render: (a) => <UserChip name={a.userName} color={a.userColor} /> },
+          { key: "role", header: "Role", render: (a) => a.roleName },
+          { key: "company", header: "Company", render: (a) => a.company },
+          { key: "brand", header: "Brand", render: (a) => a.brand },
+          { key: "country", header: "Country", render: (a) => a.country },
+          { key: "expires", header: "Expires", render: (a) => (a.expiresAt ? formatDate(a.expiresAt, locale) : "—") },
+          { key: "remove", header: "", align: "end", render: (a) => <RemoveAssignmentButton assignmentId={a.id} /> },
+        ]}
+        rows={rows}
+        getRowKey={(a) => a.id}
+      />
+    </Panel>
   );
 }
 
