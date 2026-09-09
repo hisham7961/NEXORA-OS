@@ -157,3 +157,16 @@ describe("discussions channel scope (Part §9)", () => {
     expect(() => assertRecordInScope(employee4, "discussions.view", { brandId: B, countryId: KW }, [...DIMS])).toThrow(ForbiddenError);
   });
 });
+
+describe("approved answers approval gate (Part §13-17)", () => {
+  // An agent can view/create/edit but not approve; a manager can approve in scope.
+  const agent = principal([customAssignment(["answers.view", "answers.create", "answers.edit"], { brandId: A })]);
+  const manager = principal([customAssignment(["answers.view", "answers.approve", "answers.manage"], { brandId: A })]);
+  it("an agent cannot approve answers", () => {
+    expect(can(agent, "answers.approve", { brandId: A })).toBe(false);
+  });
+  it("a manager approves only within brand scope", () => {
+    expect(can(manager, "answers.approve", { brandId: A })).toBe(true);
+    expect(can(manager, "answers.approve", { brandId: B })).toBe(false);
+  });
+});

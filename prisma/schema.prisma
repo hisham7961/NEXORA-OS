@@ -1214,25 +1214,64 @@ model CustomerCaseNote {
 // APPROVED ANSWER LIBRARY  (§18)
 // ============================================================================
 
+// The ANSWER IDENTITY. `answer` is the denormalized current-approved text (fast
+// display); the authoritative history lives in AnswerVersion. Only one version
+// is the current approved one per identity (§15).
 model ApprovedAnswer {
-  id            String    @id @default(cuid())
-  question      String
-  answer        String
-  brandId       String?
-  productId     String?
-  countryId     String?
-  category      String?
-  language      String    @default("en")
-  version       Int       @default(1)
-  status        String    @default("approved") // draft|pending|approved|retired
-  approvedById  String?
-  effectiveDate DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  archivedAt    DateTime?
+  id               String    @id @default(cuid())
+  question         String
+  answer           String    @default("")
+  brandId          String?
+  productId        String?
+  countryId        String?
+  category         String?
+  language         String    @default("en")
+  version          Int       @default(1) // current approved version number
+  status           String    @default("draft") // draft|pending|approved|retired
+  currentVersionId String?
+  authorId         String?
+  approvedById     String?
+  effectiveDate    DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  archivedAt       DateTime?
+
+  versions AnswerVersion[]
 
   @@index([brandId])
   @@index([status])
+}
+
+// Immutable historical content for each version of an answer (§15).
+model AnswerVersion {
+  id           String    @id @default(cuid())
+  answerId     String
+  version      Int
+  answer       String
+  status       String    @default("draft") // draft|pending|approved|retired
+  authorId     String?
+  approvedById String?
+  changeNote   String?
+  effectiveAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  answer_ ApprovedAnswer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  @@unique([answerId, version])
+  @@index([answerId])
+}
+
+// Lightweight usage/traceability when an approved answer is copied (§16).
+model AnswerUsage {
+  id        String   @id @default(cuid())
+  answerId  String
+  versionId String?
+  userId    String?
+  caseId    String?
+  createdAt DateTime @default(now())
+
+  @@index([answerId])
+  @@index([caseId])
 }
 
 model AnswerRequest {

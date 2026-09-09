@@ -13,6 +13,7 @@ import { BrandChip, CountryChip, UserChip } from "@/components/entity-chips";
 import { ActivityTimeline, type TimelineEntry } from "@/components/activity-timeline";
 import { EntityFiles } from "@/components/files/entity-files";
 import { CaseActionBar } from "@/components/cases/case-actions";
+import { FindAnswer } from "@/components/answers/find-answer";
 import { formatDateTime } from "@/lib/format";
 import { humanize } from "@/lib/status";
 
@@ -31,6 +32,8 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   if (!c) notFound();
 
   const canEdit = canAnywhere(principal, "cases.edit");
+  const canViewAnswers = canAnywhere(principal, "answers.view");
+  const answerOptions = canViewAnswers ? await getScopedOptions(principal, "answers.view") : null;
   const [lookups, activity, options] = await Promise.all([
     getLookups(),
     getActivity("CustomerCase", id),
@@ -83,6 +86,12 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
             <Panel>
               <PanelHeader title="Actions" />
               <PanelBody><CaseActionBar caseId={c.id} status={c.status} users={options.users} assignedToId={c.assignedToId} /></PanelBody>
+            </Panel>
+          )}
+          {canViewAnswers && answerOptions && (
+            <Panel>
+              <PanelHeader title="Approved answers" description="Find and copy an official answer, or request one." />
+              <PanelBody><FindAnswer caseId={c.id} brandId={c.brandId} countryId={c.countryId} options={{ brands: answerOptions.brands, countries: answerOptions.countries }} /></PanelBody>
             </Panel>
           )}
           <Panel>
