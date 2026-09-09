@@ -32,7 +32,7 @@ export function LoginForm({ demoAccounts }: { demoAccounts: { label: string; ema
           <Input id="email" name="email" type="email" autoComplete="email" required defaultValue={demoAccounts[0]?.email} placeholder="you@company.com" />
         </Field>
         <Field label={t("auth.password")} htmlFor="password">
-          <Input id="password" name="password" type="password" autoComplete="current-password" required placeholder="••••••••" defaultValue="password" />
+          <Input id="password" name="password" type="password" autoComplete="current-password" required placeholder="••••••••" defaultValue={demoAccounts.length ? "password" : undefined} />
         </Field>
 
         {state.error && (

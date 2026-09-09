@@ -17,6 +17,10 @@ export default async function LoginPage() {
   const user = await getCurrentUser();
   if (user) redirect("/");
 
+  // Demo accounts + prefilled credentials only in an explicitly-enabled demo
+  // build (§38) — never in production, where the login form is empty.
+  const demoAccounts = process.env.NEXORA_DEMO_LOGIN === "1" ? DEMO_ACCOUNTS : [];
+
   return (
     <div className="flex min-h-dvh items-center justify-center bg-bg px-4 py-10">
       <div className="w-full max-w-sm">
@@ -29,7 +33,7 @@ export default async function LoginPage() {
         </div>
 
         <div className="rounded-xl border border-line bg-surface p-6 shadow-md">
-          <LoginForm demoAccounts={DEMO_ACCOUNTS} />
+          <LoginForm demoAccounts={demoAccounts} />
         </div>
 
         <p className="mt-6 text-center text-[11px] text-ink-3">

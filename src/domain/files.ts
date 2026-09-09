@@ -239,6 +239,31 @@ export async function downloadFile(principal: Principal, fileId: string, version
   return { body: obj.body, name: file.name, mimeType: version.mimeType ?? file.mimeType ?? "application/octet-stream", sizeBytes: obj.sizeBytes, version: version.version };
 }
 
+/**
+ * Authorize a download and, when the storage driver supports it (S3/R2), return a
+ * short-lived presigned URL instead of streaming bytes through the app (§11). The
+ * same scope check as downloadFile runs first, and restricted access is audited,
+ * so a signed URL is only ever minted for a viewer already authorized for this
+ * file. Returns null when the driver has no signed URLs (local) — the caller then
+ * streams via downloadFile.
+ */
+export async function signedDownloadUrl(principal: Principal, fileId: string, versionId?: string, expiresInSeconds = 300): Promise<string | null> {
+  const file = await prisma.file.findUnique({ where: { id: fileId } });
+  if (!file || file.archivedAt) throw new ServiceError("not_found", "File not found", 404);
+  assertCanView(principal, file);
+  const version = versionId
+    ? await prisma.fileVersion.findUnique({ where: { id: versionId } })
+    : await prisma.fileVersion.findFirst({ where: { fileId }, orderBy: { version: "desc" } });
+  if (!version || version.fileId !== fileId) throw new ServiceError("not_found", "Version not found", 404);
+  const storage = getStorage();
+  if (!storage.signedUrl) return null;
+  const url = await storage.signedUrl(version.storageKey, expiresInSeconds);
+  if (url && file.visibility === "restricted") {
+    await prisma.auditLog.create({ data: { actorId: principal.userId, action: "file.downloaded_restricted", entityType: "File", entityId: fileId, summary: `v${version.version} (signed url)`, brandId: file.brandId, companyId: file.companyId } });
+  }
+  return url;
+}
+
 export async function updateFileMeta(ctx: ActorContext, id: string, raw: unknown): Promise<FileRow> {
   const existing = await loadEditableFile(ctx, id);
   const input = fileMetaSchema.parse(raw);

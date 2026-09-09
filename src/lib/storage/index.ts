@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { StorageDriver } from "./types";
 import { LocalStorageDriver } from "./local";
+import { S3StorageDriver } from "./s3";
 
 export type { StorageDriver, PutResult, StoredObject } from "./types";
 
@@ -19,7 +20,9 @@ export function getStorage(): StorageDriver {
     case "local":
       cached = new LocalStorageDriver();
       break;
-    // case "s3": cached = new S3StorageDriver(); break;  // implements StorageDriver
+    case "s3":
+      cached = new S3StorageDriver();
+      break;
     default:
       throw new Error(`Unknown NEXORA_STORAGE_DRIVER: ${driver}`);
   }
