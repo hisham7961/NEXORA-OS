@@ -1,0 +1,1850 @@
+// ============================================================================
+// NEXORA OS — Domain data model
+// ----------------------------------------------------------------------------
+// The central operating system for a multi-company, multi-brand cosmetics group.
+//
+// DATABASE PORTABILITY
+//   Local dev uses SQLite (zero external infrastructure — Prisma's bundled engine).
+//   Production uses PostgreSQL: change `provider` below to "postgresql" and point
+//   DATABASE_URL at your Postgres instance. The schema is written portably:
+//     * statuses/types are Strings backed by configurable StatusDefinition /
+//       WorkflowTemplate rows (§7 "statuses must be configurable", §50 workflow
+//       engine) rather than hard-coded DB enums.
+//     * money is Decimal; JSON blobs are stored as String (`*Json`) so the schema
+//       is identical on both engines.
+//
+// RELATIONSHIP CONVENTION (§54)
+//   Everything is relational, but with dozens of modules a formal Prisma relation
+//   for every cross-domain reference would explode into thousands of back-relation
+//   fields. So the convention is:
+//     * Cross-domain references are INDEXED SCALAR foreign keys (e.g. `brandId`),
+//       queried directly (`where: { brandId }`) and name-resolved in the service
+//       layer. This is the scalable "reference by stable id" pattern.
+//     * Formal Prisma relations are declared only WITHIN tight aggregate clusters
+//       where nested reads/writes are genuinely convenient (a Task and its
+//       assignees, a JournalEntry and its lines, a Role and its permissions, ...).
+//   Actor/bookkeeping references (createdById, ownerId, assignedToId, ...) are
+//   always scalar user ids.
+//
+// AUDIT & SOFT-DELETE (§31, §32, §54)
+//   Operationally important records carry createdAt/updatedAt and, where history
+//   must never be silently destroyed, `archivedAt` for soft-delete. Sensitive
+//   mutations are recorded in AuditLog by the service layer.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Local dev: sqlite. Production: change to "postgresql" (schema is portable).
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// IDENTITY & ACCESS  (§3 permissions is the critical requirement)
+// ============================================================================
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String?
+  isSuperAdmin Boolean   @default(false) // §3 "Super Admin can see everything"
+  status       String    @default("active") // active | suspended | invited
+  locale       String    @default("en") // en | ar (§39)
+  timezone     String    @default("Asia/Kuwait") // §40 per-employee timezone
+  avatarColor  String?
+  title        String?
+  phone        String?
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  archivedAt   DateTime?
+
+  employee        Employee?
+  sessions        Session[]
+  roleAssignments RoleAssignment[]
+  teamMemberships TeamMember[]
+  notifications   Notification[]
+
+  @@index([status])
+}
+
+model Session {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  userAgent String?
+  ip        String?
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// A Role is a configurable named bundle of permission keys (from the code catalog).
+model Role {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions RolePermission[]
+  assignments RoleAssignment[]
+}
+
+model RolePermission {
+  id            String @id @default(cuid())
+  roleId        String
+  permissionKey String // e.g. "campaigns.edit" — validated against the code catalog
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionKey])
+  @@index([permissionKey])
+}
+
+// Binds a User to a Role WITHIN a scope. A null dimension means "all" of it.
+// e.g. { role: marketing_manager, brandId: A, countryId: KW } = Marketing Manager
+// for Brand A in Kuwait only (§3). This is the heart of scope-based access control.
+model RoleAssignment {
+  id           String    @id @default(cuid())
+  userId       String
+  roleId       String
+  companyId    String?
+  brandId      String?
+  countryId    String?
+  departmentId String?
+  teamId       String?
+  moduleKey    String? // optionally restrict to a single module area
+  grantedById  String?
+  note         String?
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([roleId])
+  @@index([brandId])
+  @@index([countryId])
+  @@index([companyId])
+}
+
+// ============================================================================
+// ORGANIZATION  (§2 hierarchy, §23 employees/teams)
+// ============================================================================
+
+model Company {
+  id                   String    @id @default(cuid())
+  name                 String
+  legalName            String?
+  code                 String    @unique
+  baseCurrency         String    @default("KWD")
+  hqCountryId          String?
+  timezone             String    @default("Asia/Kuwait")
+  fiscalYearStartMonth Int       @default(1)
+  logoColor            String?
+  status               String    @default("active")
+  createdById          String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  archivedAt           DateTime?
+
+  brandLinks BrandCompany[]
+
+  @@index([status])
+}
+
+model Brand {
+  id               String    @id @default(cuid())
+  name             String
+  code             String    @unique
+  slug             String    @unique
+  description      String?
+  status           String    @default("active")
+  primaryCompanyId String?
+  accentColor      String?
+  createdById      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  archivedAt       DateTime?
+
+  companyLinks BrandCompany[]
+  markets      BrandMarket[]
+
+  @@index([status])
+}
+
+// A brand may be associated with more than one legal company (§2).
+model BrandCompany {
+  id        String  @id @default(cuid())
+  brandId   String
+  companyId String
+  isPrimary Boolean @default(false)
+
+  brand   Brand   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, companyId])
+  @@index([companyId])
+}
+
+// Global country/market master data.
+model Country {
+  id        String   @id @default(cuid())
+  name      String
+  iso2      String   @unique
+  iso3      String?
+  currency  String
+  timezone  String   @default("Asia/Kuwait")
+  region    String?
+  phoneCode String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  brandMarkets BrandMarket[]
+}
+
+model BrandMarket {
+  id         String    @id @default(cuid())
+  brandId    String
+  countryId  String
+  status     String    @default("active")
+  launchedAt DateTime?
+
+  brand   Brand   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  country Country @relation(fields: [countryId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, countryId])
+  @@index([countryId])
+}
+
+model Department {
+  id          String    @id @default(cuid())
+  name        String
+  code        String?
+  companyId   String?
+  parentId    String?
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  archivedAt  DateTime?
+
+  @@index([companyId])
+}
+
+model Team {
+  id           String    @id @default(cuid())
+  name         String
+  departmentId String?
+  brandId      String?
+  leadUserId   String?
+  description  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  archivedAt   DateTime?
+
+  members TeamMember[]
+
+  @@index([departmentId])
+  @@index([brandId])
+}
+
+model TeamMember {
+  id     String @id @default(cuid())
+  teamId String
+  userId String
+  role   String @default("member") // lead | member
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([userId])
+}
+
+model Employee {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  companyId        String?
+  departmentId     String?
+  teamId           String?
+  managerId        String? // -> Employee.id
+  position         String?
+  joinDate         DateTime?
+  workScheduleId   String?
+  employmentStatus String    @default("active")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  archivedAt       DateTime?
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brandAssignments EmployeeBrand[]
+  countryAssignments EmployeeCountry[]
+
+  @@index([companyId])
+  @@index([departmentId])
+  @@index([managerId])
+}
+
+model EmployeeBrand {
+  id         String @id @default(cuid())
+  employeeId String
+  brandId    String
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, brandId])
+  @@index([brandId])
+}
+
+model EmployeeCountry {
+  id         String @id @default(cuid())
+  employeeId String
+  countryId  String
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, countryId])
+  @@index([countryId])
+}
+
+// ============================================================================
+// PRODUCTS  (§13 product master)
+// ============================================================================
+
+model Product {
+  id          String    @id @default(cuid())
+  brandId     String
+  name        String
+  sku         String    @unique
+  barcode     String?
+  category    String?
+  description String?
+  status      String    @default("active")
+  launchDate  DateTime?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  archivedAt  DateTime?
+
+  variants ProductVariant[]
+  markets  ProductMarket[]
+  claims   ProductClaim[]
+
+  @@index([brandId, status])
+}
+
+model ProductVariant {
+  id        String  @id @default(cuid())
+  productId String
+  name      String
+  sku       String?
+  size      String?
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ProductMarket {
+  id        String @id @default(cuid())
+  productId String
+  countryId String
+  status    String @default("planned")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, countryId])
+  @@index([countryId])
+}
+
+model ProductClaim {
+  id           String   @id @default(cuid())
+  productId    String
+  countryId    String?
+  claim        String
+  isApproved   Boolean  @default(false)
+  approvedById String?
+  createdAt    DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+// ============================================================================
+// REGULATORY  (§14 global registration engine)
+// ============================================================================
+
+model RegulatoryAuthority {
+  id        String   @id @default(cuid())
+  name      String
+  countryId String
+  code      String?
+  website   String?
+  createdAt DateTime @default(now())
+
+  @@index([countryId])
+}
+
+model RegistrationType {
+  id                 String   @id @default(cuid())
+  name               String
+  authorityId        String?
+  countryId          String?
+  description        String?
+  workflowTemplateId String?
+  createdAt          DateTime @default(now())
+}
+
+model RegistrationCase {
+  id                 String    @id @default(cuid())
+  productId          String?
+  brandId            String?
+  companyId          String?
+  countryId          String
+  authorityId        String?
+  registrationTypeId String?
+  registrationNumber String?
+  status             String    @default("preparation") // workflow stage key
+  assignedToId       String?
+  agentName          String?
+  submissionDate     DateTime?
+  approvalDate       DateTime?
+  expiryDate         DateTime?
+  renewalDate        DateTime?
+  expectedCompletion DateTime?
+  notes              String?
+  createdById        String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  archivedAt         DateTime?
+
+  events   RegistrationEvent[]
+  docReqs  RegistrationDocReq[]
+
+  @@index([countryId, status])
+  @@index([brandId])
+  @@index([productId])
+  @@index([assignedToId])
+  @@index([expiryDate])
+}
+
+model RegistrationEvent {
+  id          String   @id @default(cuid())
+  caseId      String
+  type        String
+  title       String
+  description String?
+  actorId     String?
+  createdAt   DateTime @default(now())
+
+  case RegistrationCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+}
+
+model RegistrationDocReq {
+  id             String   @id @default(cuid())
+  caseId         String
+  documentTypeId String?
+  name           String
+  status         String   @default("required") // required | received | submitted | missing
+  fileId         String?
+  createdAt      DateTime @default(now())
+
+  case RegistrationCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+}
+
+// ============================================================================
+// DOCUMENTS & CERTIFICATES  (§15 expiration system)
+// ============================================================================
+
+model DocumentType {
+  id                 String   @id @default(cuid())
+  name               String
+  code               String?
+  category           String?
+  defaultValidityDays Int?
+  createdAt          DateTime @default(now())
+}
+
+model Document {
+  id             String    @id @default(cuid())
+  documentTypeId String?
+  companyId      String?
+  brandId        String?
+  productId      String?
+  countryId      String?
+  number         String?
+  title          String
+  issueDate      DateTime?
+  expiryDate     DateTime?
+  version        Int       @default(1)
+  status         String    @default("valid") // valid | expiring | expired | renewal_started | replaced | archived
+  visibility     String    @default("internal") // internal | restricted
+  ownerId        String?
+  fileId         String?
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  archivedAt     DateTime?
+
+  @@index([expiryDate])
+  @@index([brandId])
+  @@index([status])
+}
+
+// ============================================================================
+// FILES  (§21 file management, §52 versioning)
+// ============================================================================
+
+model Folder {
+  id        String   @id @default(cuid())
+  name      String
+  parentId  String?
+  scopeType String   @default("shared") // shared|department|brand|product|regulatory|creative|restricted|vault
+  companyId String?
+  brandId   String?
+  createdAt DateTime @default(now())
+
+  @@index([parentId])
+}
+
+model File {
+  id               String    @id @default(cuid())
+  name             String
+  mimeType         String?
+  sizeBytes        Int?
+  storageKey       String
+  checksum         String?
+  folderId         String?
+  ownerId          String?
+  visibility       String    @default("internal") // internal | restricted
+  relatedType      String?
+  relatedId        String?
+  currentVersionId String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  archivedAt       DateTime?
+
+  versions FileVersion[]
+
+  @@index([folderId])
+  @@index([relatedType, relatedId])
+}
+
+model FileVersion {
+  id           String   @id @default(cuid())
+  fileId       String
+  version      Int
+  storageKey   String
+  sizeBytes    Int?
+  uploadedById String?
+  note         String?
+  createdAt    DateTime @default(now())
+
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, version])
+}
+
+// ============================================================================
+// WORK MANAGEMENT  (§7 universal task engine, projects)
+// ============================================================================
+
+model Project {
+  id          String    @id @default(cuid())
+  name        String
+  brandId     String?
+  companyId   String?
+  ownerId     String?
+  status      String    @default("active")
+  startDate   DateTime?
+  dueDate     DateTime?
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  archivedAt  DateTime?
+
+  @@index([brandId])
+}
+
+model Task {
+  id                 String    @id @default(cuid())
+  title              String
+  description        String?
+  ownerId            String?
+  priority           String    @default("normal") // low | normal | high | urgent
+  status             String    @default("todo") // configurable via StatusDefinition(module="task")
+  startDate          DateTime?
+  dueDate            DateTime?
+  completedAt        DateTime?
+  projectId          String?
+  parentTaskId       String?
+  recurrenceRule     String?
+  approvalRequired   Boolean   @default(false)
+  tagsJson           String?
+  // queryable relational links (§7 "tasks can relate to ..."):
+  companyId          String?
+  brandId            String?
+  countryId          String?
+  productId          String?
+  campaignId         String?
+  storeId            String?
+  registrationCaseId String?
+  customerCaseId     String?
+  designRequestId    String?
+  documentId         String?
+  createdById        String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  archivedAt         DateTime?
+
+  assignees TaskAssignee[]
+  checklist TaskChecklistItem[]
+
+  @@index([status, dueDate])
+  @@index([ownerId])
+  @@index([brandId])
+  @@index([companyId])
+  @@index([dueDate])
+}
+
+model TaskAssignee {
+  id     String @id @default(cuid())
+  taskId String
+  userId String
+  role   String @default("assignee") // assignee | watcher
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId, role])
+  @@index([userId])
+}
+
+model TaskChecklistItem {
+  id       String    @id @default(cuid())
+  taskId   String
+  text     String
+  isDone   Boolean   @default(false)
+  doneById String?
+  doneAt   DateTime?
+  order    Int       @default(0)
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+}
+
+model TaskDependency {
+  id             String @id @default(cuid())
+  taskId         String
+  dependsOnTaskId String
+
+  @@unique([taskId, dependsOnTaskId])
+}
+
+// ============================================================================
+// DAILY CHECK SYSTEM  (§8 recurring daily responsibilities)
+// ============================================================================
+
+model ChecklistTemplate {
+  id             String    @id @default(cuid())
+  name           String
+  description    String?
+  brandId        String?
+  departmentId   String?
+  scheduleType   String    @default("daily") // daily | weekdays | weekly | monthly | custom
+  scheduleConfigJson String?
+  isActive       Boolean   @default(true)
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  archivedAt     DateTime?
+
+  items       ChecklistTemplateItem[]
+  assignments ChecklistAssignment[]
+  instances   ChecklistInstance[]
+
+  @@index([brandId])
+}
+
+model ChecklistTemplateItem {
+  id                 String  @id @default(cuid())
+  templateId         String
+  text               String
+  requiresNote       Boolean @default(false)
+  requiresLink       Boolean @default(false)
+  requiresAttachment Boolean @default(false)
+  requiresApproval   Boolean @default(false)
+  order              Int     @default(0)
+
+  template ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+}
+
+model ChecklistAssignment {
+  id         String    @id @default(cuid())
+  templateId String
+  userId     String
+  startDate  DateTime?
+  endDate    DateTime?
+  isActive   Boolean   @default(true)
+
+  template ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, userId])
+  @@index([userId])
+}
+
+model ChecklistInstance {
+  id           String    @id @default(cuid())
+  templateId   String
+  userId       String
+  date         DateTime // the day this instance is for
+  status       String    @default("pending") // pending | complete | late | missed
+  score        Int?
+  completedAt  DateTime?
+  verifiedById String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  template ChecklistTemplate       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  items    ChecklistInstanceItem[]
+
+  @@unique([templateId, userId, date])
+  @@index([userId, date])
+  @@index([status])
+}
+
+model ChecklistInstanceItem {
+  id             String    @id @default(cuid())
+  instanceId     String
+  templateItemId String?
+  text           String
+  isDone         Boolean   @default(false)
+  note           String?
+  link           String?
+  fileId         String?
+  doneAt         DateTime?
+  isLate         Boolean   @default(false)
+
+  instance ChecklistInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId])
+}
+
+// ============================================================================
+// ATTENDANCE  (§22 accountability, not surveillance)
+// ============================================================================
+
+model WorkSchedule {
+  id         String   @id @default(cuid())
+  name       String
+  companyId  String?
+  timezone   String   @default("Asia/Kuwait")
+  configJson String? // days + start/end times
+  createdAt  DateTime @default(now())
+}
+
+model AttendanceRecord {
+  id                 String    @id @default(cuid())
+  userId             String
+  date               DateTime
+  expectedStart      DateTime?
+  expectedEnd        DateTime?
+  actualStart        DateTime?
+  actualEnd          DateTime?
+  lateMinutes        Int       @default(0)
+  earlyLeaveMinutes  Int       @default(0)
+  overtimeMinutes    Int       @default(0)
+  breakMinutes       Int       @default(0)
+  totalWorkedMinutes Int       @default(0)
+  status             String    @default("present") // present | absent | leave | holiday | late
+  notes              String?
+  adjustedById       String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  events AttendanceEvent[]
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@index([status])
+}
+
+model AttendanceEvent {
+  id       String   @id @default(cuid())
+  recordId String?
+  userId   String
+  type     String // check_in | break_start | break_end | check_out
+  at       DateTime
+  source   String?
+  ip       String?
+  createdAt DateTime @default(now())
+
+  record AttendanceRecord? @relation(fields: [recordId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+}
+
+model LeaveRequest {
+  id         String   @id @default(cuid())
+  userId     String
+  type       String // annual | sick | unpaid | public_holiday
+  startDate  DateTime
+  endDate    DateTime
+  status     String   @default("pending") // pending | approved | rejected
+  reason     String?
+  approverId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Holiday {
+  id        String   @id @default(cuid())
+  companyId String?
+  countryId String?
+  name      String
+  date      DateTime
+  createdAt DateTime @default(now())
+}
+
+// ============================================================================
+// MARKETING / CAMPAIGNS  (§9)
+// ============================================================================
+
+model Campaign {
+  id             String    @id @default(cuid())
+  name           String
+  companyId      String?
+  brandId        String?
+  countryId      String?
+  storeId        String?
+  type           String    @default("meta") // meta|instagram|facebook|tiktok|snapchat|google|influencer|whatsapp|email|offline|retail|custom
+  objective      String?
+  ownerId        String?
+  teamId         String?
+  startDate      DateTime?
+  endDate        DateTime?
+  currency       String    @default("KWD")
+  plannedBudget  Decimal?
+  actualSpend    Decimal?
+  status         String    @default("draft") // configurable lifecycle
+  targetAudience String?
+  channelsJson   String?
+  notes          String?
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  archivedAt     DateTime?
+
+  products CampaignProduct[]
+  metrics  CampaignMetric[]
+  reports  CampaignReport[]
+
+  @@index([brandId, status])
+  @@index([countryId])
+  @@index([ownerId])
+}
+
+model CampaignProduct {
+  id         String @id @default(cuid())
+  campaignId String
+  productId  String
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, productId])
+}
+
+model CampaignMetric {
+  id         String   @id @default(cuid())
+  campaignId String
+  date       DateTime?
+  name       String // spend|impressions|reach|clicks|ctr|cpc|cpm|leads|conversions|orders|revenue|roas|custom
+  value      Decimal
+  unit       String?
+  isTarget   Boolean  @default(false)
+  note       String?
+  createdAt  DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+}
+
+model CampaignReport {
+  id         String   @id @default(cuid())
+  campaignId String
+  date       DateTime
+  summary    String?
+  authorId   String?
+  dataJson   String?
+  createdAt  DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+}
+
+// ============================================================================
+// SOCIAL PUBLISHING CONTROL  (§10 planning/scheduling/verification — not an API publisher)
+// ============================================================================
+
+model SocialAccount {
+  id                String    @id @default(cuid())
+  brandId           String?
+  companyId         String?
+  countryId         String?
+  platform          String // instagram|facebook|tiktok|snapchat|youtube|x|linkedin|custom
+  accountName       String
+  username          String?
+  url               String?
+  responsibleUserId String?
+  backupUserId      String?
+  status            String    @default("active")
+  createdAt         DateTime  @default(now())
+  archivedAt        DateTime?
+
+  @@index([brandId])
+  @@index([platform])
+}
+
+model PublishingItem {
+  id                   String    @id @default(cuid())
+  brandId              String?
+  countryId            String?
+  socialAccountId      String?
+  platform             String?
+  productId            String?
+  campaignId           String?
+  contentType          String    @default("post") // post|story|reel|video|carousel|live|custom
+  publishDate          DateTime?
+  publishTime          String?
+  caption              String?
+  ownerId              String?
+  designerId           String?
+  approverId           String?
+  creativeFileId       String?
+  status               String    @default("idea") // idea|requested|copywriting|design|review|approved|scheduled|published|failed|cancelled
+  scheduledConfirmedAt DateTime?
+  publishedConfirmedAt DateTime?
+  publishedUrl         String?
+  screenshotFileId     String?
+  notes                String?
+  recurrenceId         String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  archivedAt           DateTime?
+
+  @@index([brandId, publishDate])
+  @@index([socialAccountId])
+  @@index([status])
+}
+
+model PublishingRecurrence {
+  id              String   @id @default(cuid())
+  brandId         String?
+  productId       String?
+  socialAccountId String?
+  contentType     String   @default("story")
+  startDate       DateTime
+  days            Int      @default(1)
+  ruleJson        String?
+  createdById     String?
+  createdAt       DateTime @default(now())
+}
+
+// ============================================================================
+// WHATSAPP CAMPAIGNS  (§11 — third-party executed, internal workflow only)
+// ============================================================================
+
+model WhatsappCampaign {
+  id                String    @id @default(cuid())
+  campaignId        String? // optionally links to a Campaign
+  brandId           String?
+  countryId         String?
+  audience          String?
+  objective         String?
+  plannedDate       DateTime?
+  responsibleUserId String?
+  messageCopy       String?
+  creativeFileId    String?
+  designRequestId   String?
+  approvalId        String?
+  status            String    @default("draft") // draft|creative|review|approved|ready|sent|reported
+  scheduledAt       DateTime?
+  sentAt            DateTime?
+  resultsJson       String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  archivedAt        DateTime?
+
+  @@index([brandId])
+}
+
+// ============================================================================
+// CREATIVE / DESIGN  (§12)
+// ============================================================================
+
+model DesignRequest {
+  id             String    @id @default(cuid())
+  requesterId    String?
+  companyId      String?
+  brandId        String?
+  countryId      String?
+  productId      String?
+  campaignId     String?
+  assetType      String // post|banner|packaging|video|...
+  dimensions     String?
+  platform       String?
+  copy           String?
+  referencesJson String?
+  deadline       DateTime?
+  priority       String    @default("normal")
+  designerId     String?
+  reviewerId     String?
+  status         String    @default("requested") // requested|brief_review|assigned|designing|internal_review|revision|waiting_approval|approved|delivered|published|archived
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  archivedAt     DateTime?
+
+  versions DesignVersion[]
+
+  @@index([brandId, status])
+  @@index([designerId])
+}
+
+model DesignVersion {
+  id              String   @id @default(cuid())
+  designRequestId String
+  version         Int
+  fileId          String?
+  note            String?
+  uploadedById    String?
+  isApproved      Boolean  @default(false)
+  isRejected      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  request DesignRequest @relation(fields: [designRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([designRequestId, version])
+}
+
+model CreativeAsset {
+  id              String    @id @default(cuid())
+  brandId         String?
+  productId       String?
+  countryId       String?
+  campaignId      String?
+  platform        String?
+  assetType       String?
+  designRequestId String?
+  fileId          String?
+  designerId      String?
+  approvedAt      DateTime?
+  tagsJson        String?
+  createdAt       DateTime  @default(now())
+  archivedAt      DateTime?
+
+  @@index([brandId])
+}
+
+// ============================================================================
+// COMMERCE / STORES  (§16 — manual performance entry v1)
+// ============================================================================
+
+model Store {
+  id         String    @id @default(cuid())
+  companyId  String?
+  brandId    String?
+  countryId  String?
+  platform   String // shopify|woocommerce|zid|salla|amazon|custom|other
+  name       String
+  currency   String    @default("KWD")
+  url        String?
+  status     String    @default("active")
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  archivedAt DateTime?
+
+  responsibles StoreResponsible[]
+  performance  StorePerformance[]
+
+  @@index([brandId])
+  @@index([countryId])
+}
+
+model StoreResponsible {
+  id      String @id @default(cuid())
+  storeId String
+  userId  String
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, userId])
+}
+
+model StorePerformance {
+  id              String   @id @default(cuid())
+  storeId         String
+  periodType      String   @default("daily") // daily | weekly | monthly
+  periodStart     DateTime
+  periodEnd       DateTime?
+  sales           Decimal?
+  orders          Int?
+  unitsSold       Int?
+  returns         Int?
+  refunds         Decimal?
+  aov             Decimal?
+  conversionRate  Decimal?
+  adSpend         Decimal?
+  discounts       Decimal?
+  shippingCost    Decimal?
+  cogs            Decimal?
+  grossMargin     Decimal?
+  netContribution Decimal?
+  campaignId      String?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, periodStart])
+}
+
+// ============================================================================
+// CUSTOMER SERVICE  (§17 internal cases)
+// ============================================================================
+
+model CustomerCase {
+  id           String    @id @default(cuid())
+  companyId    String?
+  brandId      String?
+  countryId    String?
+  storeId      String?
+  productId    String?
+  orderRef     String?
+  customerRef  String?
+  type         String // product_question|complaint|return|refund|damaged|delivery|wrong_item|ecommerce|ad_issue|medical_info|other
+  priority     String    @default("normal")
+  assignedToId String?
+  status       String    @default("new") // new|assigned|waiting|in_progress|escalated|resolved|closed
+  description  String?
+  resolution   String?
+  createdById  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  archivedAt   DateTime?
+
+  notes CustomerCaseNote[]
+
+  @@index([brandId, status])
+  @@index([assignedToId])
+}
+
+model CustomerCaseNote {
+  id         String   @id @default(cuid())
+  caseId     String
+  authorId   String?
+  body       String
+  isInternal Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  case CustomerCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+}
+
+// ============================================================================
+// APPROVED ANSWER LIBRARY  (§18)
+// ============================================================================
+
+model ApprovedAnswer {
+  id            String    @id @default(cuid())
+  question      String
+  answer        String
+  brandId       String?
+  productId     String?
+  countryId     String?
+  category      String?
+  language      String    @default("en")
+  version       Int       @default(1)
+  status        String    @default("approved") // draft|pending|approved|retired
+  approvedById  String?
+  effectiveDate DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  archivedAt    DateTime?
+
+  @@index([brandId])
+  @@index([status])
+}
+
+model AnswerRequest {
+  id           String   @id @default(cuid())
+  question     String
+  requesterId  String?
+  brandId      String?
+  productId    String?
+  countryId    String?
+  context      String?
+  status       String   @default("pending") // pending|approved|rejected
+  resultAnswerId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ============================================================================
+// KNOWLEDGE BASE  (§19)
+// ============================================================================
+
+model KnowledgeArticle {
+  id            String    @id @default(cuid())
+  title         String
+  body          String
+  category      String?
+  tagsJson      String?
+  authorId      String?
+  reviewerId    String?
+  brandId       String?
+  status        String    @default("published") // draft|published|archived
+  version       Int       @default(1)
+  lastReviewedAt DateTime?
+  reviewDueAt   DateTime?
+  visibility    String    @default("internal")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  archivedAt    DateTime?
+
+  @@index([brandId])
+  @@index([category])
+}
+
+// ============================================================================
+// COMMUNICATION / DISCUSSIONS  (§20)
+// ============================================================================
+
+model Channel {
+  id           String    @id @default(cuid())
+  name         String
+  description  String?
+  type         String    @default("general") // brand|company|department|campaign|product|project|registration|store|general
+  companyId    String?
+  brandId      String?
+  departmentId String?
+  isPrivate    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  archivedAt   DateTime?
+
+  members  ChannelMember[]
+  messages Message[]
+
+  @@index([brandId])
+  @@index([type])
+}
+
+model ChannelMember {
+  id         String    @id @default(cuid())
+  channelId  String
+  userId     String
+  role       String    @default("member")
+  lastReadAt DateTime?
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id        String    @id @default(cuid())
+  channelId String
+  authorId  String
+  body      String
+  parentId  String?
+  kind      String    @default("message") // message|decision|announcement|action_required
+  isPinned  Boolean   @default(false)
+  editedAt  DateTime?
+  createdAt DateTime  @default(now())
+  archivedAt DateTime?
+
+  channel  Channel          @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  mentions MessageMention[]
+
+  @@index([channelId, createdAt])
+}
+
+model MessageMention {
+  id        String @id @default(cuid())
+  messageId String
+  userId    String
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId])
+}
+
+// ============================================================================
+// COMMENTS & MENTIONS (reusable) + REACTIONS  (§63)
+// ============================================================================
+
+model Comment {
+  id         String    @id @default(cuid())
+  authorId   String
+  body       String
+  entityType String
+  entityId   String
+  parentId   String?
+  editedAt   DateTime?
+  createdAt  DateTime  @default(now())
+  archivedAt DateTime?
+
+  @@index([entityType, entityId])
+  @@index([authorId])
+}
+
+model Reaction {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  userId     String
+  emoji      String
+  createdAt  DateTime @default(now())
+
+  @@unique([entityType, entityId, userId, emoji])
+}
+
+// ============================================================================
+// APPROVALS  (§24 universal engine)
+// ============================================================================
+
+model ApprovalRequest {
+  id          String    @id @default(cuid())
+  title       String
+  entityType  String?
+  entityId    String?
+  requesterId String?
+  type        String // campaign|budget|creative|social|answer|refund|document|expense|purchase|accounting|file|report
+  status      String    @default("pending") // pending|approved|rejected|changes
+  currentStep Int       @default(1)
+  companyId   String?
+  brandId     String?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  archivedAt  DateTime?
+
+  steps ApprovalStep[]
+
+  @@index([status])
+  @@index([requesterId])
+}
+
+model ApprovalStep {
+  id             String    @id @default(cuid())
+  requestId      String
+  order          Int
+  approverUserId String?
+  approverRole   String?
+  status         String    @default("pending") // pending|approved|rejected|changes
+  decidedAt      DateTime?
+  comment        String?
+
+  request ApprovalRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, order])
+  @@index([approverUserId])
+}
+
+// ============================================================================
+// SUBSCRIPTIONS  (§25)
+// ============================================================================
+
+model Subscription {
+  id               String    @id @default(cuid())
+  provider         String
+  companyId        String?
+  brandId          String?
+  countryId        String?
+  ownerId          String?
+  plan             String?
+  currency         String    @default("USD")
+  cost             Decimal?
+  billingCycle     String    @default("monthly") // monthly | yearly | custom
+  renewalDate      DateTime?
+  autoRenew        Boolean   @default(true)
+  paymentMethodRef String?
+  licenses         Int?
+  notes            String?
+  status           String    @default("active")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  archivedAt       DateTime?
+
+  @@index([renewalDate])
+  @@index([status])
+}
+
+// ============================================================================
+// FINANCE / ACCOUNTING  (§26 — multi-company, multi-currency, dimensional)
+// ============================================================================
+
+model FiscalYear {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  status    String   @default("open") // open | closed
+  createdAt DateTime @default(now())
+
+  periods AccountingPeriod[]
+
+  @@index([companyId])
+}
+
+model AccountingPeriod {
+  id           String   @id @default(cuid())
+  fiscalYearId String
+  name         String
+  startDate    DateTime
+  endDate      DateTime
+  status       String   @default("open")
+
+  fiscalYear FiscalYear @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
+
+  @@index([fiscalYearId])
+}
+
+model Account {
+  id        String   @id @default(cuid())
+  companyId String
+  code      String
+  name      String
+  type      String // asset | liability | equity | income | expense
+  parentId  String?
+  isActive  Boolean  @default(true)
+  currency  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, code])
+  @@index([companyId, type])
+}
+
+model CostCenter {
+  id        String   @id @default(cuid())
+  companyId String?
+  name      String
+  code      String?
+  createdAt DateTime @default(now())
+}
+
+model JournalEntry {
+  id           String    @id @default(cuid())
+  companyId    String
+  periodId     String?
+  date         DateTime
+  reference    String?
+  memo         String?
+  status       String    @default("draft") // draft | posted | void
+  currency     String    @default("KWD")
+  exchangeRate Decimal?
+  createdById  String?
+  postedById   String?
+  postedAt     DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  archivedAt   DateTime?
+
+  lines JournalLine[]
+
+  @@index([companyId, date])
+  @@index([status])
+}
+
+model JournalLine {
+  id           String  @id @default(cuid())
+  entryId      String
+  accountId    String
+  description  String?
+  debit        Decimal @default(0)
+  credit       Decimal @default(0)
+  currency     String?
+  amountBase   Decimal?
+  // analytical dimensions (§26 critical requirement):
+  companyId    String?
+  brandId      String?
+  countryId    String?
+  departmentId String?
+  campaignId   String?
+  storeId      String?
+  productId    String?
+  costCenterId String?
+
+  entry JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([entryId])
+  @@index([accountId])
+  @@index([brandId])
+  @@index([countryId])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  companyId String?
+  name      String
+  code      String?
+  currency  String?
+  contact   String?
+  createdAt DateTime @default(now())
+}
+
+model Supplier {
+  id        String   @id @default(cuid())
+  companyId String?
+  name      String
+  code      String?
+  currency  String?
+  contact   String?
+  createdAt DateTime @default(now())
+}
+
+model Invoice {
+  id         String    @id @default(cuid())
+  companyId  String?
+  type       String // receivable | payable
+  customerId String?
+  supplierId String?
+  number     String?
+  date       DateTime
+  dueDate    DateTime?
+  currency   String    @default("KWD")
+  amount     Decimal
+  amountPaid Decimal   @default(0)
+  status     String    @default("open") // draft|open|paid|overdue|void
+  brandId    String?
+  countryId  String?
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  archivedAt DateTime?
+
+  @@index([companyId, status])
+  @@index([dueDate])
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  companyId     String?
+  type          String // receipt | payment
+  invoiceId     String?
+  customerId    String?
+  supplierId    String?
+  date          DateTime
+  amount        Decimal
+  currency      String   @default("KWD")
+  method        String?
+  bankAccountId String?
+  reference     String?
+  createdAt     DateTime @default(now())
+
+  @@index([companyId])
+}
+
+model BankAccount {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  currency  String   @default("KWD")
+  number    String?
+  type      String   @default("bank") // bank | cash
+  createdAt DateTime @default(now())
+}
+
+model Budget {
+  id           String    @id @default(cuid())
+  companyId    String?
+  name         String
+  fiscalYearId String?
+  brandId      String?
+  countryId    String?
+  departmentId String?
+  campaignId   String?
+  amount       Decimal
+  currency     String    @default("KWD")
+  periodStart  DateTime?
+  periodEnd    DateTime?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([brandId])
+  @@index([companyId])
+}
+
+model ExpenseCategory {
+  id        String  @id @default(cuid())
+  name      String
+  code      String?
+  parentId  String?
+  companyId String?
+}
+
+model Expense {
+  id            String    @id @default(cuid())
+  companyId     String?
+  brandId       String?
+  countryId     String?
+  departmentId  String?
+  campaignId    String?
+  storeId       String?
+  categoryId    String?
+  amount        Decimal
+  currency      String    @default("KWD")
+  date          DateTime
+  description   String?
+  status        String    @default("pending") // draft|pending|approved|rejected|paid
+  submittedById String?
+  approvedById  String?
+  fileId        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  archivedAt    DateTime?
+
+  @@index([brandId])
+  @@index([companyId, status])
+  @@index([date])
+}
+
+model ExchangeRate {
+  id        String   @id @default(cuid())
+  base      String
+  quote     String
+  rate      Decimal
+  date      DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([base, quote, date])
+}
+
+model TaxRate {
+  id        String  @id @default(cuid())
+  companyId String?
+  countryId String?
+  name      String
+  rate      Decimal
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+}
+
+// ============================================================================
+// NOTIFICATIONS  (§30)
+// ============================================================================
+
+model Notification {
+  id         String    @id @default(cuid())
+  userId     String
+  type       String
+  title      String
+  body       String?
+  entityType String?
+  entityId   String?
+  state      String    @default("unread") // unread | read | archived
+  readAt     DateTime?
+  groupKey   String?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, state])
+  @@index([createdAt])
+}
+
+model NotificationPreference {
+  id       String  @id @default(cuid())
+  userId   String
+  channel  String // inapp | email
+  category String
+  enabled  Boolean @default(true)
+
+  @@unique([userId, category, channel])
+}
+
+// ============================================================================
+// AUDIT  (§31 — every sensitive action)
+// ============================================================================
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  actorId       String?
+  action        String
+  entityType    String
+  entityId      String?
+  summary       String?
+  oldValuesJson String?
+  newValuesJson String?
+  ip            String?
+  userAgent     String?
+  companyId     String?
+  brandId       String?
+  createdAt     DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// PLATFORM / ADMIN — no hidden systems (§34, §35, §36, §37, §49, §48, §61, §74)
+// ============================================================================
+
+model StatusDefinition {
+  id         String  @id @default(cuid())
+  module     String // task | campaign | customer_case | registration | design | ...
+  key        String
+  label      String
+  category   String  @default("neutral") // neutral | info | success | warning | critical
+  order      Int     @default(0)
+  isDefault  Boolean @default(false)
+  isTerminal Boolean @default(false)
+
+  @@unique([module, key])
+  @@index([module])
+}
+
+model WorkflowTemplate {
+  id             String   @id @default(cuid())
+  name           String
+  module         String
+  description    String?
+  definitionJson String // stages, transitions, required fields/approvals/docs
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([module])
+}
+
+model SavedView {
+  id          String   @id @default(cuid())
+  userId      String?
+  module      String
+  name        String
+  filtersJson String
+  isShared    Boolean  @default(false)
+  teamId      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([module])
+}
+
+model Favorite {
+  id         String   @id @default(cuid())
+  userId     String
+  entityType String
+  entityId   String
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, entityType, entityId])
+}
+
+model RecentItem {
+  id         String   @id @default(cuid())
+  userId     String
+  entityType String
+  entityId   String
+  viewedAt   DateTime @default(now())
+
+  @@unique([userId, entityType, entityId])
+  @@index([userId, viewedAt])
+}
+
+model ApiToken {
+  id         String    @id @default(cuid())
+  name       String
+  userId     String?
+  tokenHash  String    @unique
+  prefix     String
+  scopesJson String?
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  valueJson   String
+  category    String   @default("general")
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+}
+
+model FeatureRegistry {
+  id                String  @id @default(cuid())
+  key               String  @unique
+  name              String
+  module            String
+  webAvailable      Boolean @default(true)
+  mobileApiAvailable Boolean @default(false)
+  permissionKey     String?
+  endpoint          String?
+  status            String  @default("available") // available | planned | beta
+  notes             String?
+}
+
+model BackgroundJob {
+  id          String    @id @default(cuid())
+  name        String
+  type        String // recurring | scheduled | queue
+  status      String    @default("queued") // queued | running | success | failed
+  scheduleCron String?
+  lastRunAt   DateTime?
+  nextRunAt   DateTime?
+  lastError   String?
+  payloadJson String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status])
+}
+
+model SystemEvent {
+  id        String   @id @default(cuid())
+  type      String // error | integration | webhook | health
+  level     String   @default("info") // info | warning | error
+  message   String
+  metaJson  String?
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([level])
+  @@index([createdAt])
+}

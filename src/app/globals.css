@@ -1,0 +1,248 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   NEXORA OS — Design tokens (§41, §42, §46)
+   A sophisticated enterprise interface for a premium cosmetics group.
+   Warm neutral surfaces · charcoal/graphite typography · muted plum accent ·
+   thin borders · subtle shadows · a controlled semantic color system.
+   Light + Dark, both intentional (not inverted). RTL + LTR aware.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces (warm off-white) */
+  --bg: #f6f5f2;
+  --surface: #ffffff;
+  --surface-2: #f1efea;
+  --surface-hover: #efedE7;
+  --overlay: rgba(28, 27, 26, 0.42);
+
+  /* Typography (charcoal / graphite) */
+  --ink: #201e1b;
+  --ink-2: #6a655d;
+  --ink-3: #9b958a;
+  --on-accent: #ffffff;
+
+  /* Lines (thin borders) */
+  --line: #e7e3db;
+  --line-strong: #d8d3c8;
+
+  /* Accent (muted violet / plum) */
+  --accent: #6c5aa0;
+  --accent-hover: #5d4d8c;
+  --accent-soft: rgba(108, 90, 160, 0.1);
+  --accent-ring: rgba(108, 90, 160, 0.35);
+
+  /* Semantic system (§46: neutral, info, success, warning, critical) */
+  --info: #3f78b5;
+  --info-soft: rgba(63, 120, 181, 0.12);
+  --success: #4a9268;
+  --success-soft: rgba(74, 146, 104, 0.13);
+  --warning: #b5852f;
+  --warning-soft: rgba(181, 133, 47, 0.14);
+  --critical: #bd524c;
+  --critical-soft: rgba(189, 82, 76, 0.12);
+  --neutral: #6a655d;
+  --neutral-soft: rgba(106, 101, 93, 0.1);
+
+  /* Elevation (subtle shadows) */
+  --shadow-sm: 0 1px 2px rgba(24, 22, 20, 0.05);
+  --shadow-md: 0 4px 14px -4px rgba(24, 22, 20, 0.12), 0 2px 4px -2px rgba(24, 22, 20, 0.06);
+  --shadow-lg: 0 16px 48px -12px rgba(24, 22, 20, 0.22);
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius: 9px;
+  --radius-lg: 14px;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", "Noto Sans Arabic", "Segoe UI Arabic", Tahoma, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+}
+
+:root.dark {
+  color-scheme: dark;
+
+  --bg: #131211;
+  --surface: #1c1a18;
+  --surface-2: #24211e;
+  --surface-hover: #2a2622;
+  --overlay: rgba(0, 0, 0, 0.6);
+
+  --ink: #f2efea;
+  --ink-2: #b4aea4;
+  --ink-3: #837c72;
+  --on-accent: #16130f;
+
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.15);
+
+  --accent: #b0a0dc;
+  --accent-hover: #c0b2e6;
+  --accent-soft: rgba(176, 160, 220, 0.16);
+  --accent-ring: rgba(176, 160, 220, 0.4);
+
+  --info: #6ba3da;
+  --info-soft: rgba(107, 163, 218, 0.16);
+  --success: #6dbb8a;
+  --success-soft: rgba(109, 187, 138, 0.16);
+  --warning: #d6a856;
+  --warning-soft: rgba(214, 168, 86, 0.16);
+  --critical: #dd7a74;
+  --critical-soft: rgba(221, 122, 116, 0.16);
+  --neutral: #b4aea4;
+  --neutral-soft: rgba(180, 174, 164, 0.14);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px -4px rgba(0, 0, 0, 0.5), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 20px 56px -16px rgba(0, 0, 0, 0.7);
+}
+
+/* Expose tokens to Tailwind utilities (bg-surface, text-ink, border-line, ...) */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-hover: var(--surface-hover);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-critical: var(--critical);
+  --color-critical-soft: var(--critical-soft);
+  --color-neutral: var(--neutral);
+  --color-neutral-soft: var(--neutral-soft);
+
+  --radius-sm: var(--radius-sm);
+  --radius-DEFAULT: var(--radius);
+  --radius-lg: var(--radius-lg);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+}
+
+* {
+  border-color: var(--line);
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv02", "cv03", "cv04", "ss01";
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+/* Focus — visible, accessible (§59) */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+/* Refined scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-3);
+  background-clip: content-box;
+}
+
+/* Numeric tables should use tabular figures (§45 excellent tables) */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Logical-property helpers for RTL correctness (§39) */
+[dir="rtl"] .flip-x {
+  transform: scaleX(-1);
+}
+
+@keyframes nx-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes nx-slide-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes nx-drawer-in-ltr {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes nx-drawer-in-rtl {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+@keyframes nx-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in { animation: nx-fade-in 0.16s ease-out; }
+.animate-slide-up { animation: nx-slide-up 0.18s ease-out; }
+
+/* Skeleton loading (§66) */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    var(--surface-hover) 37%,
+    var(--surface-2) 63%
+  );
+  background-size: 200% 100%;
+  animation: nx-shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
