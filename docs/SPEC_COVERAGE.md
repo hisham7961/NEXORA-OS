@@ -61,14 +61,14 @@ all work (verified end-to-end on PostgreSQL), per the brief's own bar.
 | L,M | Social publishing actions + recurring | 🟡 | **Next increment.** |
 | N | WhatsApp workflow | 🟡 | **Next increment.** |
 | O | Creative request actions | 🟡 | **Next increment.** |
-| P | Store performance entry | 🟡 | **Next increment.** |
+| **P** | **Store performance** entry | ✅ | daily/weekly/monthly figures entry (drawer) with server-computed AOV / gross margin / net contribution; idempotent upsert per (store, period-type, period-start); scoped to the store's company/brand/country via `sales.create`; audited. Verified live on Postgres + unit tests. |
 | W | UX quality | ✅ | Drawers, inline controls, toasts, dirty-guard, activity timelines, validation — premium; RTL + dark verified across the foundation. |
 | Y | Accounting UI deferred | ✅ | Schema + dimensions preserved; no accounting UI built this phase (as instructed). |
-| Z | Verification + tests + coverage | ✅ | typecheck + build + 35 tests (incl. mutation-authorization suite) + clean-DB migration + seed; each write path verified live on Postgres. This document updated. |
+| Z | Verification + tests + coverage | ✅ | typecheck + build + 38 tests (incl. mutation-authorization suite) + clean-DB migration + seed; each write path verified live on Postgres. This document updated. |
 
-**Changelog (this phase):** branches (A) → security hardening (B) → PostgreSQL + migrations (C) → CI (D) → action/form foundation (F) → Tasks (G) → Daily Checks + generator (H,I) → Approvals (J) → Attendance (S) → Customer Cases (Q) → Regulatory (R) → Permission administration (X) → verification (Z). Each shipped as its own commit with an end-to-end Postgres verification.
+**Changelog (this phase):** branches (A) → security hardening (B) → PostgreSQL + migrations (C) → CI (D) → action/form foundation (F) → Tasks (G) → Daily Checks + generator (H,I) → Approvals (J) → Attendance (S) → Customer Cases (Q) → Regulatory (R) → Permission administration (X) → verification (Z) → Marketing Campaigns (K) → Store performance (P). Each shipped as its own commit with an end-to-end Postgres verification.
 
-**Remaining gaps (next increment), in priority order:** Store performance entry (P); Social publishing actions + coverage matrix + recurring generator (L, M); WhatsApp workflow (N); Creative request lifecycle + version approval (O). Then: employee-initiated attendance-correction approval loop; file uploads to object storage (§21/§52); the configurable Workflow engine UI (§50); the full accounting posting + statements (§26, the dedicated next phase per Part Y); rate-limiting + MFA (§38).
+**Remaining gaps (next increment), in priority order:** Social publishing actions + coverage matrix + recurring generator (L, M); WhatsApp workflow (N); Creative request lifecycle + version approval (O). Then: employee-initiated attendance-correction approval loop; file uploads to object storage (§21/§52); the configurable Workflow engine UI (§50); the full accounting posting + statements (§26, the dedicated next phase per Part Y); rate-limiting + MFA (§38).
 
 ---
 

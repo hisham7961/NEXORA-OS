@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { can, assertRecordInScope, ForbiddenError } from "@/lib/permissions/engine";
-import { assignment, principal } from "./helpers";
+import { assignment, customAssignment, principal } from "./helpers";
 
 /**
  * Phase 2, Part Z — critical mutation-authorization cases. These assert the
@@ -79,5 +79,20 @@ describe("campaign write path scope (Part K)", () => {
     expect(() => assertRecordInScope(mgr, "campaigns.edit", { brandId: A, countryId: KW }, [...DIMS])).not.toThrow();
     expect(() => assertRecordInScope(mgr, "campaigns.edit", { brandId: B, countryId: KW }, [...DIMS])).toThrow(ForbiddenError);
     expect(() => assertRecordInScope(mgr, "campaigns.edit", { brandId: A, countryId: "country_SA" }, [...DIMS])).toThrow(ForbiddenError);
+  });
+});
+
+describe("store performance entry scope (Part P)", () => {
+  // A commerce analyst able to record sales in Brand A / Kuwait only.
+  const analyst = principal([customAssignment(["sales.view", "sales.create", "stores.view"], { brandId: A, countryId: KW })]);
+  it("can record performance for an in-scope store", () => {
+    expect(can(analyst, "sales.create", { brandId: A, countryId: KW })).toBe(true);
+    expect(() => assertRecordInScope(analyst, "sales.create", { brandId: A, countryId: KW }, [...DIMS])).not.toThrow();
+  });
+  it("cannot record performance for a store in another brand (IDOR)", () => {
+    expect(() => assertRecordInScope(analyst, "sales.create", { brandId: B, countryId: KW }, [...DIMS])).toThrow(ForbiddenError);
+  });
+  it("cannot record performance for a store in another country", () => {
+    expect(() => assertRecordInScope(analyst, "sales.create", { brandId: A, countryId: AE }, [...DIMS])).toThrow(ForbiddenError);
   });
 });

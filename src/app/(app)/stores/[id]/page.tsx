@@ -3,10 +3,11 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
-import { ForbiddenError } from "@/lib/permissions/engine";
+import { canAnywhere, ForbiddenError } from "@/lib/permissions/engine";
 import { getStore } from "@/domain/stores";
 import { getLookups, refName } from "@/domain/lookups";
 import { Panel, PanelHeader, PanelBody, DataTable, StatusBadge, Metric, EmptyState } from "@/components/ui";
+import { RecordPerformanceButton } from "@/components/stores/performance-entry";
 import { BrandChip, CountryChip } from "@/components/entity-chips";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
 
@@ -25,6 +26,7 @@ export default async function StoreDetailPage({ params }: { params: Promise<{ id
   if (!store) notFound();
   const lookups = await getLookups();
   const latest = store.performance[0];
+  const canRecord = canAnywhere(principal, "sales.create");
 
   return (
     <>
@@ -38,17 +40,22 @@ export default async function StoreDetailPage({ params }: { params: Promise<{ id
             <span className="capitalize">{store.platform}</span>
           </div>
         </div>
-        <StatusBadge module="generic" status={store.status} />
+        <div className="flex items-center gap-2">
+          <StatusBadge module="generic" status={store.status} />
+          {canRecord && <RecordPerformanceButton storeId={store.id} currency={store.currency} />}
+        </div>
       </div>
 
       {latest && (
         <Panel className="mb-4">
           <PanelHeader title="Latest performance" description={`Period from ${formatDate(latest.periodStart, locale)}`} />
-          <PanelBody className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <PanelBody className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">
             <Metric label="Sales" value={formatCurrency(latest.sales, store.currency, locale)} />
             <Metric label="Orders" value={formatNumber(latest.orders, locale)} />
+            <Metric label="AOV" value={formatCurrency(latest.aov, store.currency, locale)} />
             <Metric label="Returns" value={formatNumber(latest.returns, locale)} />
             <Metric label="Gross margin" value={formatCurrency(latest.grossMargin, store.currency, locale)} category="success" />
+            <Metric label="Net contribution" value={formatCurrency(latest.netContribution, store.currency, locale)} category={Number(latest.netContribution ?? 0) < 0 ? "critical" : "success"} />
           </PanelBody>
         </Panel>
       )}
@@ -61,7 +68,9 @@ export default async function StoreDetailPage({ params }: { params: Promise<{ id
             { key: "type", header: "Type", render: (p) => <span className="capitalize text-ink-3">{p.periodType}</span> },
             { key: "sales", header: "Sales", align: "end", render: (p) => formatCurrency(p.sales, store.currency, locale) },
             { key: "orders", header: "Orders", align: "end", render: (p) => formatNumber(p.orders, locale) },
+            { key: "aov", header: "AOV", align: "end", render: (p) => formatCurrency(p.aov, store.currency, locale) },
             { key: "margin", header: "Margin", align: "end", render: (p) => formatCurrency(p.grossMargin, store.currency, locale) },
+            { key: "net", header: "Net", align: "end", render: (p) => formatCurrency(p.netContribution, store.currency, locale) },
           ]}
           rows={store.performance}
           getRowKey={(p) => p.id}
