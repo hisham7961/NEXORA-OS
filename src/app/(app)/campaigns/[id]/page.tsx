@@ -14,6 +14,7 @@ import { Panel, PanelHeader, PanelBody, DataTable, StatusBadge, Badge, TabBar, E
 import { ActivityTimeline, type TimelineEntry } from "@/components/activity-timeline";
 import { CampaignDrawerForm } from "@/components/campaigns/campaign-drawer-form";
 import { CampaignStatusBar, AddMetricButton, DeleteMetricButton } from "@/components/campaigns/campaign-actions";
+import { EntityFiles } from "@/components/files/entity-files";
 import { BrandChip, CountryChip, UserChip } from "@/components/entity-chips";
 import { formatDate, formatCurrency, formatNumber } from "@/lib/format";
 
@@ -157,6 +158,9 @@ export default async function CampaignDetailPage({
               <PanelBody><CampaignStatusBar campaignId={campaign.id} status={campaign.status} /></PanelBody>
             </Panel>
           )}
+          <div className="lg:col-span-3">
+            <EntityFiles principal={principal} entityType="Campaign" entityId={campaign.id} scope={{ companyId: campaign.companyId, brandId: campaign.brandId, countryId: campaign.countryId }} />
+          </div>
         </div>
       )}
 

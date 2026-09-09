@@ -11,6 +11,7 @@ import { getScopedOptions } from "@/domain/options";
 import { getLookups, refName } from "@/domain/lookups";
 import { Panel, PanelHeader, PanelBody, StatusBadge, Badge } from "@/components/ui";
 import { ActivityTimeline, type TimelineEntry } from "@/components/activity-timeline";
+import { EntityFiles } from "@/components/files/entity-files";
 import { PublishingForm } from "@/components/social/publishing-form";
 import { PublishingActionBar } from "@/components/social/publishing-actions";
 import { BrandChip, CountryChip, UserChip } from "@/components/entity-chips";
@@ -96,6 +97,7 @@ export default async function PublishingDetailPage({ params }: { params: Promise
             <PanelHeader title="Activity" />
             <PanelBody><ActivityTimeline entries={timeline} locale={locale} empty="No activity yet." /></PanelBody>
           </Panel>
+          <EntityFiles principal={principal} entityType="PublishingItem" entityId={item.id} scope={{ brandId: item.brandId, countryId: item.countryId }} />
         </div>
 
         <div className="space-y-4">

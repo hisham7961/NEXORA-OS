@@ -11,6 +11,7 @@ import { getScopedOptions } from "@/domain/options";
 import { getLookups, refName } from "@/domain/lookups";
 import { Panel, PanelHeader, PanelBody, StatusBadge, Metric, EmptyState } from "@/components/ui";
 import { ActivityTimeline, type TimelineEntry } from "@/components/activity-timeline";
+import { EntityFiles } from "@/components/files/entity-files";
 import { WhatsappForm } from "@/components/whatsapp/whatsapp-form";
 import { WhatsappActionBar } from "@/components/whatsapp/whatsapp-actions";
 import { BrandChip, CountryChip, UserChip } from "@/components/entity-chips";
@@ -105,6 +106,7 @@ export default async function WhatsappDetailPage({ params }: { params: Promise<{
             <PanelHeader title="Activity" />
             <PanelBody><ActivityTimeline entries={timeline} locale={locale} empty="No activity yet." /></PanelBody>
           </Panel>
+          <EntityFiles principal={principal} entityType="WhatsappCampaign" entityId={wa.id} scope={{ brandId: wa.brandId, countryId: wa.countryId }} />
         </div>
 
         <div className="space-y-4">

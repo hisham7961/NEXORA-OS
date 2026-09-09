@@ -6,6 +6,7 @@ import { AccessDenied } from "@/components/access-denied";
 import { canAnywhere, ForbiddenError } from "@/lib/permissions/engine";
 import { getRegistration, getAuthorityNames } from "@/domain/registrations";
 import { RegistrationActions } from "@/components/registrations/registration-actions";
+import { EntityFiles } from "@/components/files/entity-files";
 import { getLookups, refName } from "@/domain/lookups";
 import { Panel, PanelHeader, PanelBody, StatusBadge, Badge } from "@/components/ui";
 import { BrandChip, CountryChip, UserChip } from "@/components/entity-chips";
@@ -91,6 +92,13 @@ export default async function RegistrationDetailPage({ params }: { params: Promi
               )}
             </PanelBody>
           </Panel>
+          <EntityFiles
+            principal={principal}
+            entityType="RegistrationCase"
+            entityId={r.id}
+            scope={{ companyId: r.companyId, brandId: r.brandId, countryId: r.countryId }}
+            title="Documents & certificates"
+          />
         </div>
       </div>
     </>

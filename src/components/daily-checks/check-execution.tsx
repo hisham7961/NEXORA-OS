@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Link2, StickyNote } from "lucide-react";
+import { Check, Link2, StickyNote, Paperclip, Download } from "lucide-react";
 import { Button, Input } from "@/components/ui";
 import { useToast } from "@/components/providers";
-import { completeChecklistItemAction, submitChecklistInstanceAction } from "@/app/actions/daily-checks";
+import { completeChecklistItemAction, submitChecklistInstanceAction, addChecklistEvidenceAction } from "@/app/actions/daily-checks";
+import { fileDownloadHref } from "@/lib/files/display";
 
 export interface ExecItem {
   id: string;
@@ -13,6 +14,8 @@ export interface ExecItem {
   isDone: boolean;
   note: string | null;
   link: string | null;
+  fileId: string | null;
+  fileName: string | null;
   requiresNote: boolean;
   requiresLink: boolean;
   requiresAttachment: boolean;
@@ -24,7 +27,19 @@ function ItemRow({ instanceId, item }: { instanceId: string; item: ExecItem }) {
   const [pending, start] = useTransition();
   const [note, setNote] = useState(item.note ?? "");
   const [link, setLink] = useState(item.link ?? "");
+  const fileRef = useRef<HTMLInputElement>(null);
   const needsEvidence = item.requiresNote || item.requiresLink || item.requiresAttachment;
+
+  const uploadEvidence = (file: File) =>
+    start(async () => {
+      const fd = new FormData();
+      fd.set("instanceId", instanceId);
+      fd.set("itemId", item.id);
+      fd.set("file", file);
+      const res = await addChecklistEvidenceAction(null, fd);
+      if (res.ok) { toast({ kind: "success", title: "Evidence attached" }); router.refresh(); }
+      else toast({ kind: "error", title: res.error });
+    });
 
   const toggle = (done: boolean) =>
     start(async () => {
@@ -55,10 +70,23 @@ function ItemRow({ instanceId, item }: { instanceId: string; item: ExecItem }) {
                   <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Confirmation note (required)" className="h-8" />
                 </div>
               )}
-              {(item.requiresLink || item.requiresAttachment) && (
+              {item.requiresLink && (
                 <div className="flex items-center gap-1.5">
                   <Link2 className="h-3.5 w-3.5 text-ink-3" />
-                  <Input value={link} onChange={(e) => setLink(e.target.value)} placeholder="Evidence link (required)" className="h-8" />
+                  <Input value={link} onChange={(e) => setLink(e.target.value)} placeholder="Evidence link" className="h-8" />
+                </div>
+              )}
+              {(item.requiresAttachment || item.requiresLink) && (
+                <div className="flex items-center gap-2">
+                  <input ref={fileRef} type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadEvidence(f); }} />
+                  <Button variant="secondary" size="sm" disabled={pending} onClick={() => fileRef.current?.click()}>
+                    <Paperclip className="h-3.5 w-3.5" /> {item.fileId ? "Replace file" : "Attach file"}
+                  </Button>
+                  {item.fileId && (
+                    <a href={fileDownloadHref(item.fileId)} className="inline-flex items-center gap-1 text-[12px] text-accent hover:underline">
+                      <Download className="h-3.5 w-3.5" /> {item.fileName ?? "evidence"}
+                    </a>
+                  )}
                 </div>
               )}
             </div>

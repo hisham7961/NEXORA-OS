@@ -41,7 +41,13 @@ export async function setDesignStatusAction(id: string, status: string): Promise
 
 export async function addDesignVersionAction(_prev: ActionResult | null, fd: FormData): Promise<ActionResult> {
   const id = str(fd, "requestId")!;
-  const res = await runAction((ctx) => Design.addDesignVersion(ctx, id, { fileId: str(fd, "fileId"), note: str(fd, "note") }));
+  const picked = fd.get("file");
+  if (!picked || typeof picked === "string") return { ok: false, error: "Please choose the artwork file to upload." };
+  const blob = picked as unknown as File;
+  const body = Buffer.from(await blob.arrayBuffer());
+  const res = await runAction((ctx) =>
+    Design.addDesignVersionWithFile(ctx, id, { filename: blob.name, body, mimeType: blob.type || "application/octet-stream", note: str(fd, "note") }),
+  );
   if (res.ok) revalidatePath(`/design/${id}`);
   return res;
 }

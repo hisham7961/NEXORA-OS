@@ -47,6 +47,19 @@ function assertCanOpen(principal: Principal, file: FileRow): void {
   throw new ForbiddenError("files.view_restricted");
 }
 
+/**
+ * A caller may VIEW a file if they own it (owner always sees their own files —
+ * important for e.g. daily-check evidence uploaded by users who lack a general
+ * files.view grant) or if files.view matches the file's scope. Then the
+ * restricted gate applies.
+ */
+function assertCanView(principal: Principal, file: FileRow): void {
+  if (!(file.ownerId && file.ownerId === principal.userId)) {
+    assertRecordInScope(principal, "files.view", fileScope(file), DIMS);
+  }
+  assertCanOpen(principal, file);
+}
+
 export async function listFiles(principal: Principal, query: FileQuery): Promise<{ rows: (FileRow & { tags: string[] })[]; total: number }> {
   const restrictedGuard = canAnywhere(principal, "files.view_restricted")
     ? {}
@@ -71,10 +84,7 @@ export async function listFiles(principal: Principal, query: FileQuery): Promise
 export async function getFile(principal: Principal, id: string) {
   const file = await prisma.file.findUnique({ where: { id }, include: { versions: { orderBy: { version: "desc" }, include: {} } } });
   if (!file) return null;
-  assertRecordInScope(principal, "files.view", fileScope(file), DIMS);
-  // Restricted files are visible in the list only to authorized users; opening
-  // the detail also requires open rights.
-  assertCanOpen(principal, file);
+  assertCanView(principal, file);
   return { ...file, tags: parseTags(file.tagsJson) };
 }
 
@@ -114,7 +124,18 @@ export interface UploadInput {
 export async function uploadFile(ctx: ActorContext, input: UploadInput): Promise<FileRow> {
   const scope = { companyId: input.companyId ?? null, brandId: input.brandId ?? null, countryId: input.countryId ?? null };
   assertCan(ctx.principal, "files.create", scope);
+  return storeUploadedFile(ctx, input);
+}
 
+/**
+ * Internal upload used by trusted domain callers that have ALREADY performed
+ * their own authorization for the parent action (e.g. a user completing their
+ * OWN daily-check attaches evidence without needing the global files.create
+ * grant). Still validates size/MIME/extension/category and scopes the file.
+ * NOT exposed to the generic upload API/UI — those go through uploadFile().
+ */
+export async function storeUploadedFile(ctx: ActorContext, input: UploadInput): Promise<FileRow> {
+  const scope = { companyId: input.companyId ?? null, brandId: input.brandId ?? null, countryId: input.countryId ?? null };
   const err = validateUpload({ filename: input.filename, mimeType: input.mimeType, sizeBytes: input.body.byteLength, category: input.category });
   if (err) throw new ServiceError(err.code, err.message, 422);
 
@@ -199,8 +220,7 @@ export interface DownloadResult {
 export async function downloadFile(principal: Principal, fileId: string, versionId?: string): Promise<DownloadResult> {
   const file = await prisma.file.findUnique({ where: { id: fileId } });
   if (!file || file.archivedAt) throw new ServiceError("not_found", "File not found", 404);
-  assertRecordInScope(principal, "files.view", fileScope(file), DIMS);
-  assertCanOpen(principal, file);
+  assertCanView(principal, file);
 
   const version = versionId
     ? await prisma.fileVersion.findUnique({ where: { id: versionId } })
@@ -256,8 +276,7 @@ export async function restoreFile(ctx: ActorContext, id: string): Promise<void> 
 export async function getFileVersions(principal: Principal, fileId: string): Promise<FileVersion[]> {
   const file = await prisma.file.findUnique({ where: { id: fileId } });
   if (!file) throw new ServiceError("not_found", "File not found", 404);
-  assertRecordInScope(principal, "files.view", fileScope(file), DIMS);
-  assertCanOpen(principal, file);
+  assertCanView(principal, file);
   return prisma.fileVersion.findMany({ where: { fileId }, orderBy: { version: "desc" } });
 }
 

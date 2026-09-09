@@ -7,6 +7,7 @@ import { scopedWhere, DIMS_CBC } from "@/domain/scope";
 import { ServiceError } from "@/lib/api/handler";
 import { assertCan, audit, notify, type ActorContext } from "@/domain/mutation";
 import { optionalString, optionalDate } from "@/lib/validation";
+import { storeUploadedFile } from "@/domain/files";
 
 /** Creative / design requests (§12). */
 export const designQuerySchema = listQuerySchema.extend({ status: z.string().optional(), brandId: z.string().optional() });
@@ -165,8 +166,54 @@ export async function addDesignVersion(ctx: ActorContext, requestId: string, raw
     }
     return v;
   });
-  await audit(ctx, { action: "design.version_added", entityType: "DesignRequest", entityId: requestId, summary: `v${version.version} uploaded`, brandId: existing.brandId, companyId: existing.companyId });
-  await notify([existing.reviewerId], { type: "design.review", title: "A design version needs review", body: `v${version.version} · ${existing.assetType}`, entityType: "DesignRequest", entityId: requestId }, ctx.principal.userId);
+  await auditVersionAdded(ctx, existing, version.version, requestId);
+  return version;
+}
+
+/**
+ * Add a creative version backed by a real uploaded file (§6). The file goes
+ * through the File Platform (scoped to the request, category "creative",
+ * attached to the DesignRequest), then its id is recorded on the append-only,
+ * server-numbered DesignVersion — so designers actually upload artwork and its
+ * history is preserved with everything else the platform gives files.
+ */
+export async function addDesignVersionWithFile(
+  ctx: ActorContext,
+  requestId: string,
+  upload: { filename: string; body: Buffer; mimeType: string; note?: string | null },
+): Promise<DesignVersion> {
+  const existing = await loadEditableDesign(ctx, requestId);
+  if (["delivered", "published", "archived"].includes(existing.status)) {
+    throw new ServiceError("closed", "This request is closed to new versions", 422);
+  }
+  // The caller is authorized via design.edit on the request, so the artwork
+  // upload uses the trusted internal path (a designer need not hold a separate
+  // global files.create grant).
+  const file = await storeUploadedFile(ctx, {
+    filename: upload.filename, body: upload.body, mimeType: upload.mimeType,
+    category: "creative", companyId: existing.companyId, brandId: existing.brandId, countryId: existing.countryId,
+    relatedType: "DesignRequest", relatedId: requestId,
+  });
+  await prisma.fileAttachment.create({ data: { fileId: file.id, entityType: "DesignRequest", entityId: requestId, createdById: ctx.principal.userId } });
+
+  const version = await prisma.$transaction(async (tx) => {
+    const last = await tx.designVersion.findFirst({ where: { designRequestId: requestId }, orderBy: { version: "desc" }, select: { version: true } });
+    const next = (last?.version ?? 0) + 1;
+    const v = await tx.designVersion.create({
+      data: { designRequestId: requestId, version: next, fileId: file.id, note: upload.note ?? null, uploadedById: ctx.principal.userId },
+    });
+    if (!["internal_review", "waiting_approval"].includes(existing.status)) {
+      await tx.designRequest.update({ where: { id: requestId }, data: { status: "internal_review" } });
+    }
+    return v;
+  });
+  await auditVersionAdded(ctx, existing, version.version, requestId);
+  return version;
+}
+
+async function auditVersionAdded(ctx: ActorContext, existing: DesignRequest, version: number, requestId: string) {
+  await audit(ctx, { action: "design.version_added", entityType: "DesignRequest", entityId: requestId, summary: `v${version} uploaded`, brandId: existing.brandId, companyId: existing.companyId });
+  await notify([existing.reviewerId], { type: "design.review", title: "A design version needs review", body: `v${version} · ${existing.assetType}`, entityType: "DesignRequest", entityId: requestId }, ctx.principal.userId);
   return version;
 }
 

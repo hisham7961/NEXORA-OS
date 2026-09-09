@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Check, X } from "lucide-react";
-import { Button, Input, Textarea, Drawer } from "@/components/ui";
+import { Button, Textarea, Drawer } from "@/components/ui";
 import { ActionForm, FormField } from "@/components/form/action-form";
 import { useToast } from "@/components/providers";
 import { setDesignStatusAction, addDesignVersionAction, approveDesignVersionAction, rejectDesignVersionAction } from "@/app/actions/design";
@@ -58,11 +58,11 @@ export function AddVersionButton({ requestId }: { requestId: string }) {
   return (
     <>
       <Button variant="secondary" size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Upload version</Button>
-      <Drawer open={open} onClose={() => setOpen(false)} title="Upload a version" description="Reference the creative file and add a note. The version number is assigned automatically.">
+      <Drawer open={open} onClose={() => setOpen(false)} title="Upload a version" description="Upload the artwork file. The version number is assigned automatically and history is preserved.">
         <ActionForm action={addDesignVersionAction} submitLabel="Add version" onCancel={() => setOpen(false)} onSuccess={() => { setOpen(false); router.refresh(); }}>
           <input type="hidden" name="requestId" value={requestId} />
-          <FormField label="File reference" name="fileId" hint="Asset id / link (object storage is a later phase)">
-            <Input name="fileId" placeholder="e.g. drive link or asset id" />
+          <FormField label="Artwork file" name="file" required>
+            <input type="file" name="file" required className="block w-full text-[13px] text-ink-2 file:me-3 file:rounded-md file:border-0 file:bg-accent-soft file:px-3 file:py-1.5 file:text-[12.5px] file:font-medium file:text-accent hover:file:bg-accent-soft/80" />
           </FormField>
           <FormField label="Note" name="note">
             <Textarea name="note" placeholder="What changed in this version?" className="min-h-16" />

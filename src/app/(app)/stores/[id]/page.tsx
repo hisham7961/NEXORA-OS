@@ -8,6 +8,7 @@ import { getStore } from "@/domain/stores";
 import { getLookups, refName } from "@/domain/lookups";
 import { Panel, PanelHeader, PanelBody, DataTable, StatusBadge, Metric, EmptyState } from "@/components/ui";
 import { RecordPerformanceButton } from "@/components/stores/performance-entry";
+import { EntityFiles } from "@/components/files/entity-files";
 import { BrandChip, CountryChip } from "@/components/entity-chips";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
 
@@ -79,6 +80,9 @@ export default async function StoreDetailPage({ params }: { params: Promise<{ id
           empty={<EmptyState title="No performance entered" description="Enter daily/weekly/monthly performance to track sales and margin." />}
         />
       </Panel>
+      <div className="mt-4">
+        <EntityFiles principal={principal} entityType="Store" entityId={store.id} scope={{ companyId: store.companyId, brandId: store.brandId, countryId: store.countryId }} />
+      </div>
     </>
   );
 }

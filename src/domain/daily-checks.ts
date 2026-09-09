@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { canAnywhere, ForbiddenError, type Principal } from "@/lib/permissions/engine";
 import { ServiceError } from "@/lib/api/handler";
 import { audit, notify, type ActorContext } from "@/domain/mutation";
+import { storeUploadedFile } from "@/domain/files";
 
 /** Daily compliance dashboard (§8). */
 export interface ComplianceRow {
@@ -71,6 +72,10 @@ export async function getInstanceForExecution(principal: Principal, id: string) 
   if (!isOwner && !isManager) throw new ForbiddenError("daily_checks.view");
 
   const templateItemById = new Map(instance.template.items.map((t) => [t.id, t]));
+  const fileIds = instance.items.map((it) => it.fileId).filter((x): x is string => !!x);
+  const fileNames = fileIds.length
+    ? new Map((await prisma.file.findMany({ where: { id: { in: fileIds } }, select: { id: true, name: true } })).map((f) => [f.id, f.name]))
+    : new Map<string, string>();
   const items = instance.items.map((it) => {
     const t = it.templateItemId ? templateItemById.get(it.templateItemId) : undefined;
     return {
@@ -79,6 +84,8 @@ export async function getInstanceForExecution(principal: Principal, id: string) 
       isDone: it.isDone,
       note: it.note,
       link: it.link,
+      fileId: it.fileId,
+      fileName: it.fileId ? fileNames.get(it.fileId) ?? null : null,
       doneAt: it.doneAt,
       requiresNote: t?.requiresNote ?? false,
       requiresLink: t?.requiresLink ?? false,
@@ -112,8 +119,11 @@ export async function completeChecklistItem(
   const template = await prisma.checklistTemplateItem.findUnique({ where: { id: item.templateItemId ?? "" } }).catch(() => null);
   if (input.done && template) {
     if (template.requiresNote && !input.note?.trim()) throw new ServiceError("note_required", "This check requires a confirmation note.", 422);
-    if ((template.requiresLink || template.requiresAttachment) && !input.link?.trim()) {
-      throw new ServiceError("evidence_required", "This check requires a link/evidence.", 422);
+    if (template.requiresLink && !input.link?.trim() && !item.fileId) {
+      throw new ServiceError("evidence_required", "This check requires a link or file evidence.", 422);
+    }
+    if (template.requiresAttachment && !item.fileId) {
+      throw new ServiceError("attachment_required", "This check requires a file/image attachment.", 422);
     }
   }
 
@@ -127,6 +137,36 @@ export async function completeChecklistItem(
     },
   });
   await audit(ctx, { action: input.done ? "daily_check.item_done" : "daily_check.item_undone", entityType: "ChecklistInstance", entityId: instanceId, summary: item.text, brandId: instance.template.brandId });
+}
+
+/**
+ * Attach file/image evidence to a check item via the File Platform (§7). The
+ * file is scoped to the instance's brand/company, attached to the item, and its
+ * id is recorded on the item — so evidence stays linked through completion and
+ * verification and is never lost. Satisfies a `requiresAttachment` check.
+ */
+export async function addChecklistItemEvidence(
+  ctx: ActorContext,
+  instanceId: string,
+  itemId: string,
+  upload: { filename: string; body: Buffer; mimeType: string },
+): Promise<void> {
+  const instance = await loadOwnInstance(ctx, instanceId);
+  const item = await prisma.checklistInstanceItem.findUnique({ where: { id: itemId } });
+  if (!item || item.instanceId !== instanceId) throw new ServiceError("not_found", "Check item not found", 404);
+  if (instance.status === "verified") throw new ServiceError("locked", "This checklist is verified and locked.", 422);
+
+  // The user owns this instance, so we use the trusted internal upload (they may
+  // not hold a general files.create grant). Ownership makes the file viewable to
+  // them; managers see it via daily_checks scope.
+  const file = await storeUploadedFile(ctx, {
+    filename: upload.filename, body: upload.body, mimeType: upload.mimeType,
+    category: "document", brandId: instance.template.brandId,
+    relatedType: "ChecklistInstanceItem", relatedId: itemId,
+  });
+  await prisma.fileAttachment.create({ data: { fileId: file.id, entityType: "ChecklistInstanceItem", entityId: itemId, createdById: ctx.principal.userId } });
+  await prisma.checklistInstanceItem.update({ where: { id: itemId }, data: { fileId: file.id } });
+  await audit(ctx, { action: "daily_check.evidence_added", entityType: "ChecklistInstance", entityId: instanceId, summary: `${item.text}: ${upload.filename}`, brandId: instance.template.brandId });
 }
 
 export async function submitChecklistInstance(ctx: ActorContext, instanceId: string): Promise<void> {

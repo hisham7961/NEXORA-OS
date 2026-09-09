@@ -11,6 +11,7 @@ import { getLookups, refName } from "@/domain/lookups";
 import { Panel, PanelHeader, PanelBody, StatusBadge, Badge } from "@/components/ui";
 import { BrandChip, CountryChip, UserChip } from "@/components/entity-chips";
 import { ActivityTimeline, type TimelineEntry } from "@/components/activity-timeline";
+import { EntityFiles } from "@/components/files/entity-files";
 import { CaseActionBar } from "@/components/cases/case-actions";
 import { formatDateTime } from "@/lib/format";
 import { humanize } from "@/lib/status";
@@ -74,6 +75,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
             <PanelHeader title="Activity" />
             <PanelBody><ActivityTimeline entries={timeline} locale={locale} empty="No activity yet." /></PanelBody>
           </Panel>
+          <EntityFiles principal={principal} entityType="CustomerCase" entityId={c.id} scope={{ companyId: c.companyId, brandId: c.brandId, countryId: c.countryId }} />
         </div>
 
         <div className="space-y-4">

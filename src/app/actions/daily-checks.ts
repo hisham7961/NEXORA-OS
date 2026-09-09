@@ -17,6 +17,18 @@ export async function completeChecklistItemAction(
   return res;
 }
 
+export async function addChecklistEvidenceAction(_prev: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const instanceId = String(fd.get("instanceId"));
+  const itemId = String(fd.get("itemId"));
+  const picked = fd.get("file");
+  if (!picked || typeof picked === "string") return { ok: false, error: "Please choose an evidence file." };
+  const blob = picked as unknown as File;
+  const body = Buffer.from(await blob.arrayBuffer());
+  const res = await runAction((ctx) => DC.addChecklistItemEvidence(ctx, instanceId, itemId, { filename: blob.name, body, mimeType: blob.type || "application/octet-stream" }));
+  if (res.ok) revalidatePath(`/daily-checks/${instanceId}`);
+  return res;
+}
+
 export async function submitChecklistInstanceAction(instanceId: string): Promise<ActionResult> {
   const res = await runAction((ctx) => DC.submitChecklistInstance(ctx, instanceId));
   if (res.ok) {

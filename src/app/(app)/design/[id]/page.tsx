@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { Download } from "lucide-react";
+import { prisma } from "@/lib/db";
+import { fileDownloadHref, formatBytes, isPreviewable } from "@/lib/files/display";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
 import { canAnywhere, can, ForbiddenError } from "@/lib/permissions/engine";
@@ -44,6 +47,11 @@ export default async function DesignDetailPage({ params }: { params: Promise<{ i
     id: a.id, at: a.at, actorName: a.actorId ? refName(lookups.users, a.actorId) : "System",
     actorColor: a.actorId ? lookups.users.get(a.actorId)?.meta : null, action: a.action, summary: a.summary,
   }));
+  // Resolve the uploaded artwork file per version (for download/preview).
+  const versionFileIds = req.versions.map((v) => v.fileId).filter((x): x is string => !!x);
+  const versionFiles = versionFileIds.length
+    ? new Map((await prisma.file.findMany({ where: { id: { in: versionFileIds } }, select: { id: true, name: true, mimeType: true, sizeBytes: true } })).map((f) => [f.id, f]))
+    : new Map();
 
   return (
     <>
@@ -89,9 +97,22 @@ export default async function DesignDetailPage({ params }: { params: Promise<{ i
                           <span className="text-[11px] text-ink-3">{formatDateTime(v.createdAt, locale)}</span>
                           {v.isApproved ? <Badge category="success" dot>Approved</Badge> : v.isRejected ? <Badge category="critical" dot>Rejected</Badge> : <Badge category="neutral">In review</Badge>}
                         </div>
+                        {v.fileId && versionFiles.get(v.fileId) && (
+                          <div className="mt-0.5 flex items-center gap-2 text-[11px] text-ink-3">
+                            <span className="truncate">{versionFiles.get(v.fileId)!.name}</span>
+                            <span>·</span>
+                            <span>{formatBytes(versionFiles.get(v.fileId)!.sizeBytes)}</span>
+                            {isPreviewable(versionFiles.get(v.fileId)!.mimeType) && (
+                              <a href={fileDownloadHref(v.fileId, { inline: true })} target="_blank" rel="noreferrer" className="text-accent hover:underline">Preview</a>
+                            )}
+                          </div>
+                        )}
                         {v.note && <p className="mt-0.5 text-[12px] text-ink-3">{v.note}</p>}
                       </div>
-                      {!v.isApproved && <VersionDecision requestId={req.id} versionId={v.id} canApprove={canApprove} />}
+                      <div className="flex items-center gap-2">
+                        {v.fileId && <a href={fileDownloadHref(v.fileId)} className="text-ink-3 hover:text-accent" aria-label={`Download v${v.version}`}><Download className="h-3.5 w-3.5" /></a>}
+                        {!v.isApproved && <VersionDecision requestId={req.id} versionId={v.id} canApprove={canApprove} />}
+                      </div>
                     </li>
                   ))}
                 </ul>
