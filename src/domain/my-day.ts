@@ -7,6 +7,15 @@ export interface MyDayData {
   approvals: { id: string; title: string; requestId: string }[];
   deadlines: { id: string; title: string; dueDate: Date; kind: string }[];
   attendanceToday: { status: string; checkedIn: boolean } | null;
+  // My Day 2.0 (§21) — everything the operator owns today, scoped to them.
+  mentions: { id: string; title: string; body: string | null; channelId: string | null }[];
+  cases: { id: string; type: string; status: string; priority: string }[];
+  designs: { id: string; assetType: string; status: string }[];
+  campaigns: { id: string; name: string; status: string }[];
+  publishingToday: { id: string; contentType: string; platform: string | null; status: string }[];
+  registrations: { id: string; label: string; stage: string; dueDate: Date | null }[];
+  renewals: { id: string; provider: string; renewalDate: Date | null }[];
+  unreadDiscussions: number;
 }
 
 export async function getMyDay(principal: Principal): Promise<MyDayData> {
@@ -67,11 +76,38 @@ export async function getMyDay(principal: Principal): Promise<MyDayData> {
     .filter((t) => t.dueDate && t.dueDate >= now && t.dueDate <= in7)
     .map((t) => ({ id: t.id, title: t.title, dueDate: t.dueDate as Date, kind: "task" }));
 
+  // --- My Day 2.0 sources — all keyed to the user (assignment/ownership) ---
+  const [mentionNotifs, caseRows, designRows, campaignRows, pubRows, regRows, renewalRows, memberships] = await Promise.all([
+    prisma.notification.findMany({ where: { userId: uid, type: "discussion.mention", state: "unread" }, orderBy: { createdAt: "desc" }, take: 8 }),
+    prisma.customerCase.findMany({ where: { assignedToId: uid, archivedAt: null, status: { notIn: ["resolved", "closed"] } }, orderBy: { updatedAt: "desc" }, take: 10 }),
+    prisma.designRequest.findMany({ where: { designerId: uid, archivedAt: null, status: { notIn: ["delivered", "published", "archived"] } }, orderBy: { updatedAt: "desc" }, take: 10 }),
+    prisma.campaign.findMany({ where: { ownerId: uid, archivedAt: null, status: { notIn: ["completed", "cancelled"] } }, orderBy: { updatedAt: "desc" }, take: 10 }),
+    prisma.publishingItem.findMany({ where: { ownerId: uid, archivedAt: null, publishDate: { gte: startOfToday, lt: endOfToday }, status: { notIn: ["published", "cancelled"] } }, orderBy: { publishTime: "asc" }, take: 10 }),
+    prisma.registrationCase.findMany({ where: { archivedAt: null, assignedToId: uid, status: { notIn: ["approved", "rejected", "closed"] } }, orderBy: { expiryDate: "asc" }, take: 10 }),
+    prisma.subscription.findMany({ where: { ownerId: uid, archivedAt: null, status: "active", renewalDate: { gte: startOfToday, lte: in7 } }, orderBy: { renewalDate: "asc" }, take: 10 }),
+    prisma.channelMember.findMany({ where: { userId: uid }, select: { channelId: true, lastReadAt: true } }),
+  ]);
+
+  // Unread discussion count: channels with messages after my lastReadAt (from others).
+  let unreadDiscussions = 0;
+  for (const m of memberships) {
+    const c = await prisma.message.count({ where: { channelId: m.channelId, archivedAt: null, authorId: { not: uid }, ...(m.lastReadAt ? { createdAt: { gt: m.lastReadAt } } : {}) } });
+    if (c > 0) unreadDiscussions++;
+  }
+
   return {
     tasks,
     checks,
     approvals,
     deadlines,
     attendanceToday: attendance ? { status: attendance.status, checkedIn: !!attendance.actualStart } : null,
+    mentions: mentionNotifs.map((n) => ({ id: n.id, title: n.title, body: n.body, channelId: n.entityId })),
+    cases: caseRows.map((c) => ({ id: c.id, type: c.type, status: c.status, priority: c.priority })),
+    designs: designRows.map((d) => ({ id: d.id, assetType: d.assetType, status: d.status })),
+    campaigns: campaignRows.map((c) => ({ id: c.id, name: c.name, status: c.status })),
+    publishingToday: pubRows.map((p) => ({ id: p.id, contentType: p.contentType, platform: p.platform, status: p.status })),
+    registrations: regRows.map((r) => ({ id: r.id, label: r.registrationNumber ?? r.agentName ?? "Registration", stage: r.status, dueDate: r.expiryDate })),
+    renewals: renewalRows.map((s) => ({ id: s.id, provider: s.provider, renewalDate: s.renewalDate })),
+    unreadDiscussions,
   };
 }

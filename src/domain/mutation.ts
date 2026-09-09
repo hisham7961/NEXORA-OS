@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { writeAudit } from "@/lib/audit/log";
 import { can, assertRecordInScope, ForbiddenError, type Principal, type ScopeContext } from "@/lib/permissions/engine";
 import type { ScopeDimension } from "@/lib/permissions/catalog";
+import { recipientsAllowing } from "@/domain/notifications";
 
 /**
  * MUTATION FOUNDATION (Phase 2, Part F/T/V).
@@ -52,18 +53,27 @@ export interface NotifyInput {
   entityId?: string | null;
 }
 
-/** Create in-app notifications for a set of users (deduped; self excluded optionally). */
+/**
+ * Create in-app notifications for a set of users (deduped; self excluded
+ * optionally). Recipients who disabled this category's in-app channel are
+ * skipped (§22 preferences), and a groupKey (type:entity) is set so the center
+ * can collapse repeats and avoid spam.
+ */
 export async function notify(userIds: (string | null | undefined)[], n: NotifyInput, excludeUserId?: string): Promise<void> {
   const unique = [...new Set(userIds.filter((id): id is string => !!id))].filter((id) => id !== excludeUserId);
   if (unique.length === 0) return;
+  const allowed = await recipientsAllowing(unique, n.type);
+  if (allowed.length === 0) return;
+  const groupKey = n.entityId ? `${n.type}:${n.entityId}` : null;
   await prisma.notification.createMany({
-    data: unique.map((userId) => ({
+    data: allowed.map((userId) => ({
       userId,
       type: n.type,
       title: n.title,
       body: n.body ?? null,
       entityType: n.entityType ?? null,
       entityId: n.entityId ?? null,
+      groupKey,
     })),
   });
 }
