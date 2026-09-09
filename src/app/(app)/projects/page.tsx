@@ -1,0 +1,34 @@
+import type { Metadata } from "next";
+import type { Project } from "@prisma/client";
+import { pageGuard } from "@/lib/page-guard";
+import { AccessDenied } from "@/components/access-denied";
+import { listProjects, projectQuerySchema } from "@/domain/projects";
+import { getLookups, refName } from "@/domain/lookups";
+import { StatusBadge, EmptyState, type Column } from "@/components/ui";
+import { ResourceList } from "@/components/list/resource-list";
+import { BrandChip } from "@/components/entity-chips";
+import { formatDateShort } from "@/lib/format";
+
+export const metadata: Metadata = { title: "Projects" };
+
+export default async function ProjectsPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
+  const { principal, locale, denied } = await pageGuard("projects.view");
+  if (denied) return <AccessDenied locale={locale} />;
+  const sp = await searchParams;
+  const query = projectQuerySchema.parse(sp);
+  const [{ rows, total }, lookups] = await Promise.all([listProjects(principal, query), getLookups()]);
+
+  const columns: Column<Project>[] = [
+    { key: "name", header: "Project", render: (p) => p.name },
+    { key: "brand", header: "Brand", render: (p) => <BrandChip name={refName(lookups.brands, p.brandId)} color={p.brandId ? lookups.brands.get(p.brandId)?.meta : null} /> },
+    { key: "due", header: "Due", align: "end", render: (p) => <span className="tabular text-ink-3">{formatDateShort(p.dueDate, locale)}</span> },
+    { key: "status", header: "Status", render: (p) => <StatusBadge module="generic" status={p.status} /> },
+  ];
+
+  return (
+    <ResourceList title="Projects" description="Group related work under a project." countLabel="projects"
+      searchPlaceholder="Search projects…" columns={columns} rows={rows} getRowKey={(p) => p.id}
+      page={query.page} pageSize={query.pageSize} total={total} params={sp}
+      empty={<EmptyState title="No projects" description="Projects group tasks, creative and campaigns under one deliverable." />} />
+  );
+}
