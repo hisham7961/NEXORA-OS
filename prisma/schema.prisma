@@ -1286,8 +1286,13 @@ model Channel {
   type         String    @default("general") // brand|company|department|campaign|product|project|registration|store|general
   companyId    String?
   brandId      String?
+  countryId    String?
   departmentId String?
+  // Optional link to a specific entity (campaign/product/project/store/registration/…)
+  entityType   String?
+  entityId     String?
   isPrivate    Boolean   @default(false)
+  lastMessageAt DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   archivedAt   DateTime?
@@ -1297,6 +1302,7 @@ model Channel {
 
   @@index([brandId])
   @@index([type])
+  @@index([entityType, entityId])
 }
 
 model ChannelMember {

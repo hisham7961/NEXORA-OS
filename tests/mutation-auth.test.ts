@@ -143,3 +143,17 @@ describe("creative request + version approval scope (Part O)", () => {
     expect(() => assertRecordInScope(manager, "design.edit", { brandId: B, countryId: KW }, [...DIMS])).toThrow(ForbiddenError);
   });
 });
+
+describe("discussions channel scope (Part §9)", () => {
+  const employee4 = principal([customAssignment(["discussions.view", "discussions.create"], { brandId: A, countryId: KW })]);
+  it("can create a channel inside scope", () => {
+    expect(can(employee4, "discussions.create", { brandId: A, countryId: KW })).toBe(true);
+  });
+  it("cannot create a channel in another brand's scope", () => {
+    expect(can(employee4, "discussions.create", { brandId: B, countryId: KW })).toBe(false);
+  });
+  it("a public channel out of scope is not viewable (IDOR)", () => {
+    expect(() => assertRecordInScope(employee4, "discussions.view", { brandId: A, countryId: KW }, [...DIMS])).not.toThrow();
+    expect(() => assertRecordInScope(employee4, "discussions.view", { brandId: B, countryId: KW }, [...DIMS])).toThrow(ForbiddenError);
+  });
+});

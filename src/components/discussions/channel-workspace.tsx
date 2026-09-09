@@ -1,0 +1,345 @@
+"use client";
+
+import { useState, useTransition, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Send, Pin, PinOff, Reply, SmilePlus, Pencil, Trash2, Zap, X, CheckSquare, LifeBuoy, Stamp, Palette } from "lucide-react";
+import { Button, Textarea, Select } from "@/components/ui";
+import { Avatar } from "@/components/ui";
+import { useToast } from "@/components/providers";
+import { postMessageAction, editMessageAction, deleteMessageAction, pinMessageAction, reactMessageAction, convertMessageAction } from "@/app/actions/discussions";
+import { KIND_META } from "@/components/discussions/channel-sidebar";
+import type { ConvertTarget } from "@/domain/discussions";
+
+export interface WsMessage {
+  id: string;
+  authorId: string;
+  body: string;
+  kind: string;
+  isPinned: boolean;
+  editedAt: string | null;
+  createdAt: string;
+  parentId: string | null;
+  replyCount: number;
+  mentions: string[];
+  reactions: { emoji: string; count: number; mine: boolean }[];
+}
+
+export type UserMap = Record<string, { name: string; color?: string | null }>;
+
+const EMOJIS = ["👍", "🎉", "✅", "👀", "🔥", "❤️"];
+const CONVERT: { target: ConvertTarget; label: string; icon: typeof CheckSquare }[] = [
+  { target: "task", label: "Task", icon: CheckSquare },
+  { target: "case", label: "Customer case", icon: LifeBuoy },
+  { target: "approval", label: "Approval", icon: Stamp },
+  { target: "design", label: "Design request", icon: Palette },
+];
+
+function timeAgo(iso: string): string {
+  const d = new Date(iso);
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  return d.toLocaleDateString();
+}
+
+export function ChannelWorkspace({
+  channelId,
+  channelName,
+  messages,
+  pinned,
+  users,
+  currentUserId,
+  canManage,
+  approverOptions,
+}: {
+  channelId: string;
+  channelName: string;
+  messages: WsMessage[];
+  pinned: WsMessage[];
+  users: UserMap;
+  currentUserId: string;
+  canManage: boolean;
+  approverOptions: { id: string; label: string }[];
+}) {
+  const [thread, setThread] = useState<WsMessage | null>(null);
+  const [convert, setConvert] = useState<{ msg: WsMessage; target: ConvertTarget } | null>(null);
+
+  return (
+    <div className="flex h-full min-h-0 flex-1">
+      <div className="flex min-w-0 flex-1 flex-col">
+        {pinned.length > 0 && (
+          <div className="border-b border-line bg-surface-2/40 px-4 py-2">
+            <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-3"><Pin className="h-3 w-3" /> Pinned</div>
+            <ul className="space-y-1">
+              {pinned.map((m) => (
+                <li key={m.id} className="truncate text-[12.5px] text-ink-2"><span className="font-medium text-ink">{users[m.authorId]?.name ?? "Someone"}:</span> {m.body}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <MessageScroller
+          messages={messages}
+          users={users}
+          currentUserId={currentUserId}
+          canManage={canManage}
+          channelId={channelId}
+          onReply={setThread}
+          onConvert={(msg, target) => setConvert({ msg, target })}
+        />
+        <Composer channelId={channelId} placeholder={`Message #${channelName}`} />
+      </div>
+
+      {thread && (
+        <ThreadPanel channelId={channelId} root={thread} users={users} currentUserId={currentUserId} canManage={canManage} onClose={() => setThread(null)} onConvert={(msg, target) => setConvert({ msg, target })} />
+      )}
+
+      {convert && (
+        <ConvertDialog channelId={channelId} message={convert.msg} target={convert.target} approverOptions={approverOptions} onClose={() => setConvert(null)} />
+      )}
+    </div>
+  );
+}
+
+function MessageScroller({ messages, users, currentUserId, canManage, channelId, onReply, onConvert }: {
+  messages: WsMessage[]; users: UserMap; currentUserId: string; canManage: boolean; channelId: string;
+  onReply: (m: WsMessage) => void; onConvert: (m: WsMessage, t: ConvertTarget) => void;
+}) {
+  const endRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { endRef.current?.scrollIntoView(); }, [messages.length]);
+  return (
+    <div className="flex-1 overflow-y-auto px-4 py-3">
+      {messages.length === 0 ? (
+        <p className="py-8 text-center text-[13px] text-ink-3">No messages yet. Start the conversation.</p>
+      ) : (
+        <ul className="space-y-0.5">
+          {messages.map((m) => (
+            <MessageItem key={m.id} m={m} users={users} currentUserId={currentUserId} canManage={canManage} channelId={channelId} onReply={onReply} onConvert={onConvert} />
+          ))}
+        </ul>
+      )}
+      <div ref={endRef} />
+    </div>
+  );
+}
+
+function MessageItem({ m, users, currentUserId, canManage, channelId, onReply, onConvert, inThread }: {
+  m: WsMessage; users: UserMap; currentUserId: string; canManage: boolean; channelId: string;
+  onReply?: (m: WsMessage) => void; onConvert: (m: WsMessage, t: ConvertTarget) => void; inThread?: boolean;
+}) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [pending, start] = useTransition();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(m.body);
+  const [menu, setMenu] = useState(false);
+  const author = users[m.authorId];
+  const isMine = m.authorId === currentUserId;
+  const kind = KIND_META[m.kind];
+
+  const run = (fn: () => Promise<{ ok: boolean; error?: string }>) =>
+    start(async () => { const r = await fn(); if (r.ok) router.refresh(); else toast({ kind: "error", title: r.error ?? "Failed" }); });
+
+  return (
+    <li className={`group -mx-2 rounded-md px-2 py-1.5 hover:bg-surface-2/40 ${kind ? `border-s-2 ${kind.className}` : ""}`}>
+      <div className="flex gap-2.5">
+        <Avatar name={author?.name ?? "?"} size={28} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] font-semibold text-ink">{author?.name ?? "Unknown"}</span>
+            <span className="text-[11px] text-ink-3">{timeAgo(m.createdAt)}{m.editedAt ? " · edited" : ""}</span>
+            {kind && <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-2">{kind.label}</span>}
+            {m.isPinned && <Pin className="h-3 w-3 text-accent" />}
+          </div>
+          {editing ? (
+            <div className="mt-1 space-y-1.5">
+              <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} className="min-h-14 text-[13px]" />
+              <div className="flex gap-2">
+                <Button size="sm" variant="primary" disabled={pending} onClick={() => run(async () => { const r = await editMessageAction(channelId, m.id, draft); if (r.ok) setEditing(false); return r; })}>Save</Button>
+                <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setDraft(m.body); }}>Cancel</Button>
+              </div>
+            </div>
+          ) : (
+            <p className="whitespace-pre-wrap text-[13px] text-ink-2">{renderBody(m.body, users, m.mentions)}</p>
+          )}
+
+          <div className="mt-1 flex flex-wrap items-center gap-1">
+            {m.reactions.map((r) => (
+              <button key={r.emoji} disabled={pending} onClick={() => run(() => reactMessageAction(channelId, m.id, r.emoji))} className={`rounded-full border px-1.5 py-0.5 text-[11px] ${r.mine ? "border-accent bg-accent-soft text-accent" : "border-line text-ink-2 hover:bg-surface-2"}`}>
+                {r.emoji} {r.count}
+              </button>
+            ))}
+            {!inThread && m.replyCount > 0 && (
+              <button onClick={() => onReply?.(m)} className="rounded-full border border-line px-2 py-0.5 text-[11px] text-accent hover:bg-surface-2">{m.replyCount} {m.replyCount === 1 ? "reply" : "replies"}</button>
+            )}
+          </div>
+        </div>
+
+        {/* hover actions */}
+        <div className="relative flex items-start gap-0.5 opacity-0 group-hover:opacity-100">
+          <div className="flex items-center rounded-md border border-line bg-surface">
+            <EmojiPicker onPick={(e) => run(() => reactMessageAction(channelId, m.id, e))} />
+            {!inThread && onReply && <IconBtn title="Reply in thread" onClick={() => onReply(m)}><Reply className="h-3.5 w-3.5" /></IconBtn>}
+            {canManage && <IconBtn title={m.isPinned ? "Unpin" : "Pin"} onClick={() => run(() => pinMessageAction(channelId, m.id, !m.isPinned))}>{m.isPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}</IconBtn>}
+            <IconBtn title="Convert to work" onClick={() => setMenu((v) => !v)}><Zap className="h-3.5 w-3.5" /></IconBtn>
+            {isMine && <IconBtn title="Edit" onClick={() => setEditing(true)}><Pencil className="h-3.5 w-3.5" /></IconBtn>}
+            {(isMine || canManage) && <IconBtn title="Delete" onClick={() => run(() => deleteMessageAction(channelId, m.id))}><Trash2 className="h-3.5 w-3.5" /></IconBtn>}
+          </div>
+          {menu && (
+            <div className="absolute end-0 top-8 z-20 w-44 rounded-md border border-line bg-surface p-1 shadow-lg">
+              <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-ink-3">Convert to</div>
+              {CONVERT.map((c) => (
+                <button key={c.target} onClick={() => { setMenu(false); onConvert(m, c.target); }} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-[12.5px] text-ink-2 hover:bg-surface-2">
+                  <c.icon className="h-3.5 w-3.5" /> {c.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function IconBtn({ title, onClick, children }: { title: string; onClick: () => void; children: React.ReactNode }) {
+  return <button title={title} onClick={onClick} className="p-1.5 text-ink-3 hover:bg-surface-2 hover:text-ink">{children}</button>;
+}
+
+function EmojiPicker({ onPick }: { onPick: (e: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <IconBtn title="React" onClick={() => setOpen((v) => !v)}><SmilePlus className="h-3.5 w-3.5" /></IconBtn>
+      {open && (
+        <div className="absolute end-0 top-8 z-20 flex gap-0.5 rounded-md border border-line bg-surface p-1 shadow-lg">
+          {EMOJIS.map((e) => <button key={e} onClick={() => { onPick(e); setOpen(false); }} className="rounded p-1 text-[15px] hover:bg-surface-2">{e}</button>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function renderBody(body: string, users: UserMap, mentions: string[]) {
+  const names = new Set(mentions.map((id) => users[id]?.name).filter(Boolean) as string[]);
+  const parts = body.split(/(@[a-zA-Z0-9._-]+)/g);
+  return parts.map((p, i) => {
+    if (p.startsWith("@")) {
+      const handle = p.slice(1).toLowerCase();
+      const matched = [...names].some((n) => n.toLowerCase().replace(/\s+/g, "").startsWith(handle) || n.toLowerCase().split(/\s+/)[0] === handle);
+      if (matched || mentions.length) return <span key={i} className="rounded bg-accent-soft px-1 font-medium text-accent">{p}</span>;
+    }
+    return <span key={i}>{p}</span>;
+  });
+}
+
+function Composer({ channelId, placeholder, parentId, onSent }: { channelId: string; placeholder: string; parentId?: string; onSent?: () => void }) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [pending, start] = useTransition();
+  const [body, setBody] = useState("");
+  const [kind, setKind] = useState("message");
+
+  const send = () => {
+    if (!body.trim()) return;
+    start(async () => {
+      const r = await postMessageAction(channelId, body.trim(), kind, parentId);
+      if (r.ok) { setBody(""); setKind("message"); router.refresh(); onSent?.(); }
+      else toast({ kind: "error", title: r.error });
+    });
+  };
+
+  return (
+    <div className="border-t border-line p-3">
+      <div className="rounded-lg border border-line bg-surface focus-within:border-accent">
+        <Textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); } }}
+          placeholder={placeholder}
+          className="min-h-[44px] border-0 bg-transparent text-[13px] focus:ring-0"
+        />
+        <div className="flex items-center justify-between gap-2 border-t border-line px-2 py-1.5">
+          {!parentId ? (
+            <Select value={kind} onChange={(e) => setKind(e.target.value)} className="h-7 w-40 text-[12px]">
+              <option value="message">Message</option>
+              <option value="announcement">Announcement</option>
+              <option value="decision">Decision</option>
+              <option value="action_required">Action required</option>
+            </Select>
+          ) : <span className="text-[11px] text-ink-3">Reply</span>}
+          <Button size="sm" variant="primary" disabled={pending || !body.trim()} onClick={send}><Send className="h-3.5 w-3.5" /> Send</Button>
+        </div>
+      </div>
+      <p className="mt-1 text-[10.5px] text-ink-3">⌘/Ctrl + Enter to send · @name to mention</p>
+    </div>
+  );
+}
+
+function ThreadPanel({ channelId, root, users, currentUserId, canManage, onClose, onConvert }: {
+  channelId: string; root: WsMessage; users: UserMap; currentUserId: string; canManage: boolean; onClose: () => void; onConvert: (m: WsMessage, t: ConvertTarget) => void;
+}) {
+  const [replies, setReplies] = useState<WsMessage[] | null>(null);
+  useEffect(() => {
+    fetch(`/api/v1/discussions/${channelId}/messages`).catch(() => {}); // warm
+    fetch(`/api/v1/discussions/${channelId}/thread?parent=${root.id}`).then(async (r) => {
+      if (r.ok) { const j = await r.json(); setReplies(j.data ?? []); }
+    }).catch(() => setReplies([]));
+  }, [channelId, root.id]);
+
+  return (
+    <aside className="flex w-[360px] shrink-0 flex-col border-s border-line bg-surface">
+      <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
+        <span className="text-[13px] font-semibold text-ink">Thread</span>
+        <button onClick={onClose} className="text-ink-3 hover:text-ink"><X className="h-4 w-4" /></button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-3 py-2">
+        <ul className="space-y-0.5">
+          <MessageItem m={root} users={users} currentUserId={currentUserId} canManage={canManage} channelId={channelId} onConvert={onConvert} inThread />
+          <li className="my-1 border-t border-line" />
+          {replies === null ? <li className="py-2 text-[12px] text-ink-3">Loading…</li> : replies.map((r) => (
+            <MessageItem key={r.id} m={r} users={users} currentUserId={currentUserId} canManage={canManage} channelId={channelId} onConvert={onConvert} inThread />
+          ))}
+        </ul>
+      </div>
+      <Composer channelId={channelId} placeholder="Reply…" parentId={root.id} onSent={() => { setReplies(null); }} />
+    </aside>
+  );
+}
+
+function ConvertDialog({ channelId, message, target, approverOptions, onClose }: {
+  channelId: string; message: WsMessage; target: ConvertTarget; approverOptions: { id: string; label: string }[]; onClose: () => void;
+}) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [pending, start] = useTransition();
+  const [title, setTitle] = useState(message.body.split("\n")[0].slice(0, 120));
+  const [approver, setApprover] = useState("");
+  const labels: Record<ConvertTarget, string> = { task: "Task", case: "Customer case", approval: "Approval request", design: "Design request" };
+
+  const go = () => start(async () => {
+    const r = await convertMessageAction(channelId, message.id, target, { title, approverIds: target === "approval" && approver ? [approver] : undefined });
+    if (r.ok) { toast({ kind: "success", title: `${labels[target]} created` }); router.refresh(); const href = (r.data as { href?: string })?.href; onClose(); if (href) router.push(href); }
+    else toast({ kind: "error", title: r.error });
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
+      <div className="w-full max-w-md rounded-xl border border-line bg-surface p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <h3 className="mb-1 text-[15px] font-semibold text-ink">Convert to {labels[target]}</h3>
+        <p className="mb-3 text-[12px] text-ink-3">A backlink to this thread is kept on the new item.</p>
+        <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-3">Title</label>
+        <Textarea value={title} onChange={(e) => setTitle(e.target.value)} className="mb-3 min-h-14 text-[13px]" />
+        {target === "approval" && (
+          <>
+            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-3">Approver</label>
+            <Select value={approver} onChange={(e) => setApprover(e.target.value)} className="mb-3 w-full"><option value="">Select…</option>{approverOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</Select>
+          </>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" disabled={pending || !title.trim() || (target === "approval" && !approver)} onClick={go}>Create {labels[target]}</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
