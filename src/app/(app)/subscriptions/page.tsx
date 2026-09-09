@@ -5,9 +5,11 @@ import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
 import { canAnywhere } from "@/lib/permissions/engine";
 import { listSubscriptions, subscriptionQuerySchema } from "@/domain/subscriptions";
+import { getScopedOptions } from "@/domain/options";
 import { getLookups, refName } from "@/domain/lookups";
 import { StatusBadge, EmptyState, type Column } from "@/components/ui";
 import { ResourceList } from "@/components/list/resource-list";
+import { SubscriptionForm } from "@/components/subscriptions/subscription-controls";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { daysUntil } from "@/lib/utils";
 
@@ -18,7 +20,12 @@ export default async function SubscriptionsPage({ searchParams }: { searchParams
   if (denied) return <AccessDenied locale={locale} />;
   const sp = await searchParams;
   const query = subscriptionQuerySchema.parse(sp);
-  const [{ rows, total }, lookups] = await Promise.all([listSubscriptions(principal, query), getLookups()]);
+  const canCreate = canAnywhere(principal, "subscriptions.create");
+  const [{ rows, total }, lookups, options] = await Promise.all([
+    listSubscriptions(principal, query),
+    getLookups(),
+    canCreate ? getScopedOptions(principal, "subscriptions.create") : Promise.resolve(null),
+  ]);
   const showValues = canAnywhere(principal, "finance.view_values");
 
   const columns: Column<Subscription>[] = [
@@ -35,7 +42,8 @@ export default async function SubscriptionsPage({ searchParams }: { searchParams
     <ResourceList title="Subscriptions & Services" description="SaaS, domains, hosting and tools — with renewal alerts." countLabel="subscriptions"
       searchPlaceholder="Search providers…"
       filters={[{ name: "status", label: "Status", options: ["active", "expiring", "expired", "cancelled"].map((v) => ({ value: v, label: v })) }]}
-      columns={columns} rows={rows} getRowKey={(s) => s.id}
+      actions={canCreate && options ? <SubscriptionForm mode="create" options={{ brands: options.brands, countries: options.countries, companies: options.companies, users: options.users }} /> : undefined}
+      columns={columns} rows={rows} getRowKey={(s) => s.id} getRowHref={(s) => `/subscriptions/${s.id}`}
       page={query.page} pageSize={query.pageSize} total={total} params={sp}
       empty={<EmptyState icon={<CreditCard className="h-5 w-5" />} title="No subscriptions" description="Track recurring services and their renewal dates to avoid surprise lapses." />} />
   );

@@ -1,7 +1,9 @@
+import { z } from "zod";
 import { prisma } from "@/lib/db";
-import type { Principal } from "@/lib/permissions/engine";
+import { canAnywhere, type Principal } from "@/lib/permissions/engine";
 import { ServiceError } from "@/lib/api/handler";
-import { audit, type ActorContext } from "@/domain/mutation";
+import { assertCan, audit, notify, type ActorContext } from "@/domain/mutation";
+import { optionalString } from "@/lib/validation";
 
 /** Attendance overview (§22) — accountability, not surveillance. */
 export async function getAttendanceToday(_principal: Principal) {
@@ -119,4 +121,91 @@ export async function checkOut(ctx: ActorContext): Promise<void> {
   });
   await prisma.attendanceEvent.create({ data: { userId: ctx.principal.userId, type: "check_out", at: now, ip: ctx.ip ?? null } });
   await audit(ctx, { action: "attendance.check_out", entityType: "AttendanceRecord", entityId: ctx.principal.userId, summary: `Checked out (${totalWorkedMinutes}m worked)` });
+}
+
+// ---------------------------------------------------------------------------
+// ATTENDANCE CORRECTION LOOP (§25). Employees request corrections for their OWN
+// attendance; managers (attendance.manage) approve/reject/request-changes.
+// Approving applies the change; the original record and the request history are
+// preserved.
+// ---------------------------------------------------------------------------
+
+const CORRECTION_TYPES = ["missed_check_in", "missed_check_out", "incorrect_time", "break_error", "other"] as const;
+const CORRECTION_FIELDS = ["actualStart", "actualEnd", "breakMinutes"] as const;
+
+export const correctionInputSchema = z.object({
+  date: z.coerce.date({ invalid_type_error: "A date is required" }),
+  type: z.enum(CORRECTION_TYPES),
+  reason: z.string().trim().min(1).max(2000),
+  field: z.enum(CORRECTION_FIELDS).optional(),
+  requestedValue: optionalString, // ISO datetime for time fields, integer for breakMinutes
+});
+
+/** An employee requests a correction to their own attendance for a date. */
+export async function requestAttendanceCorrection(ctx: ActorContext, raw: unknown) {
+  const input = correctionInputSchema.parse(raw);
+  const day = new Date(input.date.getFullYear(), input.date.getMonth(), input.date.getDate());
+  const record = await prisma.attendanceRecord.findFirst({ where: { userId: ctx.principal.userId, date: day } });
+  const oldValue = record && input.field ? String((record as Record<string, unknown>)[input.field] ?? "") : null;
+
+  const correction = await prisma.attendanceCorrection.create({
+    data: {
+      userId: ctx.principal.userId, recordId: record?.id ?? null, date: day, type: input.type,
+      reason: input.reason, field: input.field ?? null, oldValue, requestedValue: input.requestedValue ?? null,
+      requestedById: ctx.principal.userId, status: "pending",
+    },
+  });
+  await audit(ctx, { action: "attendance.correction_requested", entityType: "AttendanceCorrection", entityId: correction.id, summary: `${input.type} for ${day.toISOString().slice(0, 10)}` });
+  // Notify managers who can decide (best-effort: users with attendance.manage).
+  const managers = await managerUserIds();
+  await notify(managers, { type: "attendance.correction_requested", title: "Attendance correction to review", body: input.reason.slice(0, 140), entityType: "AttendanceCorrection", entityId: correction.id }, ctx.principal.userId);
+  return correction;
+}
+
+async function managerUserIds(): Promise<string[]> {
+  // Users assigned a role granting attendance.manage (or super admins).
+  const users = await prisma.user.findMany({
+    where: { archivedAt: null, status: "active", OR: [{ isSuperAdmin: true }, { roleAssignments: { some: { role: { permissions: { some: { permissionKey: { in: ["attendance.manage", "*"] } } } } } } }] },
+    select: { id: true }, take: 50,
+  });
+  return users.map((u) => u.id);
+}
+
+/** My correction requests (most recent first). */
+export async function listMyCorrections(principal: Principal) {
+  return prisma.attendanceCorrection.findMany({ where: { userId: principal.userId }, orderBy: { createdAt: "desc" }, take: 50 });
+}
+
+/** Pending corrections a manager can act on. */
+export async function listPendingCorrections(principal: Principal) {
+  if (!canAnywhere(principal, "attendance.manage")) return [];
+  return prisma.attendanceCorrection.findMany({ where: { status: "pending" }, orderBy: { createdAt: "asc" }, take: 100 });
+}
+
+/**
+ * Manager decision. On approve, the requested value is applied to the attendance
+ * record (creating one for the date if none exists); the original record is not
+ * destroyed — the correction row preserves before/after. reject / request_changes
+ * leave the record unchanged.
+ */
+export async function decideAttendanceCorrection(ctx: ActorContext, id: string, decision: "approved" | "rejected" | "changes_requested", note?: string): Promise<void> {
+  assertCan(ctx.principal, "attendance.manage");
+  const c = await prisma.attendanceCorrection.findUnique({ where: { id } });
+  if (!c) throw new ServiceError("not_found", "Correction not found", 404);
+  if (c.status !== "pending") throw new ServiceError("decided", "This correction is already decided.", 422);
+
+  await prisma.$transaction(async (tx) => {
+    if (decision === "approved" && c.field && c.requestedValue != null) {
+      const day = new Date(c.date);
+      let record = await tx.attendanceRecord.findFirst({ where: { userId: c.userId, date: day } });
+      if (!record) record = await tx.attendanceRecord.create({ data: { userId: c.userId, date: day, status: "present" } });
+      const data: Record<string, unknown> = { adjustedById: ctx.principal.userId };
+      if (c.field === "breakMinutes") data.breakMinutes = Math.max(0, parseInt(c.requestedValue, 10) || 0);
+      else data[c.field] = new Date(c.requestedValue); // actualStart / actualEnd
+      await tx.attendanceRecord.update({ where: { id: record.id }, data });
+    }
+    await tx.attendanceCorrection.update({ where: { id }, data: { status: decision, reviewerId: ctx.principal.userId, reviewNote: note ?? null, decidedAt: new Date() } });
+  });
+  await audit(ctx, { action: `attendance.correction_${decision}`, entityType: "AttendanceCorrection", entityId: id, summary: c.type });
+  await notify([c.userId], { type: "attendance.correction_decided", title: `Your attendance correction was ${decision.replace("_", " ")}`, body: note ?? undefined, entityType: "AttendanceCorrection", entityId: id }, ctx.principal.userId);
 }

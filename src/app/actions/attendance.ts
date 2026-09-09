@@ -25,3 +25,18 @@ export async function endBreakAction(): Promise<ActionResult> {
 export async function checkOutAction(): Promise<ActionResult> {
   return clock(Att.checkOut);
 }
+
+export async function requestCorrectionAction(_prev: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const { str } = await import("@/lib/action");
+  const res = await runAction((ctx) => Att.requestAttendanceCorrection(ctx, {
+    date: str(fd, "date"), type: str(fd, "type"), reason: str(fd, "reason"), field: str(fd, "field"), requestedValue: str(fd, "requestedValue"),
+  }));
+  if (res.ok) revalidatePath("/attendance");
+  return res;
+}
+
+export async function decideCorrectionAction(id: string, decision: "approved" | "rejected" | "changes_requested", note?: string): Promise<ActionResult> {
+  const res = await runAction((ctx) => Att.decideAttendanceCorrection(ctx, id, decision, note));
+  if (res.ok) revalidatePath("/attendance");
+  return res;
+}

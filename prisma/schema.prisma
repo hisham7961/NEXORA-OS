@@ -1504,11 +1504,39 @@ model Subscription {
   licenses         Int?
   notes            String?
   status           String    @default("active")
+  // JSON int[] of day-thresholds already reminded for the CURRENT renewalDate
+  // (reset when the renewalDate changes) — keeps the reminder job idempotent.
+  remindersSentJson String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   archivedAt       DateTime?
 
   @@index([renewalDate])
+  @@index([status])
+}
+
+// Employee-initiated attendance correction request + manager decision (§25).
+// The original AttendanceRecord is never destroyed; approving applies the change
+// and the request row preserves the before/after history.
+model AttendanceCorrection {
+  id             String    @id @default(cuid())
+  userId         String // whose attendance
+  recordId       String?
+  date           DateTime
+  type           String // missed_check_in|missed_check_out|incorrect_time|break_error|other
+  reason         String
+  field          String? // which field the requestedValue targets (actualStart|actualEnd|breakMinutes|…)
+  oldValue       String?
+  requestedValue String?
+  status         String    @default("pending") // pending|approved|rejected|changes_requested
+  reviewerId     String?
+  reviewNote     String?
+  requestedById  String?
+  decidedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId, status])
   @@index([status])
 }
 
