@@ -101,6 +101,7 @@ export const dictionaries = {
     "auth.welcome": "Welcome back",
     "auth.subtitle": "Sign in to your workspace",
     "auth.invalid": "Invalid email or password",
+    "auth.tooMany": "Too many attempts. Please wait a moment and try again.",
     "auth.demoHint": "Demo accounts",
 
     "cc.title": "Command Center",
@@ -217,6 +218,7 @@ export const dictionaries = {
     "auth.welcome": "مرحبًا بعودتك",
     "auth.subtitle": "سجّل الدخول إلى مساحة عملك",
     "auth.invalid": "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+    "auth.tooMany": "محاولات كثيرة. انتظر لحظة ثم أعد المحاولة.",
     "auth.demoHint": "حسابات تجريبية",
 
     "cc.title": "مركز القيادة",

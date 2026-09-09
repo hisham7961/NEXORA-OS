@@ -4,6 +4,7 @@ import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
 import { canAnywhere } from "@/lib/permissions/engine";
 import { getSystemHealth, getJobsOverview } from "@/domain/platform";
+import { rateLimitBackend } from "@/lib/ratelimit";
 import { PageHeader, Panel, PanelHeader, StatusBadge, Metric, Badge } from "@/components/ui";
 import { RunJobButton } from "@/components/admin/job-controls";
 import { formatDateTime } from "@/lib/format";
@@ -18,7 +19,8 @@ export default async function SystemHealthPage() {
 
   return (
     <>
-      <PageHeader title="Operations Center" description="Live scheduler, background jobs, run history and recent events — nothing runs invisibly (§10, §37, §75)." />
+      <PageHeader title="Operations Center" description="Live scheduler, background jobs, run history and recent events — nothing runs invisibly (§10, §37, §75)."
+        meta={<Badge category={rateLimitBackend() === "memory" ? "warning" : "success"}>rate-limit: {rateLimitBackend()}</Badge>} />
       <Panel className="mb-4">
         <div className="grid grid-cols-2 gap-4 p-4 sm:grid-cols-4">
           <Metric label="Jobs scheduled" value={jobs.length} category="info" />

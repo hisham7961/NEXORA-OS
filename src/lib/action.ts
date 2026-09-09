@@ -34,6 +34,11 @@ export type ActionResult<T = unknown> =
 export async function runAction<T>(fn: (ctx: ActorContext) => Promise<T>): Promise<ActionResult<T>> {
   try {
     const ctx = await actorContext();
+    // Blanket per-user throttle on all mutating server actions (§1) — defense in
+    // depth alongside the per-endpoint API limits. Generous; abuse is logged.
+    const { rateLimit } = await import("@/lib/ratelimit");
+    const rl = await rateLimit("api", `action:${ctx.principal.userId}`);
+    if (!rl.allowed) return { ok: false, error: "Too many requests — please slow down and try again." };
     const data = await fn(ctx);
     return { ok: true, data };
   } catch (e) {

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth/password";
 import { createSession, destroySession } from "@/lib/auth/session";
 import { writeAudit } from "@/lib/audit/log";
+import { rateLimit } from "@/lib/ratelimit";
 import { isLocale } from "@/i18n";
 
 const credentialsSchema = z.object({
@@ -24,6 +25,15 @@ export async function signInAction(_prev: AuthState, formData: FormData): Promis
     password: String(formData.get("password") ?? ""),
   });
   if (!parsed.success) return { error: "invalid" };
+
+  // Brute-force protection (§1): throttle by IP + email before touching the DB.
+  const h0 = await headers();
+  const ip0 = h0.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anon";
+  const rl = await rateLimit("auth_login", `${ip0}:${parsed.data.email}`);
+  if (!rl.allowed) {
+    await writeAudit({ actorId: null, action: "auth.rate_limited", entityType: "User", summary: `login throttled for ${parsed.data.email}` }).catch(() => {});
+    return { error: "rate_limited" };
+  }
 
   const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
   const valid =

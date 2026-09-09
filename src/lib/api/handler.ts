@@ -3,7 +3,16 @@ import { ZodError, type ZodType } from "zod";
 import type { User } from "@prisma/client";
 import { getCurrentUser, getPrincipal } from "@/lib/auth/current-user";
 import { ForbiddenError, UnauthorizedError, type Principal } from "@/lib/permissions/engine";
+import { rateLimit, tooManyRequests, type BucketName } from "@/lib/ratelimit";
 import { fail } from "./response";
+
+/** Choose the rate-limit bucket for an API path (§1). */
+function bucketForPath(pathname: string, method: string): BucketName {
+  if (/\/api\/v1\/(accounting|finance|expenses|subscriptions)\//.test(pathname) && method !== "GET") return "finance_post";
+  if (/\/api\/v1\/(accounting|finance|permissions|users|developer|admin)/.test(pathname)) return "api_sensitive";
+  if (/\/api\/v1\/.+\/download/.test(pathname)) return "file_restricted";
+  return "api";
+}
 
 export interface ApiContext<P = Record<string, string>> {
   req: NextRequest;
@@ -38,6 +47,13 @@ export function route<P extends Record<string, string> = Record<string, string>>
       if (authRequired && (!principal || !user)) {
         throw new UnauthorizedError();
       }
+
+      // Rate limiting (§1): keyed by the authenticated user when known, else IP.
+      // Sensitive/finance/download paths get tighter buckets (see bucketForPath).
+      const pathname = new URL(req.url).pathname;
+      const identity = principal?.userId ?? ip ?? "anon";
+      const rl = await rateLimit(bucketForPath(pathname, req.method), `${identity}:${req.method}:${pathname}`);
+      if (!rl.allowed) return tooManyRequests(rl);
 
       return await handler({
         req,
