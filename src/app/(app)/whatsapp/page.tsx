@@ -3,10 +3,13 @@ import type { WhatsappCampaign } from "@prisma/client";
 import { MessageCircle } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
+import { canAnywhere } from "@/lib/permissions/engine";
 import { listWhatsapp, whatsappQuerySchema } from "@/domain/whatsapp";
+import { getScopedOptions } from "@/domain/options";
 import { getLookups, refName } from "@/domain/lookups";
 import { StatusBadge, EmptyState, type Column } from "@/components/ui";
 import { ResourceList } from "@/components/list/resource-list";
+import { WhatsappForm } from "@/components/whatsapp/whatsapp-form";
 import { BrandChip, UserChip } from "@/components/entity-chips";
 import { formatDateShort } from "@/lib/format";
 
@@ -17,7 +20,12 @@ export default async function WhatsappPage({ searchParams }: { searchParams: Pro
   if (denied) return <AccessDenied locale={locale} />;
   const sp = await searchParams;
   const query = whatsappQuerySchema.parse(sp);
-  const [{ rows, total }, lookups] = await Promise.all([listWhatsapp(principal, query), getLookups()]);
+  const canCreate = canAnywhere(principal, "whatsapp.create");
+  const [{ rows, total }, lookups, options] = await Promise.all([
+    listWhatsapp(principal, query),
+    getLookups(),
+    canCreate ? getScopedOptions(principal, "whatsapp.create") : Promise.resolve(null),
+  ]);
 
   const columns: Column<WhatsappCampaign>[] = [
     { key: "objective", header: "Objective", render: (w) => w.objective ?? "—" },
@@ -30,7 +38,8 @@ export default async function WhatsappPage({ searchParams }: { searchParams: Pro
 
   return (
     <ResourceList title="WhatsApp Campaigns" description="Third-party executed; internal workflow from brief to sent + results (§11)." countLabel="campaigns"
-      searchPlaceholder="Search WhatsApp campaigns…" columns={columns} rows={rows} getRowKey={(w) => w.id}
+      searchPlaceholder="Search WhatsApp campaigns…" columns={columns} rows={rows} getRowKey={(w) => w.id} getRowHref={(w) => `/whatsapp/${w.id}`}
+      actions={canCreate && options ? <WhatsappForm mode="create" options={{ brands: options.brands, countries: options.countries, users: options.users }} /> : undefined}
       page={query.page} pageSize={query.pageSize} total={total} params={sp}
       empty={<EmptyState icon={<MessageCircle className="h-5 w-5" />} title="No WhatsApp campaigns" description="Create a campaign, request its creative, get approval, then mark it sent and enter results." />} />
   );

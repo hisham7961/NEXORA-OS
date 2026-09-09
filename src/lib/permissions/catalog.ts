@@ -54,7 +54,7 @@ export const MODULES: ModuleDef[] = [
   // Marketing
   { key: "campaigns", label: "Campaigns", group: "Marketing", actions: ["view", "create", "edit", "delete", "approve", "export", "manage"] },
   { key: "social", label: "Social Publishing", group: "Marketing", actions: ["view", "create", "edit", "delete", "manage"] },
-  { key: "whatsapp", label: "WhatsApp Campaigns", group: "Marketing", actions: ["view", "create", "edit", "manage"] },
+  { key: "whatsapp", label: "WhatsApp Campaigns", group: "Marketing", actions: ["view", "create", "edit", "approve", "manage"] },
   // Creative
   { key: "design", label: "Design Requests", group: "Creative", actions: ["view", "create", "edit", "approve", "manage"] },
   { key: "creative_library", label: "Creative Library", group: "Creative", actions: ["view", "create", "edit", "manage"] },

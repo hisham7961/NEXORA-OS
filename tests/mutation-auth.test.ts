@@ -111,3 +111,19 @@ describe("social publishing scope (Part L/M)", () => {
     expect(() => assertRecordInScope(emp, "social.edit", { brandId: B, countryId: KW }, ["brandId", "countryId"])).toThrow(ForbiddenError);
   });
 });
+
+describe("whatsapp workflow scope + approval (Part N)", () => {
+  const employee2 = principal([assignment("marketing_employee", { brandId: A, countryId: KW })]);
+  const manager = principal([assignment("marketing_manager", { brandId: A, countryId: KW })]);
+  it("an employee can create/edit but cannot approve", () => {
+    expect(can(employee2, "whatsapp.create", { brandId: A, countryId: KW })).toBe(true);
+    expect(can(employee2, "whatsapp.approve", { brandId: A, countryId: KW })).toBe(false);
+  });
+  it("a manager can approve within scope only", () => {
+    expect(can(manager, "whatsapp.approve", { brandId: A, countryId: KW })).toBe(true);
+    expect(can(manager, "whatsapp.approve", { brandId: B, countryId: KW })).toBe(false);
+  });
+  it("blocks editing (IDOR) a campaign outside scope", () => {
+    expect(() => assertRecordInScope(manager, "whatsapp.edit", { brandId: B, countryId: KW }, ["brandId", "countryId"])).toThrow(ForbiddenError);
+  });
+});
