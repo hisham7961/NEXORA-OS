@@ -170,3 +170,29 @@ describe("approved answers approval gate (Part §13-17)", () => {
     expect(can(manager, "answers.approve", { brandId: B })).toBe(false);
   });
 });
+
+describe("subscriptions finance-value scope (Part §23-24)", () => {
+  const finance = principal([customAssignment(["subscriptions.view", "subscriptions.create", "subscriptions.edit"], { companyId: "co_A" })]);
+  const DIMS3 = ["companyId", "brandId", "countryId"] as const;
+  it("can manage subscriptions inside its company", () => {
+    expect(can(finance, "subscriptions.create", { companyId: "co_A" })).toBe(true);
+    expect(() => assertRecordInScope(finance, "subscriptions.edit", { companyId: "co_A", brandId: null, countryId: null }, [...DIMS3])).not.toThrow();
+  });
+  it("cannot edit a subscription in another company (IDOR)", () => {
+    expect(() => assertRecordInScope(finance, "subscriptions.edit", { companyId: "co_B", brandId: null, countryId: null }, [...DIMS3])).toThrow(ForbiddenError);
+  });
+  it("finance value visibility is gated by finance.view_values", () => {
+    expect(can(finance, "finance.view_values", { companyId: "co_A" })).toBe(false);
+  });
+});
+
+describe("attendance correction approval gate (Part §25)", () => {
+  const employee5 = principal([customAssignment(["attendance.view"], {})]);
+  const manager = principal([customAssignment(["attendance.view", "attendance.manage"], {})]);
+  it("an employee cannot approve corrections", () => {
+    expect(can(employee5, "attendance.manage")).toBe(false);
+  });
+  it("a manager can approve corrections", () => {
+    expect(can(manager, "attendance.manage")).toBe(true);
+  });
+});
