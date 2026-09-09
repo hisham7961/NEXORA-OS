@@ -110,8 +110,9 @@ export const campaignInputSchema = z.object({
   storeId: optionalString,
   ownerId: optionalString,
   currency: z.preprocess((v) => (typeof v === "string" && v.trim() ? v.trim().toUpperCase() : undefined), z.string().min(1).max(8).default("KWD")),
+  // plannedBudget is the user-managed figure. actualSpend is NOT accepted here —
+  // it is derived exclusively from non-target `spend` metrics (see METRIC_DICTIONARY.md).
   plannedBudget: optionalNumber,
-  actualSpend: optionalNumber,
   targetAudience: optionalString,
   startDate: optionalDate,
   endDate: optionalDate,
@@ -130,7 +131,7 @@ export async function createCampaign(ctx: ActorContext, raw: unknown): Promise<C
     data: {
       name: input.name, type: input.type, objective: input.objective ?? null, ...scope,
       storeId: input.storeId ?? null, ownerId: input.ownerId ?? null, currency: input.currency,
-      plannedBudget: input.plannedBudget ?? null, actualSpend: input.actualSpend ?? null,
+      plannedBudget: input.plannedBudget ?? null, actualSpend: null,
       targetAudience: input.targetAudience ?? null, startDate: input.startDate ?? null,
       endDate: input.endDate ?? null, notes: input.notes ?? null, status: "draft",
       createdById: ctx.principal.userId,
@@ -154,7 +155,8 @@ export async function updateCampaign(ctx: ActorContext, id: string, raw: unknown
   const existing = await loadEditableCampaign(ctx, id);
   const input = campaignUpdateSchema.parse(raw);
   const data: Record<string, unknown> = {};
-  for (const k of ["name", "type", "objective", "storeId", "ownerId", "currency", "plannedBudget", "actualSpend", "targetAudience", "startDate", "endDate", "notes"] as const) {
+  // Note: actualSpend is intentionally NOT settable here — it is derived from spend metrics.
+  for (const k of ["name", "type", "objective", "storeId", "ownerId", "currency", "plannedBudget", "targetAudience", "startDate", "endDate", "notes"] as const) {
     if (input[k] !== undefined) data[k] = input[k];
   }
   const updated = await prisma.campaign.update({ where: { id }, data });
@@ -184,9 +186,24 @@ export const metricInputSchema = z.object({
 });
 
 /**
- * Record a manual performance metric (§9). Actual (non-target) spend keeps the
- * campaign's `actualSpend` in sync so the budget panel reflects reality — done
- * atomically with the metric row.
+ * Recompute a campaign's derived `actualSpend` from the authoritative source:
+ * the sum of all non-target `spend` metrics. This is the ONLY writer of
+ * actualSpend — call it inside any transaction that adds/edits/deletes a metric
+ * (see METRIC_DICTIONARY.md). Returns the new value.
+ */
+export async function recomputeCampaignSpend(
+  tx: Pick<typeof prisma, "campaignMetric" | "campaign">,
+  campaignId: string,
+): Promise<number> {
+  const agg = await tx.campaignMetric.aggregate({ where: { campaignId, name: "spend", isTarget: false }, _sum: { value: true } });
+  const total = Number(agg._sum.value ?? 0);
+  await tx.campaign.update({ where: { id: campaignId }, data: { actualSpend: total } });
+  return total;
+}
+
+/**
+ * Record a manual performance metric (§9). A non-target `spend` metric triggers
+ * an atomic recompute of the campaign's derived `actualSpend`.
  */
 export async function addCampaignMetric(ctx: ActorContext, campaignId: string, raw: unknown) {
   const existing = await loadEditableCampaign(ctx, campaignId);
@@ -198,12 +215,58 @@ export async function addCampaignMetric(ctx: ActorContext, campaignId: string, r
         isTarget: input.isTarget, date: input.date ?? new Date(), note: input.note ?? null,
       },
     });
-    if (input.name === "spend" && !input.isTarget) {
-      const agg = await tx.campaignMetric.aggregate({ where: { campaignId, name: "spend", isTarget: false }, _sum: { value: true } });
-      await tx.campaign.update({ where: { id: campaignId }, data: { actualSpend: agg._sum.value ?? input.value } });
-    }
+    if (input.name === "spend" && !input.isTarget) await recomputeCampaignSpend(tx, campaignId);
     return m;
   });
   await audit(ctx, { action: "campaign.metric_added", entityType: "Campaign", entityId: campaignId, summary: `${input.isTarget ? "target " : ""}${input.name}: ${input.value}`, brandId: existing.brandId, companyId: existing.companyId });
   return metric;
+}
+
+/** Delete a metric; recompute derived spend atomically if it was a spend metric. */
+export async function deleteCampaignMetric(ctx: ActorContext, campaignId: string, metricId: string): Promise<void> {
+  const existing = await loadEditableCampaign(ctx, campaignId);
+  const metric = await prisma.campaignMetric.findUnique({ where: { id: metricId } });
+  if (!metric || metric.campaignId !== campaignId) throw new ServiceError("not_found", "Metric not found", 404);
+  await prisma.$transaction(async (tx) => {
+    await tx.campaignMetric.delete({ where: { id: metricId } });
+    if (metric.name === "spend" && !metric.isTarget) await recomputeCampaignSpend(tx, campaignId);
+  });
+  await audit(ctx, { action: "campaign.metric_deleted", entityType: "Campaign", entityId: campaignId, summary: `${metric.isTarget ? "target " : ""}${metric.name}: ${metric.value}`, brandId: existing.brandId, companyId: existing.companyId });
+}
+
+/**
+ * One-time, idempotent backfill/compat for the derived-spend model. For every
+ * campaign: if it has non-target `spend` metrics, recompute actualSpend from
+ * them; otherwise, if it carries a legacy non-zero actualSpend that was set
+ * directly (pre-Phase-2.5), preserve that figure by materializing it as a single
+ * dated `spend` metric (noted as migrated) and then recompute — so the value is
+ * never lost and the derived model becomes the single source of truth.
+ * Safe to run repeatedly (skips campaigns already carrying a migrated metric).
+ */
+export async function backfillCampaignSpend(actorId: string | null): Promise<{ recomputed: number; migrated: number }> {
+  const campaigns = await prisma.campaign.findMany({ select: { id: true, actualSpend: true, createdAt: true } });
+  let recomputed = 0;
+  let migrated = 0;
+  for (const c of campaigns) {
+    const spendCount = await prisma.campaignMetric.count({ where: { campaignId: c.id, name: "spend", isTarget: false } });
+    if (spendCount > 0) {
+      await prisma.$transaction((tx) => recomputeCampaignSpend(tx, c.id));
+      recomputed++;
+      continue;
+    }
+    const legacy = Number(c.actualSpend ?? 0);
+    if (legacy > 0) {
+      await prisma.$transaction(async (tx) => {
+        await tx.campaignMetric.create({
+          data: { campaignId: c.id, name: "spend", value: legacy, isTarget: false, date: c.createdAt, note: "Migrated legacy actualSpend (Phase 2.5 derived-spend model)" },
+        });
+        await recomputeCampaignSpend(tx, c.id);
+      });
+      migrated++;
+    }
+  }
+  if (actorId) {
+    await prisma.auditLog.create({ data: { actorId, action: "job.campaign_spend_backfill", entityType: "BackgroundJob", summary: `${recomputed} recomputed, ${migrated} migrated` } });
+  }
+  return { recomputed, migrated };
 }

@@ -16,7 +16,6 @@ function buildInput(fd: FormData) {
     ownerId: str(fd, "ownerId"),
     currency: str(fd, "currency"),
     plannedBudget: str(fd, "plannedBudget"),
-    actualSpend: str(fd, "actualSpend"),
     targetAudience: str(fd, "targetAudience"),
     startDate: str(fd, "startDate"),
     endDate: str(fd, "endDate"),
@@ -62,5 +61,11 @@ export async function addCampaignMetricAction(_prev: ActionResult | null, fd: Fo
     }),
   );
   if (res.ok) revalidatePath(`/campaigns/${id}`);
+  return res;
+}
+
+export async function deleteCampaignMetricAction(campaignId: string, metricId: string): Promise<ActionResult> {
+  const res = await runAction((ctx) => Campaigns.deleteCampaignMetric(ctx, campaignId, metricId));
+  if (res.ok) revalidatePath(`/campaigns/${campaignId}`);
   return res;
 }

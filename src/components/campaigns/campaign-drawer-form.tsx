@@ -22,7 +22,6 @@ export interface CampaignDefaults {
   ownerId?: string | null;
   currency?: string;
   plannedBudget?: string | null;
-  actualSpend?: string | null;
   targetAudience?: string | null;
   startDate?: string | null;
   endDate?: string | null;
@@ -85,14 +84,9 @@ export function CampaignDrawerForm({
             <FormField label="Currency" name="currency">
               <Input name="currency" defaultValue={defaults.currency ?? "KWD"} maxLength={8} />
             </FormField>
-            <FormField label="Planned budget" name="plannedBudget">
+            <FormField label="Planned budget" name="plannedBudget" hint={isEdit ? "Actual spend is derived from logged spend metrics" : undefined}>
               <Input type="number" step="0.001" min="0" name="plannedBudget" defaultValue={defaults.plannedBudget ?? ""} placeholder="0.000" />
             </FormField>
-            {isEdit && (
-              <FormField label="Actual spend" name="actualSpend" hint="Auto-updates from logged spend metrics">
-                <Input type="number" step="0.001" min="0" name="actualSpend" defaultValue={defaults.actualSpend ?? ""} placeholder="0.000" />
-              </FormField>
-            )}
             <FormField label="Start date" name="startDate">
               <Input type="date" name="startDate" defaultValue={defaults.startDate ?? ""} />
             </FormField>

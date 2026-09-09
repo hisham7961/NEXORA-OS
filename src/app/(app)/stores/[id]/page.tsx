@@ -49,12 +49,13 @@ export default async function StoreDetailPage({ params }: { params: Promise<{ id
       {latest && (
         <Panel className="mb-4">
           <PanelHeader title="Latest performance" description={`Period from ${formatDate(latest.periodStart, locale)}`} />
-          <PanelBody className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">
-            <Metric label="Sales" value={formatCurrency(latest.sales, store.currency, locale)} />
+          <PanelBody className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
+            <Metric label="Gross sales" value={formatCurrency(latest.sales, store.currency, locale)} />
+            <Metric label="Net sales" value={formatCurrency(latest.netSales, store.currency, locale)} />
             <Metric label="Orders" value={formatNumber(latest.orders, locale)} />
             <Metric label="AOV" value={formatCurrency(latest.aov, store.currency, locale)} />
             <Metric label="Returns" value={formatNumber(latest.returns, locale)} />
-            <Metric label="Gross margin" value={formatCurrency(latest.grossMargin, store.currency, locale)} category="success" />
+            <Metric label="Gross profit" value={formatCurrency(latest.grossMargin, store.currency, locale)} category="success" />
             <Metric label="Net contribution" value={formatCurrency(latest.netContribution, store.currency, locale)} category={Number(latest.netContribution ?? 0) < 0 ? "critical" : "success"} />
           </PanelBody>
         </Panel>
@@ -66,11 +67,12 @@ export default async function StoreDetailPage({ params }: { params: Promise<{ id
           columns={[
             { key: "period", header: "Period", render: (p) => `${formatDate(p.periodStart, locale)}` },
             { key: "type", header: "Type", render: (p) => <span className="capitalize text-ink-3">{p.periodType}</span> },
-            { key: "sales", header: "Sales", align: "end", render: (p) => formatCurrency(p.sales, store.currency, locale) },
+            { key: "sales", header: "Gross sales", align: "end", render: (p) => formatCurrency(p.sales, store.currency, locale) },
+            { key: "net_sales", header: "Net sales", align: "end", render: (p) => formatCurrency(p.netSales, store.currency, locale) },
             { key: "orders", header: "Orders", align: "end", render: (p) => formatNumber(p.orders, locale) },
             { key: "aov", header: "AOV", align: "end", render: (p) => formatCurrency(p.aov, store.currency, locale) },
-            { key: "margin", header: "Margin", align: "end", render: (p) => formatCurrency(p.grossMargin, store.currency, locale) },
-            { key: "net", header: "Net", align: "end", render: (p) => formatCurrency(p.netContribution, store.currency, locale) },
+            { key: "profit", header: "Gross profit", align: "end", render: (p) => formatCurrency(p.grossMargin, store.currency, locale) },
+            { key: "net", header: "Net contrib.", align: "end", render: (p) => formatCurrency(p.netContribution, store.currency, locale) },
           ]}
           rows={store.performance}
           getRowKey={(p) => p.id}

@@ -90,10 +90,34 @@ function round2(n: number): number {
 }
 
 /**
- * Record (or update) a store's performance for a period. Derived metrics —
- * AOV, gross margin and net contribution — are computed server-side from the
- * entered figures so they can't drift. Re-entering the same period upserts,
- * making imports and manual entry idempotent.
+ * The authoritative store-performance metric model (see docs/METRIC_DICTIONARY.md).
+ * INPUTS are stored as entered; DERIVED values are computed here, server-side,
+ * so Accounting and Analytics all read one consistent definition:
+ *   Net Sales        = Gross Sales − Discounts − Refunds
+ *   AOV              = Net Sales / Orders
+ *   Gross Profit     = Net Sales − COGS            (stored in `grossMargin`)
+ *   Net Contribution = Gross Profit − Ad Spend − Shipping Cost
+ * A component absent (null) is treated as 0 in the arithmetic; a derived value is
+ * null only when it has no meaningful inputs (e.g. no gross sales entered).
+ */
+export function deriveStoreMetrics(input: {
+  sales?: number | null; orders?: number | null; refunds?: number | null;
+  discounts?: number | null; cogs?: number | null; adSpend?: number | null; shippingCost?: number | null;
+}) {
+  const sales = input.sales ?? null;
+  const netSales = sales != null ? round2(sales - (input.discounts ?? 0) - (input.refunds ?? 0)) : null;
+  const orders = input.orders ?? null;
+  const aov = netSales != null && orders && orders > 0 ? round2(netSales / orders) : null;
+  const grossMargin = netSales != null && input.cogs != null ? round2(netSales - input.cogs) : null;
+  const netContribution =
+    grossMargin != null ? round2(grossMargin - (input.adSpend ?? 0) - (input.shippingCost ?? 0)) : null;
+  return { netSales, aov, grossMargin, netContribution };
+}
+
+/**
+ * Record (or update) a store's performance for a period. Derived metrics are
+ * computed from the entered input components so they can't drift. Re-entering
+ * the same period upserts, making imports and manual entry idempotent.
  */
 export async function recordStorePerformance(ctx: ActorContext, storeId: string, raw: unknown): Promise<StorePerformance> {
   const store = await prisma.store.findUnique({ where: { id: storeId } });
@@ -105,28 +129,20 @@ export async function recordStorePerformance(ctx: ActorContext, storeId: string,
     throw new ServiceError("invalid_period", "Period end cannot be before the start", 422);
   }
 
-  const sales = input.sales ?? null;
-  const orders = input.orders ?? null;
-  const refunds = input.refunds ?? null;
-  const cogs = input.cogs ?? null;
-  const adSpend = input.adSpend ?? null;
-  const shippingCost = input.shippingCost ?? null;
-
-  const aov = sales != null && orders && orders > 0 ? round2(sales / orders) : null;
-  // Gross margin = sales − COGS − refunds (contribution before ad/shipping).
-  const grossMargin = sales != null && cogs != null ? round2(sales - cogs - (refunds ?? 0)) : null;
-  // Net contribution additionally nets out ad spend and shipping cost.
-  const netContribution =
-    grossMargin != null ? round2(grossMargin - (adSpend ?? 0) - (shippingCost ?? 0)) : null;
+  const { netSales, aov, grossMargin, netContribution } = deriveStoreMetrics({
+    sales: input.sales, orders: input.orders, refunds: input.refunds,
+    discounts: input.discounts, cogs: input.cogs, adSpend: input.adSpend, shippingCost: input.shippingCost,
+  });
 
   const data = {
     periodType: input.periodType,
     periodEnd: input.periodEnd ?? null,
-    sales, orders: orders != null ? Math.trunc(orders) : null,
+    sales: input.sales ?? null, orders: input.orders != null ? Math.trunc(input.orders) : null,
     unitsSold: input.unitsSold != null ? Math.trunc(input.unitsSold) : null,
     returns: input.returns != null ? Math.trunc(input.returns) : null,
-    refunds, adSpend, discounts: input.discounts ?? null, shippingCost, cogs,
-    aov, grossMargin, netContribution,
+    refunds: input.refunds ?? null, adSpend: input.adSpend ?? null, discounts: input.discounts ?? null,
+    shippingCost: input.shippingCost ?? null, cogs: input.cogs ?? null,
+    netSales, aov, grossMargin, netContribution,
     campaignId: input.campaignId ?? null, notes: input.notes ?? null,
   };
 
@@ -142,7 +158,7 @@ export async function recordStorePerformance(ctx: ActorContext, storeId: string,
   await audit(ctx, {
     action: existing ? "store.performance_updated" : "store.performance_recorded",
     entityType: "Store", entityId: storeId,
-    summary: `${input.periodType} ${input.periodStart.toISOString().slice(0, 10)}${sales != null ? ` · sales ${sales}` : ""}`,
+    summary: `${input.periodType} ${input.periodStart.toISOString().slice(0, 10)}${input.sales != null ? ` · gross sales ${input.sales}` : ""}`,
     brandId: store.brandId, companyId: store.companyId,
   });
   return row;

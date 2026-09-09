@@ -30,7 +30,7 @@ export function RecordPerformanceButton({ storeId, currency }: { storeId: string
             <FormField label="Period end" name="periodEnd" hint="Optional (weekly/monthly)">
               <Input type="date" name="periodEnd" />
             </FormField>
-            <FormField label={`Sales (${currency})`} name="sales">
+            <FormField label={`Gross sales (${currency})`} name="sales" hint="Before discounts & refunds">
               <Input type="number" step="0.001" min="0" name="sales" placeholder="0.000" />
             </FormField>
             <FormField label="Orders" name="orders">

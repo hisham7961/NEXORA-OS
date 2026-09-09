@@ -2,11 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button, Input, Select, Textarea, Drawer } from "@/components/ui";
 import { ActionForm, FormField, FormSection } from "@/components/form/action-form";
 import { useToast } from "@/components/providers";
-import { setCampaignStatusAction, addCampaignMetricAction } from "@/app/actions/campaigns";
+import { setCampaignStatusAction, addCampaignMetricAction, deleteCampaignMetricAction } from "@/app/actions/campaigns";
 import type { ActionResult } from "@/lib/action";
 import { humanize } from "@/lib/status";
 
@@ -98,5 +98,27 @@ export function AddMetricButton({ campaignId }: { campaignId: string }) {
         </ActionForm>
       </Drawer>
     </>
+  );
+}
+
+export function DeleteMetricButton({ campaignId, metricId }: { campaignId: string; metricId: string }) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [pending, start] = useTransition();
+  return (
+    <button
+      disabled={pending}
+      aria-label="Delete metric"
+      className="text-ink-3 hover:text-critical disabled:opacity-50"
+      onClick={() =>
+        start(async () => {
+          const res = await deleteCampaignMetricAction(campaignId, metricId);
+          if (res.ok) { toast({ kind: "success", title: "Metric removed" }); router.refresh(); }
+          else toast({ kind: "error", title: res.error });
+        })
+      }
+    >
+      <Trash2 className="h-3.5 w-3.5" />
+    </button>
   );
 }

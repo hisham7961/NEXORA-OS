@@ -1114,19 +1114,22 @@ model StorePerformance {
   periodType      String   @default("daily") // daily | weekly | monthly
   periodStart     DateTime
   periodEnd       DateTime?
-  sales           Decimal?
+  // --- INPUT components (entered) — see docs/METRIC_DICTIONARY.md ---
+  sales           Decimal? // Gross Sales (before discounts/refunds)
   orders          Int?
   unitsSold       Int?
   returns         Int?
   refunds         Decimal?
-  aov             Decimal?
-  conversionRate  Decimal?
-  adSpend         Decimal?
   discounts       Decimal?
-  shippingCost    Decimal?
   cogs            Decimal?
-  grossMargin     Decimal?
-  netContribution Decimal?
+  adSpend         Decimal?
+  shippingCost    Decimal?
+  conversionRate  Decimal?
+  // --- DERIVED, computed server-side from the inputs above ---
+  netSales        Decimal? // = sales - discounts - refunds
+  aov             Decimal? // = netSales / orders
+  grossMargin     Decimal? // Gross Profit = netSales - cogs
+  netContribution Decimal? // = grossMargin - adSpend - shippingCost
   campaignId      String?
   notes           String?
   createdAt       DateTime @default(now())

@@ -13,7 +13,7 @@ import { getLookups, refName } from "@/domain/lookups";
 import { Panel, PanelHeader, PanelBody, DataTable, StatusBadge, Badge, TabBar, EmptyState, Metric, type Column, type TabItem } from "@/components/ui";
 import { ActivityTimeline, type TimelineEntry } from "@/components/activity-timeline";
 import { CampaignDrawerForm } from "@/components/campaigns/campaign-drawer-form";
-import { CampaignStatusBar, AddMetricButton } from "@/components/campaigns/campaign-actions";
+import { CampaignStatusBar, AddMetricButton, DeleteMetricButton } from "@/components/campaigns/campaign-actions";
 import { BrandChip, CountryChip, UserChip } from "@/components/entity-chips";
 import { formatDate, formatCurrency, formatNumber } from "@/lib/format";
 
@@ -100,7 +100,6 @@ export default async function CampaignDetailPage({
               id: campaign.id, name: campaign.name, type: campaign.type, objective: campaign.objective,
               ownerId: campaign.ownerId, currency: campaign.currency,
               plannedBudget: campaign.plannedBudget != null ? String(campaign.plannedBudget) : "",
-              actualSpend: campaign.actualSpend != null ? String(campaign.actualSpend) : "",
               targetAudience: campaign.targetAudience, notes: campaign.notes,
               startDate: isoDate(campaign.startDate), endDate: isoDate(campaign.endDate),
             }}
@@ -165,7 +164,7 @@ export default async function CampaignDetailPage({
         <Panel>
           <PanelHeader
             title="Performance metrics"
-            description="Actual results and targets. Spend rolls up into the campaign budget."
+            description="Actual results and targets. Non-target spend metrics are the single source of Actual spend — the budget derives from them."
             action={canEdit ? <AddMetricButton campaignId={campaign.id} /> : undefined}
           />
           <DataTable
@@ -175,6 +174,7 @@ export default async function CampaignDetailPage({
               { key: "unit", header: "Unit", render: (m) => m.unit ?? "—" },
               { key: "kind", header: "Kind", render: (m) => (m.isTarget ? <Badge category="info">Target</Badge> : <span className="text-ink-3">Actual</span>) },
               { key: "date", header: "Date", align: "end", render: (m) => formatDate(m.date, locale) },
+              ...(canEdit ? [{ key: "del", header: "", align: "end" as const, render: (m: (typeof metrics)[number]) => <DeleteMetricButton campaignId={campaign.id} metricId={m.id} /> }] : []),
             ] as Column<(typeof metrics)[number]>[]}
             rows={metrics}
             getRowKey={(m) => m.id}
