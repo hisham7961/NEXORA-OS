@@ -32,6 +32,46 @@
 
 ---
 
+## Phase 2 — Production Hardening & Write Paths (status)
+
+Phase 2 turned NEXORA from a read-oriented surface into an **operable** system, and
+hardened the repository for production. A write path is ✅ only when **UI + mutation
++ service + API + permission + validation + transaction + audit + real persistence**
+all work (verified end-to-end on PostgreSQL), per the brief's own bar.
+
+| Part | Area | Status | Notes |
+|------|------|:------:|-------|
+| A | Freeze Phase 1 (`main`) + `claude/phase-2-write-paths` | ✅ | Stable baseline branch; all Phase-2 work isolated. |
+| B | Security / repo hygiene | ✅ | `.env` untracked + gitignored; `.env.example` only. Production **fails startup** on missing/placeholder/short `NEXORA_SESSION_SECRET` (via `instrumentation.ts`). Seed refuses to run against production/non-local DB unless `NEXORA_ALLOW_SEED=true`. |
+| C | PostgreSQL + migrations | ✅ | Single DB for dev + prod (no SQLite). Versioned migration in `prisma/migrations`; `migrate deploy` is the path (no `db push`). `docker-compose.yml` for local. Case-insensitive search. Verified: **clean-DB migrate + seed** works. |
+| D | CI quality gate | ✅ | GitHub Actions: `npm ci` → prisma generate → **migrate deploy on a clean Postgres service** → typecheck → tests → build. |
+| F | Universal action/form foundation | ✅ | `runAction`/`ActorContext`, `mutation.ts` (audit/notify/activity), `ActionForm` (per-field validation, dirty-guard, toasts), `Drawer`, `ToastProvider`, `ActivityTimeline`, scoped form `options`. |
+| **G** | **Tasks** write path | ✅ | create/edit/status/assign/checklist/subtask/dependency/archive. Verified. |
+| **H** | **Daily Check execution** | ✅ | complete-item (required note/evidence), submit, verify; own-instance only. Verified. |
+| **I** | **Daily Check generator** | ✅ | Real, idempotent, schedule-aware, logged in System Jobs, retryable. Verified. |
+| **J** | **Approval engine** | ✅ | Sequential multi-step; immutable history; approve/reject/changes/cancel. Verified. |
+| **Q** | **Customer Cases** write path | ✅ | create/assign/status/escalate/resolve/notes. Verified. |
+| **R** | **Regulatory** write path | ✅ | stage transitions write the event timeline; requirements; authority responses. Verified. |
+| **S** | **Attendance** clock | ✅ | check-in/break/back/check-out state machine with validated transitions + computed durations. Verified. |
+| **X** | **Permission administration** | ✅ | create/edit roles, scoped assignments + expiry, remove; **no privilege escalation** (scope-bounded, super-admin protected); all audited. Verified. |
+| T | Audit everything | ✅* | Every implemented mutation audits (create/edit/status/assign/approval/attendance/registration/permission changes) and is readable in the Audit Explorer. *Grows with each remaining write path. |
+| U | API parity | ✅* | Each implemented action is exposed under `/api/v1` sharing the exact domain logic. |
+| V | Transactions & concurrency | ✅ | Multi-record ops (task+assignees+checklist, approval decisions, registration stage+event, break accounting, role+permissions) run in `prisma.$transaction`; generator + dependencies are idempotent/guarded. |
+| K | Marketing Campaign write path | 🟡 | **Next increment.** Read/detail exist; create/edit/status/metrics follow the same proven pattern. |
+| L,M | Social publishing actions + recurring | 🟡 | **Next increment.** |
+| N | WhatsApp workflow | 🟡 | **Next increment.** |
+| O | Creative request actions | 🟡 | **Next increment.** |
+| P | Store performance entry | 🟡 | **Next increment.** |
+| W | UX quality | ✅ | Drawers, inline controls, toasts, dirty-guard, activity timelines, validation — premium; RTL + dark verified across the foundation. |
+| Y | Accounting UI deferred | ✅ | Schema + dimensions preserved; no accounting UI built this phase (as instructed). |
+| Z | Verification + tests + coverage | ✅ | typecheck + build + 31 tests (incl. mutation-authorization suite) + clean-DB migration + seed; each write path verified live on Postgres. This document updated. |
+
+**Changelog (this phase):** branches (A) → security hardening (B) → PostgreSQL + migrations (C) → CI (D) → action/form foundation (F) → Tasks (G) → Daily Checks + generator (H,I) → Approvals (J) → Attendance (S) → Customer Cases (Q) → Regulatory (R) → Permission administration (X) → verification (Z). Each shipped as its own commit with an end-to-end Postgres verification.
+
+**Remaining gaps (next increment), in priority order:** Campaign write path + manual metrics (K); Store performance entry (P); Social publishing actions + coverage matrix + recurring generator (L, M); WhatsApp workflow (N); Creative request lifecycle + version approval (O). Then: employee-initiated attendance-correction approval loop; file uploads to object storage (§21/§52); the configurable Workflow engine UI (§50); the full accounting posting + statements (§26, the dedicated next phase per Part Y); rate-limiting + MFA (§38).
+
+---
+
 ## المقارنة التفصيلية (Section-by-section)
 
 | # | Section (from brief) | Status | ملاحظات / Notes |
