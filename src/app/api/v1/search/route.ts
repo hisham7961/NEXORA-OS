@@ -4,6 +4,9 @@ import { prisma } from "@/lib/db";
 import { canAnywhere, accessibleScopeIds } from "@/lib/permissions/engine";
 import { scopedWhere, DIMS_CBC } from "@/domain/scope";
 import { humanize } from "@/lib/status";
+import { searchKnowledge } from "@/domain/knowledge";
+import { findApprovedAnswers } from "@/domain/answers";
+import { listFiles } from "@/domain/files";
 
 interface Hit {
   type: string;
@@ -66,6 +69,29 @@ export const GET = route(async ({ principal, req }) => {
       prisma.registrationCase
         .findMany({ where: scopedWhere(principal, "registrations.view", DIMS_CBC, { archivedAt: null, registrationNumber: { contains: q, mode: "insensitive" } }), take: TAKE })
         .then((rows) => rows.map((r) => ({ type: "registration", id: r.id, title: r.registrationNumber ?? "Registration case", subtitle: "Registration", href: `/registrations/${r.id}` }))),
+    );
+  }
+
+  // Knowledge, approved answers and files (§20) — permission + scope aware.
+  if (canAnywhere(principal, "knowledge.view")) {
+    tasks.push(
+      searchKnowledge(principal, q, TAKE).then((rows) =>
+        rows.map((a) => ({ type: "knowledge", id: a.id, title: a.title, subtitle: "Knowledge", href: `/knowledge/${a.id}` })),
+      ),
+    );
+  }
+  if (canAnywhere(principal, "answers.view")) {
+    tasks.push(
+      findApprovedAnswers(principal, { q }).then((rows) =>
+        rows.slice(0, TAKE).map((a) => ({ type: "answer", id: a.id, title: a.question, subtitle: "Approved answer", href: `/answers/${a.id}` })),
+      ),
+    );
+  }
+  if (canAnywhere(principal, "files.view")) {
+    tasks.push(
+      listFiles(principal, { q, page: 1, pageSize: TAKE } as never).then(({ rows }) =>
+        rows.map((f) => ({ type: "file", id: f.id, title: f.name, subtitle: "File", href: `/files/${f.id}` })),
+      ),
     );
   }
 

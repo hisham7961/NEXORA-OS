@@ -75,7 +75,7 @@ export const MODULES: ModuleDef[] = [
   { key: "teams", label: "Teams", group: "Organization", actions: ["view", "create", "edit", "delete", "manage"] },
   { key: "employees", label: "Employees", group: "Organization", actions: ["view", "create", "edit", "delete", "manage"] },
   // Knowledge & Communication
-  { key: "knowledge", label: "Knowledge Base", group: "Knowledge", actions: ["view", "create", "edit", "manage"] },
+  { key: "knowledge", label: "Knowledge Base", group: "Knowledge", actions: ["view", "create", "edit", "approve", "manage"] },
   { key: "files", label: "Files", group: "Knowledge", actions: ["view", "create", "edit", "delete", "manage"] },
   { key: "discussions", label: "Discussions", group: "Communication", actions: ["view", "create", "edit", "manage"] },
   // Finance

@@ -1295,14 +1295,17 @@ model AnswerRequest {
 model KnowledgeArticle {
   id            String    @id @default(cuid())
   title         String
-  body          String
+  body          String // denormalized current published body
   category      String?
   tagsJson      String?
   authorId      String?
   reviewerId    String?
   brandId       String?
-  status        String    @default("published") // draft|published|archived
-  version       Int       @default(1)
+  productId     String?
+  countryId     String?
+  status        String    @default("draft") // draft|in_review|published|archived
+  version       Int       @default(1) // current published version number
+  currentVersionId String?
   lastReviewedAt DateTime?
   reviewDueAt   DateTime?
   visibility    String    @default("internal")
@@ -1310,8 +1313,30 @@ model KnowledgeArticle {
   updatedAt     DateTime  @updatedAt
   archivedAt    DateTime?
 
+  versions KnowledgeVersion[]
+
   @@index([brandId])
   @@index([category])
+}
+
+// Immutable published/draft content history for an article (§19).
+model KnowledgeVersion {
+  id          String   @id @default(cuid())
+  articleId   String
+  version     Int
+  title       String
+  body        String
+  status      String   @default("draft") // draft|in_review|published|superseded
+  authorId    String?
+  approvedById String?
+  changeNote  String?
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  article KnowledgeArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, version])
+  @@index([articleId])
 }
 
 // ============================================================================
