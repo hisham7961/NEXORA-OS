@@ -12,6 +12,9 @@ import { DEFAULT_ROLES, allPermissionKeys } from "../src/lib/permissions/catalog
 import { initializeCompanyAccounting } from "../src/domain/accounting/bootstrap";
 import { createFiscalYear } from "../src/domain/accounting/fiscal";
 import { postJournalEntry } from "../src/domain/accounting/posting";
+import { createTaxRate } from "../src/domain/accounting/setup";
+import { createCustomer } from "../src/domain/accounting/customers";
+import { createInvoice, issueInvoice, postReceipt, createCreditNote, issueCreditNote, applyCreditNote } from "../src/domain/accounting/ar";
 
 const prisma = new PrismaClient();
 
@@ -27,6 +30,8 @@ async function clear() {
     "featureRegistry", "systemSetting", "apiToken", "recentItem", "favorite", "savedView",
     "workflowTransitionLog", "workflowInstance", "workflowVersion", "workflowDefinition",
     "workflowTemplate", "statusDefinition",
+    "receiptAllocation", "creditNoteApplication", "customerReceipt",
+    "creditNoteLine", "creditNote", "salesInvoiceLine", "salesInvoice",
     "journalLine", "journalEntry", "journal", "numberSequence", "companyAccountingSettings",
     "account", "accountingPeriod", "fiscalYear", "bankAccount",
     "costCenter", "invoice", "payment", "customer", "supplier", "budget", "expense",
@@ -430,6 +435,25 @@ async function main() {
   await postJournalEntry(fctx, { companyId: pcc.id, journalCode: "EJ", date: new Date(yr, now.getMonth(), 12), memo: "Marketing — Solara KW", lines: [
     { accountId: marketing, debit: 2500, brandId: solara.id, countryId: countries.KW },
     { accountId: cash, credit: 2500 } ] });
+
+  // ------------------------------------------- Accounts Receivable demo (§C)
+  console.log("• Accounts Receivable (customers, invoices, receipt, credit note)");
+  const vat = await createTaxRate(fctx, pcc.id, { name: "VAT 5%", rate: 5, computation: "exclusive", outputTaxAccountId: await acc("2200") });
+  const custWafra = await createCustomer(fctx, pcc.id, { name: "Wafra Pharmacies", code: "C-1001", currency: "KWD", paymentTermsDays: 30, brandId: solara.id, countryId: countries.KW });
+  const custBoutiqat = await createCustomer(fctx, pcc.id, { name: "Boutiqat Retail", code: "C-1002", currency: "KWD", paymentTermsDays: 45, countryId: countries.KW });
+  // Fully-issued invoice, later partially received.
+  const invA = await createInvoice(fctx, pcc.id, { customerId: custWafra.id, issueDate: new Date(yr, now.getMonth(), 8),
+    lines: [ { description: "Solara serum — wholesale (120u)", quantity: 120, unitPrice: 18, taxRateId: vat.id, brandId: solara.id, countryId: countries.KW } ] });
+  await issueInvoice(fctx, invA.id);
+  await postReceipt(fctx, pcc.id, { customerId: custWafra.id, receiptDate: new Date(yr, now.getMonth(), 20), amount: 1000, method: "bank", reference: "TT-88213", allocations: [{ invoiceId: invA.id, amount: 1000 }] });
+  // A second open invoice (aging) + a credit note applied against it.
+  const invB = await createInvoice(fctx, pcc.id, { customerId: custBoutiqat.id, issueDate: new Date(yr, now.getMonth(), 2), dueDate: new Date(yr, now.getMonth(), 2),
+    lines: [ { description: "Gift sets — seasonal", quantity: 40, unitPrice: 25, taxRateId: vat.id, countryId: countries.KW } ] });
+  await issueInvoice(fctx, invB.id);
+  const cnB = await createCreditNote(fctx, pcc.id, { customerId: custBoutiqat.id, issueDate: new Date(yr, now.getMonth(), 6), reason: "2 sets damaged in transit",
+    lines: [ { description: "Returned gift sets (2)", quantity: 2, unitPrice: 25, taxRateId: vat.id, countryId: countries.KW } ] });
+  await issueCreditNote(fctx, cnB.id);
+  await applyCreditNote(fctx, cnB.id, [{ invoiceId: invB.id, amount: 52.5 }]);
 
   // ------------------------------------------------------------- Attendance
   console.log("• Attendance (today)");

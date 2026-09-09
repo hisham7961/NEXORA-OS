@@ -22,21 +22,30 @@ to status `reversed`. Reason required; posting date must be in an open period.
 Normal reversal rules apply once posted.
 
 ---
-The following are the **intended** patterns for the AR/AP/Expense/Bank increments
-(C–E), documented here so the mappings are settled before implementation.
+AR patterns below are **built** (Increment C). AP/Expense/Bank (D–E) remain the
+**intended** patterns, documented so the mappings are settled before implementation.
 
-## Sales Invoice (pending — Increment C)
-On post: **Dr Receivable** (invoice total) · **Cr Revenue** (net, per line revenue
-account/dimensions) · **Cr Output Tax** (tax). Discounts/returns to their configured
-accounts. Links `sourceType = SalesInvoice`.
+## Sales Invoice (built — Increment C)
+On issue: **Dr Receivable** (invoice total, `customerId` dimension) · **Cr Revenue**
+(net, one credit per line to the line's revenue account with full analytical
+dimensions) · **Cr Output Tax** (tax, aggregated by output-tax account). Journal
+`SJ`, `sourceType = SalesInvoice`. Drafts carry no GL; issuing allocates the invoice
+number and posts atomically. Posted invoices are corrected by credit note or void
+(void reverses the GL), never edited.
 
-## Customer Credit Note (pending — C)
-Reduces receivable/revenue/tax: **Dr Revenue / Dr Output Tax · Cr Receivable**
-(mirrors the invoice, per configured accounts). Unapplied credit tracked.
+## Customer Credit Note (built — C)
+On issue, mirrors the invoice against receivable: **Dr Revenue / Dr Output Tax · Cr
+Receivable** (per configured accounts, `customerId` dimension). Journal `SJ`,
+`sourceType = CreditNote`. Applying a credit note to an open invoice is a sub-ledger
+contra (both sides already sit in Receivable) — it reduces the invoice balance with
+no new GL. Unapplied credit is tracked as the note's remaining balance.
 
-## Customer Receipt (pending — C)
-**Dr Bank/Cash · Cr Receivable**, allocated to one or more open invoices
-(allocations transaction-safe, no over-allocation).
+## Customer Receipt (built — C)
+**Dr Bank/Cash · Cr Receivable** (`customerId` dimension), journal `CJ`,
+`sourceType = CustomerReceipt`. Allocated to one or more open invoices in the same
+atomic transaction; allocations can never exceed the receipt amount or an invoice's
+balance due. Unapplied receipt value is retained as customer credit and can be
+allocated later.
 
 ## Supplier Bill (pending — Increment D)
 **Dr Expense/Asset/Inventory** (per line) · **Dr Input Tax** (recoverable) · **Cr

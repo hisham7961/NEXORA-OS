@@ -1,0 +1,38 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { pageGuard } from "@/lib/page-guard";
+import { AccessDenied } from "@/components/access-denied";
+import { resolveAccountingCompany } from "@/domain/accounting/access";
+import { listCustomers } from "@/domain/accounting/customers";
+import { listTaxRates } from "@/domain/accounting/setup";
+import { PageHeader, Panel, PanelBody, EmptyState } from "@/components/ui";
+import { DocumentComposer } from "@/components/accounting/ar-controls";
+
+export const metadata: Metadata = { title: "New Invoice" };
+
+export default async function NewInvoicePage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
+  const { principal, locale, denied } = await pageGuard("ar.create");
+  if (denied) return <AccessDenied locale={locale} />;
+  const sp = await searchParams;
+  const { current } = await resolveAccountingCompany(principal, sp.company);
+  if (!current) return <><PageHeader title="New Invoice" /><Panel><EmptyState title="No company in scope" /></Panel></>;
+
+  const [{ rows: customers }, taxRates] = await Promise.all([
+    listCustomers(principal, current.id, { active: "active", pageSize: 500 }),
+    listTaxRates(principal, current.id),
+  ]);
+
+  return (
+    <>
+      <div className="mb-1 text-xs text-ink-3"><Link href={`/accounting/invoices?company=${current.id}`} className="hover:text-ink-2">Sales Invoices</Link> / New</div>
+      <PageHeader title="New Invoice" description={`Legal company ${current.name} · ${current.baseCurrency}`} />
+      <Panel>
+        <PanelBody>
+          <DocumentComposer companyId={current.id} kind="invoice" baseCurrency={current.baseCurrency}
+            customers={customers.map((c) => ({ id: c.id, name: c.name }))}
+            taxRates={taxRates.map((t) => ({ id: t.id, name: `${t.name} (${Number(t.rate)}%)`, rate: Number(t.rate) }))} />
+        </PanelBody>
+      </Panel>
+    </>
+  );
+}

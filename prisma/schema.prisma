@@ -293,8 +293,8 @@ model Employee {
   updatedAt        DateTime  @updatedAt
   archivedAt       DateTime?
 
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  brandAssignments EmployeeBrand[]
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brandAssignments   EmployeeBrand[]
   countryAssignments EmployeeCountry[]
 
   @@index([companyId])
@@ -436,8 +436,8 @@ model RegistrationCase {
   updatedAt          DateTime  @updatedAt
   archivedAt         DateTime?
 
-  events   RegistrationEvent[]
-  docReqs  RegistrationDocReq[]
+  events  RegistrationEvent[]
+  docReqs RegistrationDocReq[]
 
   @@index([countryId, status])
   @@index([brandId])
@@ -479,37 +479,37 @@ model RegistrationDocReq {
 // ============================================================================
 
 model DocumentType {
-  id                 String   @id @default(cuid())
-  name               String
-  code               String?
-  category           String?
+  id                  String   @id @default(cuid())
+  name                String
+  code                String?
+  category            String?
   defaultValidityDays Int?
-  createdAt          DateTime @default(now())
+  createdAt           DateTime @default(now())
 }
 
 model Document {
-  id             String    @id @default(cuid())
-  documentTypeId String?
-  companyId      String?
-  brandId        String?
-  productId      String?
-  countryId      String?
-  number         String?
-  title          String
-  issueDate      DateTime?
-  expiryDate     DateTime?
-  version        Int       @default(1)
-  status         String    @default("valid") // valid | expiring | expired | renewal_started | replaced | archived
-  visibility     String    @default("internal") // internal | restricted
-  ownerId        String?
-  fileId         String?
-  createdById    String?
+  id                String    @id @default(cuid())
+  documentTypeId    String?
+  companyId         String?
+  brandId           String?
+  productId         String?
+  countryId         String?
+  number            String?
+  title             String
+  issueDate         DateTime?
+  expiryDate        DateTime?
+  version           Int       @default(1)
+  status            String    @default("valid") // valid | expiring | expired | renewal_started | replaced | archived
+  visibility        String    @default("internal") // internal | restricted
+  ownerId           String?
+  fileId            String?
+  createdById       String?
   // JSON int[] of expiry day-thresholds already reminded for the current
   // expiryDate (reset when expiryDate changes) — keeps the reminder job idempotent.
   remindersSentJson String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  archivedAt     DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  archivedAt        DateTime?
 
   @@index([expiryDate])
   @@index([brandId])
@@ -687,8 +687,8 @@ model TaskChecklistItem {
 }
 
 model TaskDependency {
-  id             String @id @default(cuid())
-  taskId         String
+  id              String @id @default(cuid())
+  taskId          String
   dependsOnTaskId String
 
   @@unique([taskId, dependsOnTaskId])
@@ -699,18 +699,18 @@ model TaskDependency {
 // ============================================================================
 
 model ChecklistTemplate {
-  id             String    @id @default(cuid())
-  name           String
-  description    String?
-  brandId        String?
-  departmentId   String?
-  scheduleType   String    @default("daily") // daily | weekdays | weekly | monthly | custom
+  id                 String    @id @default(cuid())
+  name               String
+  description        String?
+  brandId            String?
+  departmentId       String?
+  scheduleType       String    @default("daily") // daily | weekdays | weekly | monthly | custom
   scheduleConfigJson String?
-  isActive       Boolean   @default(true)
-  createdById    String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  archivedAt     DateTime?
+  isActive           Boolean   @default(true)
+  createdById        String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  archivedAt         DateTime?
 
   items       ChecklistTemplateItem[]
   assignments ChecklistAssignment[]
@@ -825,13 +825,13 @@ model AttendanceRecord {
 }
 
 model AttendanceEvent {
-  id       String   @id @default(cuid())
-  recordId String?
-  userId   String
-  type     String // check_in | break_start | break_end | check_out
-  at       DateTime
-  source   String?
-  ip       String?
+  id        String   @id @default(cuid())
+  recordId  String?
+  userId    String
+  type      String // check_in | break_start | break_end | check_out
+  at        DateTime
+  source    String?
+  ip        String?
   createdAt DateTime @default(now())
 
   record AttendanceRecord? @relation(fields: [recordId], references: [id], onDelete: SetNull)
@@ -912,15 +912,15 @@ model CampaignProduct {
 }
 
 model CampaignMetric {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   campaignId String
   date       DateTime?
   name       String // spend|impressions|reach|clicks|ctr|cpc|cpm|leads|conversions|orders|revenue|roas|custom
   value      Decimal
   unit       String?
-  isTarget   Boolean  @default(false)
+  isTarget   Boolean   @default(false)
   note       String?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
 
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
@@ -1140,9 +1140,9 @@ model StoreResponsible {
 }
 
 model StorePerformance {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   storeId         String
-  periodType      String   @default("daily") // daily | weekly | monthly
+  periodType      String    @default("daily") // daily | weekly | monthly
   periodStart     DateTime
   periodEnd       DateTime?
   // --- INPUT components (entered) — see docs/METRIC_DICTIONARY.md ---
@@ -1163,7 +1163,7 @@ model StorePerformance {
   netContribution Decimal? // = grossMargin - adSpend - shippingCost
   campaignId      String?
   notes           String?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime  @default(now())
 
   store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
@@ -1278,17 +1278,17 @@ model AnswerUsage {
 }
 
 model AnswerRequest {
-  id           String   @id @default(cuid())
-  question     String
-  requesterId  String?
-  brandId      String?
-  productId    String?
-  countryId    String?
-  context      String?
-  status       String   @default("pending") // pending|approved|rejected
+  id             String   @id @default(cuid())
+  question       String
+  requesterId    String?
+  brandId        String?
+  productId      String?
+  countryId      String?
+  context        String?
+  status         String   @default("pending") // pending|approved|rejected
   resultAnswerId String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 // ============================================================================
@@ -1296,25 +1296,25 @@ model AnswerRequest {
 // ============================================================================
 
 model KnowledgeArticle {
-  id            String    @id @default(cuid())
-  title         String
-  body          String // denormalized current published body
-  category      String?
-  tagsJson      String?
-  authorId      String?
-  reviewerId    String?
-  brandId       String?
-  productId     String?
-  countryId     String?
-  status        String    @default("draft") // draft|in_review|published|archived
-  version       Int       @default(1) // current published version number
+  id               String    @id @default(cuid())
+  title            String
+  body             String // denormalized current published body
+  category         String?
+  tagsJson         String?
+  authorId         String?
+  reviewerId       String?
+  brandId          String?
+  productId        String?
+  countryId        String?
+  status           String    @default("draft") // draft|in_review|published|archived
+  version          Int       @default(1) // current published version number
   currentVersionId String?
-  lastReviewedAt DateTime?
-  reviewDueAt   DateTime?
-  visibility    String    @default("internal")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  archivedAt    DateTime?
+  lastReviewedAt   DateTime?
+  reviewDueAt      DateTime?
+  visibility       String    @default("internal")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  archivedAt       DateTime?
 
   versions KnowledgeVersion[]
 
@@ -1324,17 +1324,17 @@ model KnowledgeArticle {
 
 // Immutable published/draft content history for an article (§19).
 model KnowledgeVersion {
-  id          String   @id @default(cuid())
-  articleId   String
-  version     Int
-  title       String
-  body        String
-  status      String   @default("draft") // draft|in_review|published|superseded
-  authorId    String?
+  id           String    @id @default(cuid())
+  articleId    String
+  version      Int
+  title        String
+  body         String
+  status       String    @default("draft") // draft|in_review|published|superseded
+  authorId     String?
   approvedById String?
-  changeNote  String?
-  publishedAt DateTime?
-  createdAt   DateTime @default(now())
+  changeNote   String?
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
 
   article KnowledgeArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
 
@@ -1347,22 +1347,22 @@ model KnowledgeVersion {
 // ============================================================================
 
 model Channel {
-  id           String    @id @default(cuid())
-  name         String
-  description  String?
-  type         String    @default("general") // brand|company|department|campaign|product|project|registration|store|general
-  companyId    String?
-  brandId      String?
-  countryId    String?
-  departmentId String?
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  type          String    @default("general") // brand|company|department|campaign|product|project|registration|store|general
+  companyId     String?
+  brandId       String?
+  countryId     String?
+  departmentId  String?
   // Optional link to a specific entity (campaign/product/project/store/registration/…)
-  entityType   String?
-  entityId     String?
-  isPrivate    Boolean   @default(false)
+  entityType    String?
+  entityId      String?
+  isPrivate     Boolean   @default(false)
   lastMessageAt DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  archivedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  archivedAt    DateTime?
 
   members  ChannelMember[]
   messages Message[]
@@ -1386,15 +1386,15 @@ model ChannelMember {
 }
 
 model Message {
-  id        String    @id @default(cuid())
-  channelId String
-  authorId  String
-  body      String
-  parentId  String?
-  kind      String    @default("message") // message|decision|announcement|action_required
-  isPinned  Boolean   @default(false)
-  editedAt  DateTime?
-  createdAt DateTime  @default(now())
+  id         String    @id @default(cuid())
+  channelId  String
+  authorId   String
+  body       String
+  parentId   String?
+  kind       String    @default("message") // message|decision|announcement|action_required
+  isPinned   Boolean   @default(false)
+  editedAt   DateTime?
+  createdAt  DateTime  @default(now())
   archivedAt DateTime?
 
   channel  Channel          @relation(fields: [channelId], references: [id], onDelete: Cascade)
@@ -1491,28 +1491,28 @@ model ApprovalStep {
 // ============================================================================
 
 model Subscription {
-  id               String    @id @default(cuid())
-  provider         String
-  companyId        String?
-  brandId          String?
-  countryId        String?
-  ownerId          String?
-  plan             String?
-  currency         String    @default("USD")
-  cost             Decimal?
-  billingCycle     String    @default("monthly") // monthly | yearly | custom
-  renewalDate      DateTime?
-  autoRenew        Boolean   @default(true)
-  paymentMethodRef String?
-  licenses         Int?
-  notes            String?
-  status           String    @default("active")
+  id                String    @id @default(cuid())
+  provider          String
+  companyId         String?
+  brandId           String?
+  countryId         String?
+  ownerId           String?
+  plan              String?
+  currency          String    @default("USD")
+  cost              Decimal?
+  billingCycle      String    @default("monthly") // monthly | yearly | custom
+  renewalDate       DateTime?
+  autoRenew         Boolean   @default(true)
+  paymentMethodRef  String?
+  licenses          Int?
+  notes             String?
+  status            String    @default("active")
   // JSON int[] of day-thresholds already reminded for the CURRENT renewalDate
   // (reset when the renewalDate changes) — keeps the reminder job idempotent.
   remindersSentJson String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  archivedAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  archivedAt        DateTime?
 
   @@index([renewalDate])
   @@index([status])
@@ -1584,7 +1584,7 @@ model AccountingPeriod {
 }
 
 model Account {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   companyId     String
   code          String
   name          String
@@ -1592,16 +1592,16 @@ model Account {
   type          String // asset | liability | equity | revenue | cogs | expense | other_income | other_expense
   subtype       String? // cash|bank|ar|inventory|prepayment|fixed_asset|ap|accrued|tax_payable|loan|capital|retained_earnings|sales|sales_returns|discount|cogs|marketing|shipping|payroll|professional_fees|rent|utilities|fx
   parentId      String?
-  level         Int      @default(0)
-  normalBalance String   @default("debit") // debit | credit
+  level         Int       @default(0)
+  normalBalance String    @default("debit") // debit | credit
   currency      String? // optional single-currency restriction
-  allowPosting  Boolean  @default(true) // false = header/summary account
-  isSystem      Boolean  @default(false) // referenced by accounting settings; protected
-  isActive      Boolean  @default(true)
+  allowPosting  Boolean   @default(true) // false = header/summary account
+  isSystem      Boolean   @default(false) // referenced by accounting settings; protected
+  isActive      Boolean   @default(true)
   notes         String?
   createdById   String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   archivedAt    DateTime?
 
   lines JournalLine[]
@@ -1629,33 +1629,33 @@ model CostCenter {
 }
 
 model JournalEntry {
-  id              String    @id @default(cuid())
-  companyId       String
-  journalId       String?
-  journalNumber   String?
-  periodId        String?
-  date            DateTime // transaction date
-  postingDate     DateTime? // GL recognition date (defaults to transaction date)
-  documentDate    DateTime?
-  reference       String?
-  memo            String?
-  status          String    @default("draft") // draft | posted | reversed | void
-  currency        String    @default("KWD") // entry transaction currency
-  baseCurrency    String    @default("KWD")
-  exchangeRate    Decimal?
-  totalDebitBase  Decimal   @default(0) // denormalised for fast trial balance
-  totalCreditBase Decimal   @default(0)
+  id                String    @id @default(cuid())
+  companyId         String
+  journalId         String?
+  journalNumber     String?
+  periodId          String?
+  date              DateTime // transaction date
+  postingDate       DateTime? // GL recognition date (defaults to transaction date)
+  documentDate      DateTime?
+  reference         String?
+  memo              String?
+  status            String    @default("draft") // draft | posted | reversed | void
+  currency          String    @default("KWD") // entry transaction currency
+  baseCurrency      String    @default("KWD")
+  exchangeRate      Decimal?
+  totalDebitBase    Decimal   @default(0) // denormalised for fast trial balance
+  totalCreditBase   Decimal   @default(0)
   // Source traceability (§80) + reversal reciprocity (§14).
-  sourceType      String? // SalesInvoice|SupplierBill|Expense|CustomerPayment|SupplierPayment|BankTransfer|CreditNote|OpeningBalance|ManualJournal
-  sourceId        String?
+  sourceType        String? // SalesInvoice|SupplierBill|Expense|CustomerPayment|SupplierPayment|BankTransfer|CreditNote|OpeningBalance|ManualJournal
+  sourceId          String?
   reversalOfEntryId String?
   reversedByEntryId String?
-  createdById     String?
-  postedById      String?
-  postedAt        DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  archivedAt      DateTime?
+  createdById       String?
+  postedById        String?
+  postedAt          DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  archivedAt        DateTime?
 
   lines JournalLine[]
 
@@ -1667,15 +1667,15 @@ model JournalEntry {
 }
 
 model JournalLine {
-  id                  String  @id @default(cuid())
+  id                  String   @id @default(cuid())
   entryId             String
   accountId           String
-  lineNo              Int     @default(0)
+  lineNo              Int      @default(0)
   description         String?
   // Amounts are stored in BASE (company) currency — debit/credit balance and drive
   // the trial balance directly. Transaction-currency detail is kept alongside.
-  debit               Decimal @default(0)
-  credit              Decimal @default(0)
+  debit               Decimal  @default(0)
+  credit              Decimal  @default(0)
   transactionCurrency String?
   transactionAmount   Decimal? // absolute amount in transaction currency
   exchangeRate        Decimal?
@@ -1706,13 +1706,34 @@ model JournalLine {
 }
 
 model Customer {
-  id        String   @id @default(cuid())
-  companyId String?
-  name      String
-  code      String?
-  currency  String?
-  contact   String?
-  createdAt DateTime @default(now())
+  id                  String    @id @default(cuid())
+  companyId           String?
+  name                String
+  code                String?
+  currency            String? // preferred billing currency
+  contact             String?
+  email               String?
+  phone               String?
+  addressJson         String? // structured address (JSON text, §4-DB)
+  taxId               String? // tax registration number
+  paymentTermsDays    Int? // overrides company default terms
+  creditLimit         Decimal? // informational credit ceiling (base currency)
+  receivableAccountId String? // override AR control account (else settings.receivable)
+  brandId             String?
+  countryId           String?
+  isActive            Boolean   @default(true)
+  notes               String?
+  createdById         String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @default(now()) @updatedAt
+  archivedAt          DateTime?
+
+  invoices    SalesInvoice[]
+  creditNotes CreditNote[]
+  receipts    CustomerReceipt[]
+
+  @@index([companyId, isActive])
+  @@index([brandId])
 }
 
 model Supplier {
@@ -1851,64 +1872,70 @@ model ExchangeRate {
 // configuration and concurrency-safe number sequences.
 // ============================================================================
 
-/** Per-company accounting configuration (§4). System-account mappings are stored
- *  as stable account IDs, never resolved by English name (§6). */
+/**
+ * Per-company accounting configuration (§4). System-account mappings are stored
+ * as stable account IDs, never resolved by English name (§6).
+ */
 model CompanyAccountingSettings {
-  id                    String   @id @default(cuid())
-  companyId             String   @unique
-  baseCurrency          String   @default("KWD")
-  fiscalYearStartMonth  Int      @default(1)
-  timezone              String   @default("Asia/Kuwait")
-  roundingPolicy        String   @default("half_up") // half_up | half_even | down | up
-  balancingToleranceJson String? // per-currency minor-unit tolerance overrides
+  id                        String    @id @default(cuid())
+  companyId                 String    @unique
+  baseCurrency              String    @default("KWD")
+  fiscalYearStartMonth      Int       @default(1)
+  timezone                  String    @default("Asia/Kuwait")
+  roundingPolicy            String    @default("half_up") // half_up | half_even | down | up
+  balancingToleranceJson    String? // per-currency minor-unit tolerance overrides
   // System-account mappings (account IDs).
-  receivableAccountId   String?
-  payableAccountId      String?
-  revenueAccountId      String?
-  cogsAccountId         String?
-  inventoryAccountId    String?
-  bankClearingAccountId String?
-  cashAccountId         String?
-  inputTaxAccountId     String?
-  outputTaxAccountId    String?
+  receivableAccountId       String?
+  payableAccountId          String?
+  revenueAccountId          String?
+  cogsAccountId             String?
+  inventoryAccountId        String?
+  bankClearingAccountId     String?
+  cashAccountId             String?
+  inputTaxAccountId         String?
+  outputTaxAccountId        String?
   retainedEarningsAccountId String?
-  fxGainAccountId       String?
-  fxLossAccountId       String?
-  suspenseAccountId     String?
-  roundingAccountId     String?
+  fxGainAccountId           String?
+  fxLossAccountId           String?
+  suspenseAccountId         String?
+  roundingAccountId         String?
   // Numbering + terms.
-  journalPrefix         String   @default("GJ")
-  invoicePrefix         String   @default("INV")
-  billPrefix            String   @default("BILL")
-  paymentPrefix         String   @default("PAY")
-  defaultPaymentTerms   Int      @default(30) // days
-  lockDate              DateTime? // hard lock — no posting on/before
-  softCloseDate         DateTime? // authorized users only on/before
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  journalPrefix             String    @default("GJ")
+  invoicePrefix             String    @default("INV")
+  billPrefix                String    @default("BILL")
+  paymentPrefix             String    @default("PAY")
+  defaultPaymentTerms       Int       @default(30) // days
+  lockDate                  DateTime? // hard lock — no posting on/before
+  softCloseDate             DateTime? // authorized users only on/before
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
 
   @@index([companyId])
 }
 
-/** Journal configuration (§9). A Journal is config; a JournalEntry is the txn. */
+/**
+ * Journal configuration (§9). A Journal is config; a JournalEntry is the txn.
+ */
 model Journal {
-  id         String    @id @default(cuid())
-  companyId  String
-  code       String // GJ | SJ | PJ | BJ | CJ | EJ | AJ | OB
-  name       String
-  type       String    @default("general") // general|sales|purchase|bank|cash|expense|adjustment|opening
+  id           String    @id @default(cuid())
+  companyId    String
+  code         String // GJ | SJ | PJ | BJ | CJ | EJ | AJ | OB
+  name         String
+  type         String    @default("general") // general|sales|purchase|bank|cash|expense|adjustment|opening
   numberPrefix String?
-  isActive   Boolean   @default(true)
-  createdAt  DateTime  @default(now())
-  archivedAt DateTime?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  archivedAt   DateTime?
 
   @@unique([companyId, code])
   @@index([companyId])
 }
 
-/** Concurrency-safe monotonic number sequences (§13/§75). Allocation uses an
- *  atomic UPDATE ... RETURNING inside the posting transaction so simultaneous
- *  posts can never receive the same number. */
+/**
+ * Concurrency-safe monotonic number sequences (§13/§75). Allocation uses an
+ * atomic UPDATE ... RETURNING inside the posting transaction so simultaneous
+ * posts can never receive the same number.
+ */
 model NumberSequence {
   id        String   @id @default(cuid())
   companyId String
@@ -1923,20 +1950,234 @@ model NumberSequence {
 }
 
 model TaxRate {
-  id                 String   @id @default(cuid())
+  id                 String    @id @default(cuid())
   companyId          String?
   countryId          String?
   name               String
   rate               Decimal // percentage, e.g. 5.000
-  computation        String   @default("exclusive") // exclusive | inclusive
+  computation        String    @default("exclusive") // exclusive | inclusive
   inputTaxAccountId  String? // recoverable (on purchases)
   outputTaxAccountId String? // payable (on sales)
   effectiveDate      DateTime?
-  isActive           Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  isActive           Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   @@index([companyId])
+}
+
+// ============================================================================
+// ACCOUNTS RECEIVABLE (Phase 3 — Increment C). Sales invoices, credit notes and
+// customer receipts. Every issued/posted document drives the GL exclusively via
+// the posting engine (posting.ts); these rows are the AR sub-ledger and carry the
+// posted JournalEntry id for traceability (§80). Money is Decimal (§DB-money).
+// ============================================================================
+
+model SalesInvoice {
+  id             String    @id @default(cuid())
+  companyId      String
+  customerId     String
+  invoiceNumber  String? // allocated at issue (concurrency-safe sequence)
+  status         String    @default("draft") // draft | issued | partially_paid | paid | void | written_off
+  issueDate      DateTime
+  dueDate        DateTime?
+  documentDate   DateTime?
+  currency       String    @default("KWD") // transaction currency
+  baseCurrency   String    @default("KWD")
+  exchangeRate   Decimal? // txn→base at issue (historical; never recomputed §40)
+  // Amounts in TRANSACTION currency; *Base mirrors in company base currency.
+  subtotal       Decimal   @default(0) // net of tax, after line discounts
+  taxTotal       Decimal   @default(0)
+  total          Decimal   @default(0) // subtotal + tax
+  amountPaid     Decimal   @default(0) // allocated from receipts + credit notes
+  amountDue      Decimal   @default(0) // total − amountPaid
+  totalBase      Decimal   @default(0)
+  // Header default analytical dimensions (lines may override).
+  brandId        String?
+  countryId      String?
+  departmentId   String?
+  campaignId     String?
+  storeId        String?
+  reference      String?
+  notes          String?
+  journalEntryId String? // posted GL entry (sourceType = SalesInvoice)
+  createdById    String?
+  postedById     String?
+  postedAt       DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  archivedAt     DateTime?
+
+  customer           Customer                @relation(fields: [customerId], references: [id])
+  lines              SalesInvoiceLine[]
+  allocations        ReceiptAllocation[]
+  creditApplications CreditNoteApplication[]
+
+  @@unique([companyId, invoiceNumber])
+  @@index([companyId, status])
+  @@index([customerId])
+  @@index([dueDate])
+  @@index([issueDate])
+}
+
+model SalesInvoiceLine {
+  id               String  @id @default(cuid())
+  invoiceId        String
+  lineNo           Int     @default(0)
+  description      String
+  quantity         Decimal @default(1)
+  unitPrice        Decimal @default(0)
+  discountPct      Decimal @default(0) // 0..100
+  lineNet          Decimal @default(0) // quantity*unitPrice*(1-discount)
+  taxRateId        String?
+  taxAmount        Decimal @default(0)
+  revenueAccountId String? // override (else settings.revenue)
+  productId        String?
+  brandId          String?
+  countryId        String?
+  departmentId     String?
+  campaignId       String?
+  storeId          String?
+  costCenterId     String?
+
+  invoice SalesInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([productId])
+}
+
+model CreditNote {
+  id               String    @id @default(cuid())
+  companyId        String
+  customerId       String
+  creditNoteNumber String?
+  status           String    @default("draft") // draft | issued | applied | void
+  issueDate        DateTime
+  currency         String    @default("KWD")
+  baseCurrency     String    @default("KWD")
+  exchangeRate     Decimal?
+  subtotal         Decimal   @default(0)
+  taxTotal         Decimal   @default(0)
+  total            Decimal   @default(0)
+  amountApplied    Decimal   @default(0) // applied to invoices
+  amountRemaining  Decimal   @default(0) // unapplied customer credit
+  totalBase        Decimal   @default(0)
+  brandId          String?
+  countryId        String?
+  reason           String?
+  reference        String?
+  journalEntryId   String? // sourceType = CreditNote
+  createdById      String?
+  postedById       String?
+  postedAt         DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  archivedAt       DateTime?
+
+  customer     Customer                @relation(fields: [customerId], references: [id])
+  lines        CreditNoteLine[]
+  applications CreditNoteApplication[]
+
+  @@unique([companyId, creditNoteNumber])
+  @@index([companyId, status])
+  @@index([customerId])
+}
+
+model CreditNoteLine {
+  id               String  @id @default(cuid())
+  creditNoteId     String
+  lineNo           Int     @default(0)
+  description      String
+  quantity         Decimal @default(1)
+  unitPrice        Decimal @default(0)
+  lineNet          Decimal @default(0)
+  taxRateId        String?
+  taxAmount        Decimal @default(0)
+  revenueAccountId String?
+  productId        String?
+  brandId          String?
+  countryId        String?
+  departmentId     String?
+  campaignId       String?
+  storeId          String?
+  costCenterId     String?
+
+  creditNote CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+
+  @@index([creditNoteId])
+}
+
+model CustomerReceipt {
+  id              String    @id @default(cuid())
+  companyId       String
+  customerId      String
+  receiptNumber   String?
+  status          String    @default("draft") // draft | posted | void
+  receiptDate     DateTime
+  currency        String    @default("KWD")
+  baseCurrency    String    @default("KWD")
+  exchangeRate    Decimal?
+  amount          Decimal   @default(0) // total received
+  allocatedAmount Decimal   @default(0) // sum of allocations
+  unappliedAmount Decimal   @default(0) // amount − allocated (customer credit)
+  amountBase      Decimal   @default(0)
+  bankAccountId   String? // deposit account override (else settings.cash)
+  method          String? // bank | cash | card | cheque | transfer
+  reference       String?
+  notes           String?
+  brandId         String?
+  countryId       String?
+  journalEntryId  String? // sourceType = CustomerReceipt
+  createdById     String?
+  postedById      String?
+  postedAt        DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  archivedAt      DateTime?
+
+  customer    Customer            @relation(fields: [customerId], references: [id])
+  allocations ReceiptAllocation[]
+
+  @@unique([companyId, receiptNumber])
+  @@index([companyId, status])
+  @@index([customerId])
+}
+
+/**
+ * A receipt applied to a specific open invoice (sub-ledger; no extra GL — the
+ * receipt already credited Receivable). Sum of allocations ≤ receipt amount and
+ * ≤ invoice amountDue, enforced transactionally (§no-over-allocation).
+ */
+model ReceiptAllocation {
+  id        String   @id @default(cuid())
+  receiptId String
+  invoiceId String
+  amount    Decimal
+  createdAt DateTime @default(now())
+
+  receipt CustomerReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  invoice SalesInvoice    @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@unique([receiptId, invoiceId])
+  @@index([invoiceId])
+}
+
+/**
+ * A credit note applied to an open invoice (sub-ledger contra; both documents
+ * already posted to Receivable, so application nets them without new GL).
+ */
+model CreditNoteApplication {
+  id           String   @id @default(cuid())
+  creditNoteId String
+  invoiceId    String
+  amount       Decimal
+  createdAt    DateTime @default(now())
+
+  creditNote CreditNote   @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+  invoice    SalesInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@unique([creditNoteId, invoiceId])
+  @@index([invoiceId])
 }
 
 // ============================================================================
@@ -2187,16 +2428,16 @@ model SystemSetting {
 }
 
 model FeatureRegistry {
-  id                String  @id @default(cuid())
-  key               String  @unique
-  name              String
-  module            String
-  webAvailable      Boolean @default(true)
+  id                 String  @id @default(cuid())
+  key                String  @unique
+  name               String
+  module             String
+  webAvailable       Boolean @default(true)
   mobileApiAvailable Boolean @default(false)
-  permissionKey     String?
-  endpoint          String?
-  status            String  @default("available") // available | planned | beta
-  notes             String?
+  permissionKey      String?
+  endpoint           String?
+  status             String  @default("available") // available | planned | beta
+  notes              String?
 }
 
 model BackgroundJob {
@@ -2218,7 +2459,9 @@ model BackgroundJob {
   @@index([status])
 }
 
-/** Append-only run history for scheduled/manual job executions (§10, observability). */
+/**
+ * Append-only run history for scheduled/manual job executions (§10, observability).
+ */
 model BackgroundJobRun {
   id         String    @id @default(cuid())
   jobId      String?

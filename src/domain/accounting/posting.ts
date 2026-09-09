@@ -130,41 +130,59 @@ async function resolveJournalId(tx: Prisma.TransactionClient, companyId: string,
 }
 
 /**
- * Post a balanced journal entry to the ledger. Concurrency-safe numbering + the
- * whole write run in one transaction (§74/§75): a double-click cannot create two
- * entries with the same number, and any failure rolls the whole thing back.
+ * Authorize + validate + resolve the posting period for a journal, without
+ * writing. Returns the parsed input, prepared lines and the open period id. Shared
+ * by `postJournalEntry` and source modules (AR/AP/…) that post inside their own
+ * transaction via {@link writePostedEntry}.
  */
-export async function postJournalEntry(ctx: ActorContext, raw: unknown): Promise<JournalEntry> {
+export async function prepareForPost(ctx: ActorContext, raw: unknown): Promise<{ input: JournalInput; prepared: Awaited<ReturnType<typeof prepare>>; postingDate: Date; periodId: string | null }> {
   const input = journalInputSchema.parse(raw);
   assertCan(ctx.principal, "accounting.post", { companyId: input.companyId });
   const prepared = await prepare(input);
   const postingDate = input.postingDate ?? input.date;
   const elevated = canFinance(ctx.principal, "periods.manage", input.companyId);
   const periodId = await assertOpenPeriod(input.companyId, postingDate, elevated);
+  return { input, prepared, postingDate, periodId };
+}
 
-  const entry = await prisma.$transaction(async (tx) => {
-    const { id: journalId, prefix } = await resolveJournalId(tx, input.companyId, input.journalCode);
-    const number = await allocateNumber(tx, { companyId: input.companyId, key: `journal:${prefix}`, prefix, year: postingDate.getFullYear() });
-    const e = await tx.journalEntry.create({
-      data: {
-        companyId: input.companyId, journalId, journalNumber: number, periodId,
-        date: input.date, postingDate, documentDate: input.documentDate ?? null,
-        reference: input.reference ?? null, memo: input.memo ?? null,
-        status: "posted", currency: prepared.currency, baseCurrency: prepared.baseCurrency, exchangeRate: D(prepared.rate),
-        totalDebitBase: prepared.totalDebit, totalCreditBase: prepared.totalCredit,
-        sourceType: input.sourceType ?? "ManualJournal", sourceId: input.sourceId ?? null,
-        createdById: ctx.principal.userId, postedById: ctx.principal.userId, postedAt: new Date(),
-      },
-    });
-    await tx.journalLine.createMany({
-      data: prepared.lines.map((l, i) => ({
-        entryId: e.id, accountId: l.accountId, lineNo: i + 1, description: l.description,
-        debit: l.debit, credit: l.credit, transactionCurrency: l.transactionCurrency, transactionAmount: l.transactionAmount, exchangeRate: l.exchangeRate,
-        companyId: input.companyId, ...l.dims,
-      })),
-    });
-    return e;
+/**
+ * Write a posted entry + its lines inside an existing transaction (concurrency-safe
+ * numbering, immutable `posted` status). The single write path — source modules
+ * call this so their sub-ledger update and the GL post commit atomically. The
+ * caller is responsible for the audit entry (so it reflects the source document).
+ */
+export async function writePostedEntry(tx: Prisma.TransactionClient, ctx: ActorContext, input: JournalInput, prepared: Awaited<ReturnType<typeof prepare>>, postingDate: Date, periodId: string | null): Promise<JournalEntry> {
+  const { id: journalId, prefix } = await resolveJournalId(tx, input.companyId, input.journalCode);
+  const number = await allocateNumber(tx, { companyId: input.companyId, key: `journal:${prefix}`, prefix, year: postingDate.getFullYear() });
+  const e = await tx.journalEntry.create({
+    data: {
+      companyId: input.companyId, journalId, journalNumber: number, periodId,
+      date: input.date, postingDate, documentDate: input.documentDate ?? null,
+      reference: input.reference ?? null, memo: input.memo ?? null,
+      status: "posted", currency: prepared.currency, baseCurrency: prepared.baseCurrency, exchangeRate: D(prepared.rate),
+      totalDebitBase: prepared.totalDebit, totalCreditBase: prepared.totalCredit,
+      sourceType: input.sourceType ?? "ManualJournal", sourceId: input.sourceId ?? null,
+      createdById: ctx.principal.userId, postedById: ctx.principal.userId, postedAt: new Date(),
+    },
   });
+  await tx.journalLine.createMany({
+    data: prepared.lines.map((l, i) => ({
+      entryId: e.id, accountId: l.accountId, lineNo: i + 1, description: l.description,
+      debit: l.debit, credit: l.credit, transactionCurrency: l.transactionCurrency, transactionAmount: l.transactionAmount, exchangeRate: l.exchangeRate,
+      companyId: input.companyId, ...l.dims,
+    })),
+  });
+  return e;
+}
+
+/**
+ * Post a balanced journal entry to the ledger. Concurrency-safe numbering + the
+ * whole write run in one transaction (§74/§75): a double-click cannot create two
+ * entries with the same number, and any failure rolls the whole thing back.
+ */
+export async function postJournalEntry(ctx: ActorContext, raw: unknown): Promise<JournalEntry> {
+  const { input, prepared, postingDate, periodId } = await prepareForPost(ctx, raw);
+  const entry = await prisma.$transaction((tx) => writePostedEntry(tx, ctx, input, prepared, postingDate, periodId));
   await audit(ctx, { action: "journal.posted", entityType: "JournalEntry", entityId: entry.id, summary: `${entry.journalNumber} ${prepared.totalDebit} ${prepared.baseCurrency}`, companyId: input.companyId });
   return entry;
 }

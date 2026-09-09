@@ -4,6 +4,7 @@ import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
 import { resolveAccountingCompany } from "@/domain/accounting/access";
 import { trialBalance, profitAndLoss, balanceSheet } from "@/domain/accounting/reports";
+import { arAging } from "@/domain/accounting/ar";
 import Link from "next/link";
 import { PageHeader, Panel, PanelHeader, PanelBody, DataTable, Badge, EmptyState, Metric, type Column } from "@/components/ui";
 import { CompanyPicker } from "@/components/accounting/company-picker";
@@ -25,6 +26,7 @@ export default async function AccountingReportsPage({ searchParams }: { searchPa
     { key: "trial-balance", label: "Trial Balance" },
     { key: "profit-loss", label: "Profit & Loss" },
     { key: "balance-sheet", label: "Balance Sheet" },
+    { key: "ar-aging", label: "AR Aging" },
   ];
 
   return (
@@ -93,6 +95,34 @@ export default async function AccountingReportsPage({ searchParams }: { searchPa
               </div>
               <p className="mt-3 text-[12px] text-ink-3">Assets {money(bs.assets, locale)} = Liabilities {money(bs.liabilities, locale)} + Equity {money(bs.totalEquity, locale)} (of which current-period earnings {money(bs.currentEarnings, locale)}).</p>
             </PanelBody>
+          </Panel>
+        );
+      })()}
+
+      {tab === "ar-aging" && await (async () => {
+        const aging = await arAging(principal, current.id);
+        const columns: Column<(typeof aging.rows)[number]>[] = [
+          { key: "name", header: "Customer", render: (r) => <span className="text-ink">{r.name}</span> },
+          { key: "current", header: "Current", align: "end", render: (r) => <span className="tabular text-ink-2">{money(String(r.current), locale)}</span> },
+          { key: "d30", header: "1–30", align: "end", render: (r) => <span className="tabular text-ink-2">{money(String(r.d30), locale)}</span> },
+          { key: "d60", header: "31–60", align: "end", render: (r) => <span className="tabular text-warning">{money(String(r.d60), locale)}</span> },
+          { key: "d90", header: "61–90", align: "end", render: (r) => <span className="tabular text-warning">{money(String(r.d90), locale)}</span> },
+          { key: "older", header: "90+", align: "end", render: (r) => <span className="tabular text-critical">{money(String(r.older), locale)}</span> },
+          { key: "total", header: "Total", align: "end", render: (r) => <span className="tabular font-medium text-ink">{money(String(r.total), locale)}</span> },
+        ];
+        const t = aging.totals;
+        return (
+          <Panel>
+            <PanelHeader title="Accounts Receivable Aging" action={<Badge category="info">{aging.rows.length} customers</Badge>} />
+            <DataTable columns={columns} rows={aging.rows} getRowKey={(r) => r.customerId} empty={<EmptyState title="No open receivables" description="All issued invoices are settled." />} />
+            <div className="flex flex-wrap justify-end gap-6 border-t border-line px-4 py-2 text-[13px] font-medium">
+              <span>Current <span className="ms-1 tabular text-ink">{money(String(t.current), locale)}</span></span>
+              <span>1–30 <span className="ms-1 tabular text-ink">{money(String(t.d30), locale)}</span></span>
+              <span>31–60 <span className="ms-1 tabular text-ink">{money(String(t.d60), locale)}</span></span>
+              <span>61–90 <span className="ms-1 tabular text-ink">{money(String(t.d90), locale)}</span></span>
+              <span>90+ <span className="ms-1 tabular text-ink">{money(String(t.older), locale)}</span></span>
+              <span>Total <span className="ms-1 tabular text-ink">{money(String(t.total), locale)} {cur}</span></span>
+            </div>
           </Panel>
         );
       })()}

@@ -80,8 +80,19 @@ never denormalized names.
 Built & verified: rate limiting; foundation (settings, CoA, fiscal/periods,
 journals, tax, FX, cost centers); the GL posting engine (post, reverse, numbering,
 period control, immutability, invariants); GL/Trial Balance/P&L/Balance Sheet
-reports; accounting UI (overview/setup, chart of accounts, journal workspace,
-reports); the `/api/v1/accounting/*` surface; a balanced posted-journal demo seed.
-Pending increments: AR (invoices/credit notes/receipts/aging), AP + Expenses,
-Bank/Cash/FX/reconciliation, Budgets + Cash Flow, and the Financial Intelligence
-dashboards / 360 integrations.
+reports; **Accounts Receivable (Increment C)** — customers, sales invoices
+(draft→issue→GL), credit notes (issue + application), customer receipts with
+transaction-safe allocation, AR aging and customer statements, all verified by 24
+live double-entry invariants; the `/api/v1/accounting/*` surface; a balanced
+posted-journal + AR demo seed.
+Pending increments: AP + Expenses, Bank/Cash/FX/reconciliation, Budgets + Cash Flow,
+and the Financial Intelligence dashboards / 360 integrations.
+
+### AR domain (`src/domain/accounting/`)
+- `customers.ts` — the AR party master (company-scoped, `ar.*`).
+- `ar.ts` — sales invoices, credit notes, receipts, allocations, and the AR aging /
+  customer-statement reports. Documents drive the GL only through `posting.ts`; each
+  posted document stores its `journalEntryId`. Issuing an invoice/credit note and
+  posting a receipt commit the sub-ledger update and the GL post in one transaction
+  via the engine's `prepareForPost` + `writePostedEntry` (so a posted document can
+  never exist without its balanced ledger entry, or vice-versa).
