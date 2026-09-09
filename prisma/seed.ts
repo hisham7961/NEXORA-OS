@@ -20,7 +20,7 @@ const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 async function clear() {
   // Delete in an order that respects FKs (children first). Dev-only reset.
   const tables = [
-    "auditLog", "notification", "notificationPreference", "systemEvent", "backgroundJob",
+    "auditLog", "notification", "notificationPreference", "systemEvent", "backgroundJobRun", "backgroundJob",
     "featureRegistry", "systemSetting", "apiToken", "recentItem", "favorite", "savedView",
     "workflowTransitionLog", "workflowInstance", "workflowVersion", "workflowDefinition",
     "workflowTemplate", "statusDefinition",
@@ -454,13 +454,16 @@ async function main() {
       { key: "attendance", name: "Attendance", module: "work", webAvailable: true, mobileApiAvailable: false, permissionKey: "attendance.view", endpoint: "/api/v1/attendance", status: "planned" },
     ],
   });
+  // Job rows are named to match src/lib/jobs/registry.ts so the in-process
+  // scheduler (§10) tracks status/history against them.
   await prisma.backgroundJob.createMany({
     data: [
-      { name: "Generate recurring daily checks", type: "recurring", status: "success", scheduleCron: "0 0 * * *", lastRunAt: startOfToday, nextRunAt: d(1) },
-      { name: "Certificate expiry reminders", type: "recurring", status: "success", scheduleCron: "0 6 * * *", lastRunAt: startOfToday, nextRunAt: d(1) },
-      { name: "Subscription renewal reminders", type: "recurring", status: "success", scheduleCron: "0 7 * * *", lastRunAt: startOfToday, nextRunAt: d(1) },
-      { id: "workflow-escalations", name: "Workflow SLA escalations", type: "recurring", status: "success", scheduleCron: "0 * * * *", lastRunAt: startOfToday, nextRunAt: d(1) },
-      { name: "Notification digest delivery", type: "queue", status: "running", lastRunAt: now },
+      { name: "Generate recurring daily checks", type: "recurring", status: "queued", scheduleCron: "5 0 * * *", nextRunAt: d(1) },
+      { name: "Certificate & document expiry reminders", type: "recurring", status: "queued", scheduleCron: "0 6 * * *", nextRunAt: d(1) },
+      { name: "Subscription renewal reminders", type: "recurring", status: "queued", scheduleCron: "0 7 * * *", nextRunAt: d(1) },
+      { name: "Publishing recurrence", type: "recurring", status: "queued", scheduleCron: "10 0 * * *", nextRunAt: d(1) },
+      { name: "Workflow SLA escalations", type: "recurring", status: "queued", scheduleCron: "0 * * * *", nextRunAt: d(1) },
+      { name: "Campaign spend backfill", type: "recurring", status: "queued", scheduleCron: "30 1 * * *", nextRunAt: d(1) },
     ],
   });
 

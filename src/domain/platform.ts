@@ -1,4 +1,33 @@
 import { prisma } from "@/lib/db";
+import { JOB_DEFINITIONS } from "@/lib/jobs/registry";
+import { nextRun } from "@/lib/jobs/cron";
+
+/**
+ * Scheduled-jobs overview for the Admin Operations Center (§10, §75). Driven by
+ * the JOB_DEFINITIONS registry (the source of truth) joined to each job's latest
+ * BackgroundJobRun — so what's shown is what actually runs, not a seeded claim.
+ */
+export async function getJobsOverview() {
+  const [latestRuns, recentRuns] = await Promise.all([
+    prisma.backgroundJobRun.findMany({ orderBy: { startedAt: "desc" }, take: 200 }),
+    prisma.backgroundJobRun.findMany({ orderBy: { startedAt: "desc" }, take: 25 }),
+  ]);
+  const latestByName = new Map<string, (typeof latestRuns)[number]>();
+  for (const r of latestRuns) if (!latestByName.has(r.jobName)) latestByName.set(r.jobName, r);
+
+  const jobs = JOB_DEFINITIONS.map((d) => {
+    const last = latestByName.get(d.name) ?? null;
+    return {
+      name: d.name,
+      cron: d.cron,
+      description: d.description,
+      permission: d.permission,
+      nextRunAt: nextRun(d.cron),
+      last: last ? { status: last.status, startedAt: last.startedAt, durationMs: last.durationMs, error: last.error, trigger: last.trigger } : null,
+    };
+  });
+  return { jobs, recentRuns };
+}
 
 /** Developer Portal (§35) — never expose secrets. */
 export async function getDeveloperPortal() {

@@ -8,5 +8,10 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { assertSecureConfig } = await import("@/lib/env");
     assertSecureConfig();
+    // Start the in-process job scheduler (§10) so recurring jobs actually run
+    // (daily checks, expiry/renewal reminders, publishing recurrence, workflow
+    // SLA escalation). Idempotent runners + a single-start guard make this safe.
+    const { startScheduler } = await import("@/lib/jobs/scheduler");
+    startScheduler();
   }
 }

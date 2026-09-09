@@ -86,3 +86,64 @@ export async function getDocumentTypeNames(): Promise<Map<string, string>> {
   const types = await prisma.documentType.findMany({ select: { id: true, name: true } });
   return new Map(types.map((t) => [t.id, t.name]));
 }
+
+// ---------------------------------------------------------------------------
+// CERTIFICATE / DOCUMENT EXPIRY REMINDERS (§22) — idempotent generator.
+// Admin-configurable thresholds via SystemSetting `certificates.reminderThresholds`
+// (falls back to a sensible default). Mirrors the subscription-reminders pattern:
+// one most-urgent unsent threshold fired per document per run; all reached
+// thresholds marked sent (per expiryDate) so re-runs never double-notify.
+// ---------------------------------------------------------------------------
+export const DEFAULT_CERT_THRESHOLDS = [180, 120, 90, 60, 30, 14, 7, 1];
+
+async function certThresholds(): Promise<number[]> {
+  const row = await prisma.systemSetting.findUnique({ where: { key: "certificates.reminderThresholds" } }).catch(() => null);
+  if (row) {
+    try {
+      const v = JSON.parse(row.valueJson);
+      if (Array.isArray(v) && v.every((n) => typeof n === "number")) return [...v].sort((a, b) => b - a);
+    } catch { /* fall through to default */ }
+  }
+  return DEFAULT_CERT_THRESHOLDS;
+}
+
+export async function generateCertificateReminders(actorId: string | null, now: Date = new Date()): Promise<{ scanned: number; notified: number }> {
+  const { notify } = await import("@/domain/mutation");
+  const thresholds = await certThresholds();
+
+  await prisma.backgroundJob.upsert({
+    where: { id: "certificate-reminders" },
+    update: { lastRunAt: now, status: "running" },
+    create: { id: "certificate-reminders", name: "Certificate & document expiry reminders", type: "recurring", scheduleCron: "0 6 * * *", status: "running", lastRunAt: now },
+  }).catch(() => {});
+
+  const docs = await prisma.document.findMany({
+    where: { archivedAt: null, expiryDate: { not: null, gte: now } },
+    select: { id: true, title: true, expiryDate: true, ownerId: true, brandId: true, companyId: true, remindersSentJson: true },
+    take: 2000,
+  });
+
+  let notified = 0;
+  for (const d of docs) {
+    if (!d.expiryDate) continue;
+    const daysLeft = Math.ceil((d.expiryDate.getTime() - now.getTime()) / 86_400_000);
+    if (daysLeft < 0) continue;
+    const sent: number[] = (() => { try { return JSON.parse(d.remindersSentJson ?? "[]"); } catch { return []; } })();
+    const reached = thresholds.filter((t) => t >= daysLeft);
+    const unsent = reached.filter((t) => !sent.includes(t));
+    if (unsent.length === 0) continue;
+    if (d.ownerId) {
+      await notify([d.ownerId], {
+        type: "certificate.expiring",
+        title: `Expiring in ${daysLeft}d: ${d.title}`,
+        body: `This document expires on ${d.expiryDate.toISOString().slice(0, 10)}. Start renewal to avoid a lapse.`,
+        entityType: "Document", entityId: d.id,
+      });
+      notified++;
+    }
+    await prisma.document.update({ where: { id: d.id }, data: { remindersSentJson: JSON.stringify([...new Set([...sent, ...reached])]), status: daysLeft <= 30 ? "expiring" : undefined } });
+  }
+
+  await prisma.backgroundJob.update({ where: { id: "certificate-reminders" }, data: { status: "success", nextRunAt: new Date(now.getTime() + 86_400_000) } }).catch(() => {});
+  return { scanned: docs.length, notified };
+}

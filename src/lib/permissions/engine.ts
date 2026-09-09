@@ -153,10 +153,20 @@ export function scopeWhereFor(
 /**
  * Which ids of a given scope dimension can this principal access for a permission?
  * Used to filter org-entity lists whose OWN id is the scope value (Brand.id is the
- * "brandId", Company.id is the "companyId", Country.id is the "countryId"). Returns
- * "all" for unrestricted access, or a concrete id list. An assignment restricting a
- * DIFFERENT dimension is skipped (it scopes a context that doesn't map onto this
- * entity type) — fail-closed.
+ * "brandId", Company.id is the "companyId", Country.id is the "countryId") and to
+ * populate scoped form option lists. Returns "all" for unrestricted access, or a
+ * concrete id list.
+ *
+ * Scope semantics (fixed — see §13 / P0): an assignment that restricts THIS
+ * dimension contributes its id, **regardless of any other dimension it also
+ * restricts** — a Brand-A/Kuwait grant genuinely grants access to Brand A (the
+ * country is a sub-scope, not a reason to hide the brand). This is what stops the
+ * old footgun where a combined-dimension grant collapsed to `[]`. An assignment
+ * that does NOT restrict this dimension grants "all" of it (possibly sub-scoped by
+ * other dims we can't enumerate on an org-entity list), so we widen to "all" —
+ * never to `[]`. The authoritative per-record check is always `can()` /
+ * `assertRecordInScope()` / `scopeWhereFor()`, so widening here can only surface
+ * choices; it can never let a write through outside scope.
  */
 export function accessibleScopeIds(
   principal: Principal,
@@ -170,9 +180,10 @@ export function accessibleScopeIds(
     if (!notExpired(a, now)) continue;
     if (!grantsKey(a, permissionKey)) continue;
     if (a.moduleKey && a.moduleKey !== moduleForPermission(permissionKey)) continue;
-    const otherRestricted = SCOPE_DIMENSIONS.some((dd) => dd !== dimension && a[dd] != null);
-    if (otherRestricted) continue;
+    // Grant does not restrict this dimension ⇒ it covers all of it.
     if (a[dimension] == null) return "all";
+    // Grant restricts this dimension ⇒ that id is accessible, whatever other
+    // dimensions it also narrows (those are sub-scopes, enforced per-record).
     ids.add(a[dimension] as string);
   }
   return [...ids];

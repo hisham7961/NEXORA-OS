@@ -504,6 +504,9 @@ model Document {
   ownerId        String?
   fileId         String?
   createdById    String?
+  // JSON int[] of expiry day-thresholds already reminded for the current
+  // expiryDate (reset when expiryDate changes) — keeps the reminder job idempotent.
+  remindersSentJson String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   archivedAt     DateTime?
@@ -2054,18 +2057,40 @@ model FeatureRegistry {
 }
 
 model BackgroundJob {
-  id          String    @id @default(cuid())
-  name        String
-  type        String // recurring | scheduled | queue
-  status      String    @default("queued") // queued | running | success | failed
-  scheduleCron String?
-  lastRunAt   DateTime?
-  nextRunAt   DateTime?
-  lastError   String?
-  payloadJson String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  name           String
+  type           String // recurring | scheduled | queue
+  status         String    @default("queued") // queued | running | success | failed
+  scheduleCron   String?
+  lastRunAt      DateTime?
+  nextRunAt      DateTime?
+  lastDurationMs Int?
+  lastError      String?
+  payloadJson    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
+  runs BackgroundJobRun[]
+
+  @@index([status])
+}
+
+/** Append-only run history for scheduled/manual job executions (§10, observability). */
+model BackgroundJobRun {
+  id         String    @id @default(cuid())
+  jobId      String?
+  jobName    String
+  trigger    String    @default("scheduled") // scheduled | manual
+  status     String // success | failed
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  durationMs Int?
+  resultJson String?
+  error      String?
+
+  job BackgroundJob? @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([jobName, startedAt])
   @@index([status])
 }
 
