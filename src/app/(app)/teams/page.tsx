@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import { Users } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
+import { canAnywhere } from "@/lib/permissions/engine";
 import { listTeams, teamQuerySchema, type TeamRow } from "@/domain/teams";
 import { getLookups, refName } from "@/domain/lookups";
+import { prisma } from "@/lib/db";
 import { PageHeader, Panel, DataTable, Badge, type Column } from "@/components/ui";
 import { ListToolbar } from "@/components/list/toolbar";
 import { Pagination } from "@/components/list/pagination";
 import { BrandChip, UserChip } from "@/components/entity-chips";
+import { TeamForm, DepartmentForm } from "@/components/org/org-forms";
 
 export const metadata: Metadata = { title: "Teams" };
 
@@ -18,7 +21,12 @@ export default async function TeamsPage({ searchParams }: { searchParams: Promis
   const sp = await searchParams;
   const query = teamQuerySchema.parse(sp);
   const { rows, total } = await listTeams(principal, query);
-  const lookups = await getLookups();
+  const canCreate = canAnywhere(principal, "teams.create");
+  const [lookups, departments] = await Promise.all([getLookups(), prisma.department.findMany({ where: { archivedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" } })]);
+  const brandOpts = [...lookups.brands.values()].sort((a, b) => a.name.localeCompare(b.name)).map((b) => ({ id: b.id, label: b.name }));
+  const userOpts = [...lookups.users.values()].sort((a, b) => a.name.localeCompare(b.name)).map((u) => ({ id: u.id, label: u.name }));
+  const companyOpts = [...lookups.companies.values()].sort((a, b) => a.name.localeCompare(b.name)).map((c) => ({ id: c.id, label: c.name }));
+  const deptOpts = departments.map((d) => ({ id: d.id, label: d.name }));
 
   const brandOptions = [...lookups.brands.values()].map((b) => ({ value: b.id, label: b.name }));
 
@@ -50,6 +58,7 @@ export default async function TeamsPage({ searchParams }: { searchParams: Promis
         title="Teams"
         description="Cross-functional teams group people by brand and department, and route work and ownership."
         meta={<Badge category="neutral">{total} teams</Badge>}
+        actions={canCreate ? <div className="flex items-center gap-2"><DepartmentForm mode="create" companies={companyOpts} /><TeamForm mode="create" brands={brandOpts} departments={deptOpts} users={userOpts} /></div> : undefined}
       />
       <ListToolbar
         placeholder="Search teams…"

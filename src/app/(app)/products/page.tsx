@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import { Package } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
+import { canAnywhere } from "@/lib/permissions/engine";
 import { listProducts, productQuerySchema, type ProductRow } from "@/domain/products";
+import { getScopedOptions } from "@/domain/options";
 import { getLookups, refName } from "@/domain/lookups";
 import { PageHeader, Panel, DataTable, StatusBadge, Badge, type Column } from "@/components/ui";
 import { ListToolbar } from "@/components/list/toolbar";
 import { Pagination } from "@/components/list/pagination";
 import { BrandChip } from "@/components/entity-chips";
+import { ProductForm } from "@/components/products/product-controls";
 
 export const metadata: Metadata = { title: "Products" };
 
@@ -18,7 +21,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const sp = await searchParams;
   const query = productQuerySchema.parse(sp);
   const { rows, total } = await listProducts(principal, query);
-  const lookups = await getLookups();
+  const canCreate = canAnywhere(principal, "products.create");
+  const [lookups, options] = await Promise.all([getLookups(), canCreate ? getScopedOptions(principal, "products.create") : Promise.resolve(null)]);
 
   const brandOptions = [...lookups.brands.values()]
     .sort((a, b) => a.name.localeCompare(b.name))
@@ -38,6 +42,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         title="Products"
         description="The product master — every SKU, its markets, regulatory registrations, campaigns and customer cases in one place."
         meta={<Badge category="neutral">{total} products</Badge>}
+        actions={canCreate && options ? <ProductForm mode="create" brands={options.brands} /> : undefined}
       />
       <ListToolbar
         placeholder="Search by name or SKU…"

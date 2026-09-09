@@ -38,6 +38,7 @@ export const CREATE_COMMANDS: CreateCommand[] = [
   { key: "social", label: "Create social post", href: "/social?new=1", permission: "social.create" },
   { key: "whatsapp", label: "Create WhatsApp campaign", href: "/whatsapp?new=1", permission: "whatsapp.create" },
   { key: "design", label: "Create design request", href: "/design?new=1", permission: "design.create" },
+  { key: "product", label: "Create product", href: "/products?new=1", permission: "products.create" },
   { key: "registration", label: "Create registration case", href: "/registrations?new=1", permission: "registrations.create" },
   { key: "case", label: "Create customer case", href: "/cases?new=1", permission: "cases.create" },
   { key: "answer", label: "Create approved answer", href: "/answers?new=1", permission: "answers.create" },
@@ -47,6 +48,12 @@ export const CREATE_COMMANDS: CreateCommand[] = [
   { key: "approval", label: "Create approval request", href: "/approvals?new=1", permission: "approvals.manage" },
   { key: "subscription", label: "Create subscription", href: "/subscriptions?new=1", permission: "subscriptions.create" },
   { key: "workflow", label: "Create workflow", href: "/workflows?new=1", permission: "workflows.create" },
+  { key: "company", label: "Create company", href: "/companies?new=1", permission: "companies.create" },
+  { key: "brand", label: "Create brand", href: "/brands?new=1", permission: "brands.create" },
+  { key: "market", label: "Create market", href: "/markets?new=1", permission: "markets.create" },
+  { key: "team", label: "Create team", href: "/teams?new=1", permission: "teams.create" },
+  { key: "employee", label: "Create employee", href: "/employees?new=1", permission: "employees.create" },
+  { key: "project", label: "Create project", href: "/projects?new=1", permission: "projects.create" },
 ];
 
 export const NAVIGATION: NavGroup[] = [

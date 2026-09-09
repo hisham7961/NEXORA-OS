@@ -4,13 +4,17 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
-import { ForbiddenError } from "@/lib/permissions/engine";
+import { ForbiddenError, canAnywhere, can } from "@/lib/permissions/engine";
 import { getProduct } from "@/domain/products";
+import { getScopedOptions } from "@/domain/options";
 import { getLookups, refName } from "@/domain/lookups";
 import { Panel, PanelHeader, PanelBody, DataTable, StatusBadge, Badge, TabBar, EmptyState, Metric, type Column, type TabItem } from "@/components/ui";
 import { BrandChip, CountryChip } from "@/components/entity-chips";
+import { ProductForm, ArchiveProductButton, ProductVariants, ProductMarkets, ProductClaims } from "@/components/products/product-controls";
 import { formatDate, formatCurrency } from "@/lib/format";
 import { daysUntil } from "@/lib/utils";
+
+function isoDate(d: Date | null | undefined): string { return d ? new Date(d).toISOString().slice(0, 10) : ""; }
 
 export const metadata: Metadata = { title: "Product" };
 
@@ -35,8 +39,11 @@ export default async function ProductDetailPage({
   if (!data) notFound();
 
   const { product, variants, markets, claims, campaigns, registrations, documents, cases } = data;
-  const lookups = await getLookups();
+  const canEdit = can(principal, "products.edit", { brandId: product.brandId });
+  const canApprove = can(principal, "products.manage", { brandId: product.brandId });
+  const [lookups, options] = await Promise.all([getLookups(), canEdit ? getScopedOptions(principal, "products.edit") : Promise.resolve(null)]);
   const brandColor = lookups.brands.get(product.brandId)?.meta;
+  const countryOptions = [...lookups.countries.values()].sort((a, b) => a.name.localeCompare(b.name)).map((c) => ({ id: c.id, label: c.name }));
 
   const tabs: TabItem[] = [
     { key: "overview", label: "Overview" },
@@ -69,6 +76,12 @@ export default async function ProductDetailPage({
             </div>
           </div>
         </div>
+        {canEdit && options && (
+          <div className="flex items-center gap-2">
+            <ProductForm mode="edit" brands={options.brands} defaults={{ id: product.id, brandId: product.brandId, name: product.name, sku: product.sku, barcode: product.barcode, category: product.category, description: product.description, status: product.status, launchDate: isoDate(product.launchDate) }} />
+            <ArchiveProductButton productId={product.id} />
+          </div>
+        )}
       </div>
 
       <TabBar tabs={tabs} current={tab} className="mb-4" />
@@ -110,39 +123,11 @@ export default async function ProductDetailPage({
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Panel>
               <PanelHeader title="Variants" description="Pack sizes and shades sold under this product" />
-              <ul className="divide-y divide-line">
-                {variants.map((v) => (
-                  <li key={v.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                    <div className="min-w-0">
-                      <div className="text-[13px] text-ink">{v.name}</div>
-                      {v.sku && <div className="text-xs text-ink-3 font-mono">{v.sku}</div>}
-                    </div>
-                    {v.size && <span className="text-xs text-ink-3">{v.size}</span>}
-                  </li>
-                ))}
-                {variants.length === 0 && (
-                  <li className="px-4 py-6 text-sm text-ink-3">No variants — this product is sold as a single SKU. Add variants when pack sizes or shades differ.</li>
-                )}
-              </ul>
+              <PanelBody><ProductVariants productId={product.id} variants={variants} editable={canEdit} /></PanelBody>
             </Panel>
             <Panel>
-              <PanelHeader title="Claims" description="Approved marketing and regulatory claims by market" />
-              <ul className="divide-y divide-line">
-                {claims.map((c) => (
-                  <li key={c.id} className="flex items-start justify-between gap-3 px-4 py-2.5">
-                    <div className="min-w-0">
-                      <div className="text-[13px] text-ink">{c.claim}</div>
-                      <div className="mt-0.5 text-xs text-ink-3">
-                        {c.countryId ? refName(lookups.countries, c.countryId) : "All markets"}
-                      </div>
-                    </div>
-                    <Badge category={c.isApproved ? "success" : "warning"}>{c.isApproved ? "Approved" : "Pending"}</Badge>
-                  </li>
-                ))}
-                {claims.length === 0 && (
-                  <li className="px-4 py-6 text-sm text-ink-3">No claims recorded. Claims control what may be said about this product per market — add and approve them before use.</li>
-                )}
-              </ul>
+              <PanelHeader title="Claims" description="Marketing and regulatory claims by market — approve before use" />
+              <PanelBody><ProductClaims productId={product.id} claims={claims} countries={countryOptions} editable={canEdit} canApprove={canApprove} /></PanelBody>
             </Panel>
           </div>
         </div>
@@ -150,15 +135,8 @@ export default async function ProductDetailPage({
 
       {tab === "markets" && (
         <Panel>
-          <DataTable
-            columns={[
-              { key: "country", header: "Market", render: (m) => <CountryChip name={refName(lookups.countries, m.countryId)} iso2={lookups.countries.get(m.countryId)?.meta} /> },
-              { key: "status", header: "Status", align: "end", render: (m) => <StatusBadge module="generic" status={m.status} /> },
-            ] as Column<(typeof markets)[number]>[]}
-            rows={markets}
-            getRowKey={(m) => m.id}
-            empty={<EmptyState title="No markets" description="The countries where this product is planned or sold will appear here. Add a market to start its regulatory and go-to-market work." />}
-          />
+          <PanelHeader title="Market availability" description="Where this product is planned or sold" />
+          <PanelBody><ProductMarkets productId={product.id} markets={markets} countries={countryOptions} editable={canEdit} /></PanelBody>
         </Panel>
       )}
 

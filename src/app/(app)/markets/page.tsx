@@ -2,21 +2,24 @@ import type { Metadata } from "next";
 import { Globe2 } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
+import { canAnywhere } from "@/lib/permissions/engine";
 import { listMarkets, marketQuerySchema, type MarketRow } from "@/domain/markets";
 import { PageHeader, Panel, DataTable, Badge, type Column } from "@/components/ui";
 import { ListToolbar } from "@/components/list/toolbar";
 import { Pagination } from "@/components/list/pagination";
 import { CountryChip } from "@/components/entity-chips";
+import { CountryForm } from "@/components/org/org-forms";
 
 export const metadata: Metadata = { title: "Markets" };
 
 export default async function MarketsPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
-  const { locale, denied } = await pageGuard("markets.view");
+  const { principal, locale, denied } = await pageGuard("markets.view");
   if (denied) return <AccessDenied locale={locale} />;
 
   const sp = await searchParams;
   const query = marketQuerySchema.parse(sp);
   const { rows, total } = await listMarkets(query);
+  const canCreate = canAnywhere(principal, "markets.create");
 
   const columns: Column<MarketRow>[] = [
     { key: "name", header: "Market", render: (c) => <CountryChip name={c.name} iso2={c.iso2} /> },
@@ -33,6 +36,7 @@ export default async function MarketsPage({ searchParams }: { searchParams: Prom
         title="Markets"
         description="The countries the group operates in — each drives its own currency, registrations and document rules."
         meta={<Badge category="neutral">{total} markets</Badge>}
+        actions={canCreate ? <CountryForm mode="create" /> : undefined}
       />
       <ListToolbar placeholder="Search by country or ISO code…" />
       <Panel>

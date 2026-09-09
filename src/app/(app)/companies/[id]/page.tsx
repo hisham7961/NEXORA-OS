@@ -4,11 +4,12 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
-import { ForbiddenError } from "@/lib/permissions/engine";
+import { ForbiddenError, canAnywhere } from "@/lib/permissions/engine";
 import { getCompany } from "@/domain/companies";
 import { getLookups, refName } from "@/domain/lookups";
 import { Panel, PanelHeader, PanelBody, DataTable, StatusBadge, Badge, TabBar, EmptyState, Metric, type Column, type TabItem } from "@/components/ui";
 import { BrandChip, CountryChip, UserChip } from "@/components/entity-chips";
+import { CompanyForm, ArchiveOrgButton } from "@/components/org/org-forms";
 import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Company" };
@@ -70,6 +71,12 @@ export default async function CompanyDetailPage({
             </div>
           </div>
         </div>
+        {canAnywhere(principal, "companies.edit") && (
+          <div className="flex items-center gap-2">
+            <CompanyForm mode="edit" countries={[...lookups.countries.values()].sort((a, b) => a.name.localeCompare(b.name)).map((c) => ({ id: c.id, label: c.name }))} defaults={{ id: company.id, name: company.name, legalName: company.legalName, code: company.code, baseCurrency: company.baseCurrency, hqCountryId: company.hqCountryId, timezone: company.timezone, fiscalYearStartMonth: company.fiscalYearStartMonth, status: company.status }} />
+            {canAnywhere(principal, "companies.delete") && <ArchiveOrgButton kind="company" id={company.id} redirect="/companies" />}
+          </div>
+        )}
       </div>
 
       <TabBar tabs={tabs} current={tab} className="mb-4" />

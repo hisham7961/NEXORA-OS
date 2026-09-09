@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 import { Building2 } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
+import { canAnywhere } from "@/lib/permissions/engine";
 import { listCompanies, companyQuerySchema, type CompanyRow } from "@/domain/companies";
+import { getLookups } from "@/domain/lookups";
 import { PageHeader, Panel, DataTable, StatusBadge, Badge, type Column } from "@/components/ui";
 import { ListToolbar } from "@/components/list/toolbar";
 import { Pagination } from "@/components/list/pagination";
+import { CompanyForm } from "@/components/org/org-forms";
 
 export const metadata: Metadata = { title: "Companies" };
 
@@ -16,6 +19,9 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
   const sp = await searchParams;
   const query = companyQuerySchema.parse(sp);
   const { rows, total } = await listCompanies(principal, query);
+  const canCreate = canAnywhere(principal, "companies.create");
+  const lookups = await getLookups();
+  const countryOptions = [...lookups.countries.values()].sort((a, b) => a.name.localeCompare(b.name)).map((c) => ({ id: c.id, label: c.name }));
 
   const columns: Column<CompanyRow>[] = [
     {
@@ -46,6 +52,7 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
         title="Companies"
         description="Each legal entity anchors its brands, employees and books — the roots of the group hierarchy."
         meta={<Badge category="neutral">{total} companies</Badge>}
+        actions={canCreate ? <CompanyForm mode="create" countries={countryOptions} /> : undefined}
       />
       <ListToolbar
         placeholder="Search companies…"

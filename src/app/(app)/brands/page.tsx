@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import { Gem } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
+import { canAnywhere } from "@/lib/permissions/engine";
 import { listBrands, brandQuerySchema, type BrandRow } from "@/domain/brands";
+import { getLookups } from "@/domain/lookups";
 import { PageHeader, Panel, DataTable, StatusBadge, Badge, type Column } from "@/components/ui";
 import { ListToolbar } from "@/components/list/toolbar";
 import { Pagination } from "@/components/list/pagination";
 import { BrandChip } from "@/components/entity-chips";
+import { BrandForm } from "@/components/org/org-forms";
 
 export const metadata: Metadata = { title: "Brands" };
 
@@ -17,6 +20,9 @@ export default async function BrandsPage({ searchParams }: { searchParams: Promi
   const sp = await searchParams;
   const query = brandQuerySchema.parse(sp);
   const { rows, total } = await listBrands(principal, query);
+  const canCreate = canAnywhere(principal, "brands.create");
+  const lookups = await getLookups();
+  const companyOptions = [...lookups.companies.values()].sort((a, b) => a.name.localeCompare(b.name)).map((c) => ({ id: c.id, label: c.name }));
 
   const columns: Column<BrandRow>[] = [
     { key: "name", header: "Brand", render: (b) => <BrandChip name={b.name} color={b.accentColor} /> },
@@ -33,6 +39,7 @@ export default async function BrandsPage({ searchParams }: { searchParams: Promi
         title="Brands"
         description="Every brand connects companies, markets, products, campaigns, regulatory and finance."
         meta={<Badge category="neutral">{total} brands</Badge>}
+        actions={canCreate ? <BrandForm mode="create" companies={companyOptions} /> : undefined}
       />
       <ListToolbar
         placeholder="Search brands…"
