@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import { Clock } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
-import { getAttendanceToday } from "@/domain/attendance";
-import { PageHeader, Panel, PanelHeader, DataTable, StatusBadge, Metric, EmptyState } from "@/components/ui";
+import { getAttendanceToday, getMyAttendanceToday } from "@/domain/attendance";
+import { PageHeader, Panel, PanelHeader, PanelBody, DataTable, StatusBadge, Metric, EmptyState } from "@/components/ui";
 import { UserChip } from "@/components/entity-chips";
+import { ClockWidget } from "@/components/attendance/clock-widget";
 import { formatDateTime } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Attendance" };
@@ -12,11 +13,21 @@ export const metadata: Metadata = { title: "Attendance" };
 export default async function AttendancePage() {
   const { principal, locale, denied } = await pageGuard("attendance.view");
   if (denied) return <AccessDenied locale={locale} />;
-  const { rows, summary } = await getAttendanceToday(principal);
+  const [my, { rows, summary }] = await Promise.all([getMyAttendanceToday(principal), getAttendanceToday(principal)]);
 
   return (
     <>
       <PageHeader title="Attendance" description="Today's attendance — an accountability system, not surveillance (§22)." />
+      <Panel className="mb-4">
+        <PanelHeader title="My clock" description="Check in, take breaks, and check out. Transitions are validated." />
+        <PanelBody>
+          <ClockWidget
+            state={my.state}
+            startedAt={my.record?.actualStart ? formatDateTime(my.record.actualStart, locale) : null}
+            workedMinutes={my.record?.totalWorkedMinutes}
+          />
+        </PanelBody>
+      </Panel>
       <Panel className="mb-4">
         <div className="grid grid-cols-2 gap-4 p-4 sm:grid-cols-4">
           <Metric label="Present" value={summary.present} category="success" />
