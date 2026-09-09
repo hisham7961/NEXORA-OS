@@ -5,6 +5,8 @@ import { Stamp } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
 import { listApprovals, getMyApprovals, approvalQuerySchema } from "@/domain/approvals";
+import { getScopedOptions } from "@/domain/options";
+import { NewApprovalButton } from "@/components/approvals/new-approval-button";
 import { getLookups, refName } from "@/domain/lookups";
 import { PageHeader, Panel, PanelHeader, DataTable, StatusBadge, Badge, EmptyState, type Column } from "@/components/ui";
 import { ListToolbar } from "@/components/list/toolbar";
@@ -19,7 +21,12 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
   if (denied) return <AccessDenied locale={locale} />;
   const sp = await searchParams;
   const query = approvalQuerySchema.parse(sp);
-  const [{ rows, total }, mine, lookups] = await Promise.all([listApprovals(principal, query), getMyApprovals(principal), getLookups()]);
+  const [{ rows, total }, mine, lookups, options] = await Promise.all([
+    listApprovals(principal, query),
+    getMyApprovals(principal),
+    getLookups(),
+    getScopedOptions(principal, "approvals.view"),
+  ]);
 
   const columns: Column<ApprovalRequest>[] = [
     { key: "title", header: "Title", render: (a) => a.title },
@@ -31,7 +38,11 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
 
   return (
     <>
-      <PageHeader title="Approvals" description="A universal approval engine with multi-step routing (§24)." />
+      <PageHeader
+        title="Approvals"
+        description="A universal approval engine with multi-step routing (§24)."
+        actions={<NewApprovalButton options={{ users: options.users, brands: options.brands, companies: options.companies }} />}
+      />
       {mine.length > 0 && (
         <Panel className="mb-4">
           <PanelHeader title="Waiting for me" icon={<Stamp className="h-4 w-4" />} action={<Badge category="warning">{mine.length}</Badge>} />
