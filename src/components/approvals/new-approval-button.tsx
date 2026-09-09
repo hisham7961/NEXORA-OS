@@ -1,5 +1,7 @@
 "use client";
 
+import { useCreateShortcut } from "@/lib/use-create-shortcut";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X, ArrowDown } from "lucide-react";
@@ -39,6 +41,7 @@ function ApproverSteps({ users }: { users: Option[] }) {
 
 export function NewApprovalButton({ options }: { options: { users: Option[]; brands: Option[]; companies: Option[] } }) {
   const [open, setOpen] = useState(false);
+  useCreateShortcut(() => setOpen(true));
   const router = useRouter();
   return (
     <>

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser, getPrincipal } from "@/lib/auth/current-user";
-import { allowedNavKeys } from "@/lib/navigation-access";
+import { allowedNavKeys, allowedCreateCommands } from "@/lib/navigation-access";
 import { DEFAULT_ROLES } from "@/lib/permissions/catalog";
 import { prisma } from "@/lib/db";
 import { ShellProvider } from "@/components/layout/shell-context";
@@ -13,6 +13,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!user || !principal) redirect("/login");
 
   const allowed = allowedNavKeys(principal);
+  const createCommands = allowedCreateCommands(principal);
 
   let roleLabel = "Employee";
   if (principal.isSuperAdmin) roleLabel = "Super Administrator";
@@ -39,7 +40,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </main>
         </div>
       </div>
-      <CommandPalette allowed={allowed} />
+      <CommandPalette allowed={allowed} createCommands={createCommands} />
     </ShellProvider>
   );
 }

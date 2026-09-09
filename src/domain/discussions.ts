@@ -249,7 +249,9 @@ export async function editMessage(ctx: ActorContext, messageId: string, body: st
   const message = await loadOwnMessage(ctx, messageId);
   if (message.authorId !== ctx.principal.userId) throw new ForbiddenError("discussions.edit_own");
   if (!body.trim()) throw new ServiceError("empty", "Message cannot be empty", 422);
-  return prisma.message.update({ where: { id: messageId }, data: { body: body.trim(), editedAt: new Date() } });
+  const updated = await prisma.message.update({ where: { id: messageId }, data: { body: body.trim(), editedAt: new Date() } });
+  await audit(ctx, { action: "message.edited", entityType: "Channel", entityId: message.channelId, summary: body.trim().slice(0, 100), brandId: message.channel.brandId });
+  return updated;
 }
 
 export async function deleteMessage(ctx: ActorContext, messageId: string): Promise<void> {
@@ -257,6 +259,7 @@ export async function deleteMessage(ctx: ActorContext, messageId: string): Promi
   const isManager = canAnywhere(ctx.principal, "discussions.manage");
   if (message.authorId !== ctx.principal.userId && !isManager) throw new ForbiddenError("discussions.edit_own");
   await prisma.message.update({ where: { id: messageId }, data: { archivedAt: new Date() } });
+  await audit(ctx, { action: "message.deleted", entityType: "Channel", entityId: message.channelId, summary: message.body.slice(0, 100), brandId: message.channel.brandId });
 }
 
 export async function setMessagePinned(ctx: ActorContext, messageId: string, pinned: boolean): Promise<void> {

@@ -57,7 +57,7 @@ all work (verified end-to-end on PostgreSQL), per the brief's own bar.
 | **S** | **Attendance** clock | ✅ | check-in/break/back/check-out state machine with validated transitions + computed durations. Verified. |
 | **X** | **Permission administration** | ✅ | create/edit roles, scoped assignments + expiry, remove; **no privilege escalation** (scope-bounded, super-admin protected); all audited. Verified. |
 | T | Audit everything | ✅* | Every implemented mutation audits (create/edit/status/assign/approval/attendance/registration/permission changes) and is readable in the Audit Explorer. *Grows with each remaining write path. |
-| U | API parity | ✅* | Each implemented action is exposed under `/api/v1` sharing the exact domain logic. |
+| U | API parity | ✅ | Every implemented action is exposed under `/api/v1` sharing the exact domain logic. The §30 sweep closed the remaining web-only lifecycle/edit/sub-entity writes (status transitions, cancel/archive, draft edits & revisions, requirements, notes, attachments, message edit/delete/pin/react, per-item checks) so no business logic is reachable from the web UI alone (89 route files). |
 | V | Transactions & concurrency | ✅ | Multi-record ops (task+assignees+checklist, approval decisions, registration stage+event, break accounting, role+permissions) run in `prisma.$transaction`; generator + dependencies are idempotent/guarded. |
 | **K** | **Marketing Campaign** write path | ✅ | create/edit (drawer), lifecycle transitions, manual metrics with atomic spend roll-up into the budget, activity timeline. Combined-dimension scope (brand + country) enforced on create + IDOR edit. Verified live on Postgres + unit tests. |
 | **L,M** | **Social publishing** actions + recurring | ✅ | plan/edit items (drawer), workflow stages, two verification checkpoints (confirm-scheduled requires *approved*; confirm-published requires *scheduled*, captures the public URL), a **platform × 7-day coverage matrix**, a detail page with activity, and an **idempotent recurring generator** (job route + per-recurrence, never duplicates a date). Brand + country scope enforced. Verified live on Postgres + unit tests. |
@@ -91,7 +91,7 @@ all work (verified end-to-end on PostgreSQL), per the brief's own bar.
 | 11 | WhatsApp Campaigns | ✅ | سير عمل داخلي كامل brief→sent→reported بانتقالات مُتحقَّقة + **بوابة اعتماد بالنطاق** + تسجيل الإرسال + التقاط النتائج (Part N). لا إرسال عبر API (مطابق). |
 | 12 | Creative / Design | ✅ | دورة حياة كاملة + **إصدارات append-only مرقّمة من الخادم** + اعتماد/رفض لكل إصدار حيث يَجُبّ الاعتمادُ الأحدثُ السابقَ (نسخة معتمدة واحدة، حفظ التاريخ) (Part O). *رفع ملف الإصدار الحقيقي في الطور 2.5 §6.* |
 | 13 | Products (Master + 360) | ✅ | Product Master + صفحة 360 بتبويبات (Overview/Markets/Regulatory/Documents/Campaigns/Support). *الإنشاء/التعديل لاحقًا.* |
-| 14 | Global Regulatory Registration | ✅ | مسار كتابة كامل (Part R): انتقالات المراحل تكتب خطًّا زمنيًّا للأحداث + المتطلبات + ردود السلطات، بالنطاق ومُدقَّق. *باني سير العمل القابل للتهيئة من الواجهة في الطور 2.5 §26.* |
+| 14 | Global Regulatory Registration | ✅ | مسار كتابة كامل (Part R): انتقالات المراحل تكتب خطًّا زمنيًّا للأحداث + المتطلبات + ردود السلطات، بالنطاق ومُدقَّق. **مربوط الآن بمحرّك سير العمل القابل للتهيئة (§26–27)** عبر `WorkflowPanel` + سير عمل "اعتماد التسجيل" المُفعّل في البذور. |
 | 15 | Certificate & Document Expiration | 🟡 | `Document` + حالات + تتبّع انتهاء + عرض المستندات/الشهادات + إبراز المنتهية/الموشكة في مركز القيادة. *عتبات التنبيه القابلة للتهيئة (وظيفة مرئية) لاحقًا.* |
 | 16 | E-commerce Stores | ✅ | مسار كتابة كامل (Part P): إدخال أداء يومي/أسبوعي/شهري بحساب AOV/هامش إجمالي/مساهمة صافية من الخادم + upsert idempotent لكل فترة + بالنطاق ومُدقَّق. |
 | 17 | Customer Service | ✅ | مسار كتابة كامل (Part Q): إنشاء/إسناد/حالة/تصعيد/حل/ملاحظات + نشاط. *تكامل مكتبة الأجوبة داخل الحالة في الطور 2.5 §17.* |
@@ -106,12 +106,12 @@ all work (verified end-to-end on PostgreSQL), per the brief's own bar.
 | 26 | Full Accounting & Financial Analytics | 🧩 | كل الكيانات مُنمذَجة: FiscalYear/Period/Account/Journal(+dimensions)/CostCenter/Customer/Supplier/Invoice/Payment/Bank/Budget/Expense/ExchangeRate/TaxRate + نظرة مالية + مصروفات. *الترحيل + التقارير (Trial Balance/P&L/Balance Sheet/…) لاحقًا.* الأبعاد التحليلية جاهزة في المخطط. |
 | 27 | Management Analytics | 🟡 | نظرة تحليلية بمؤشرات حقيقية عبر الوحدات. *التحليلات القابلة للفلترة لكل مجال لاحقًا.* |
 | 28 | Report Builder | 🧩 | `SavedView` + قائمة التقارير. *باني التقارير التفاعلي لاحقًا.* |
-| 29 | Universal Search | ✅ | لوحة Cmd/K + `/api/v1/search` ضمن النطاق عبر عدة كيانات. *أوامر "إنشاء…" لاحقًا (أوامر التنقل جاهزة).* |
+| 29 | Universal Search | ✅ | لوحة Cmd/K + `/api/v1/search` ضمن النطاق عبر عدة كيانات، **مع أوامر "إنشاء…" لكل وحدة** (§29) مُصفّاة بالصلاحية وترتبط عميقًا بواجهة الإنشاء (`?new=1` + `useCreateShortcut`) — بجانب أوامر التنقّل والبحث الحيّ. |
 | 30 | Notification Center | ✅ | **الإشعارات 2.0 (§22)**: مقروء/غير مقروء/أرشفة/تحديد الكل، تجميع بمفتاح groupKey، فلترة بالفئة، روابط للكيان، و**تفضيلات لكل فئة** تُطبَّق في `notify()` فعلاً (تُسكِت الفئات المعطّلة). |
 | 31 | Audit Log | ✅ | `AuditLog` + `writeAudit` + مستكشف تدقيق مقروء (لا JSON خام). *توسيع تغطية الإجراءات المدقّقة لاحقًا.* |
 | 32 | Archive / Soft Delete | ✅ | `archivedAt` على الكيانات المهمة؛ القوائم تُرشّح `archivedAt:null`. |
 | 33 | API-First Architecture | ✅ | خدمات النطاق مشتركة بين الويب و`/api/v1`، فحوص صلاحيات، مغلّف موحّد. |
-| 34 | Web/Mobile Feature Parity | 🟡 | `FeatureRegistry` + بوابة المطورين تُظهر توفّر الويب/الموبايل. *استكمال السجل لكل الميزات لاحقًا.* |
+| 34 | Web/Mobile Feature Parity | ✅ | `FeatureRegistry` + بوابة المطورين، و**مسح تكافؤ شامل (§30)**: كل مسار دورة حياة/تحرير كان متاحًا في الويب فقط أصبح له مكافئ تحت `/api/v1` عبر نفس خدمات الدومين — تغييرات الحالة (حملات/نشر/واتساب/تصميم)، إلغاء/أرشفة الاشتراكات، أرشفة المهمة وإسنادها وقوائمها، ملاحظات الحالات، تحرير مسودّات/مراجعات/تقاعد الأجوبة والمعرفة، تحديث التسجيلات ومتطلباتها وردود السلطة، قرار إصدار التصميم، مرفقات/مجلّدات الملفات، تحرير/حذف/تثبيت/تفاعل رسائل النقاش، وإتمام بنود الفحص اليومي. |
 | 35 | Developer Portal | 🟡 | سجل الميزات + النقاط الطرفية + رموز API (بلا أسرار) + صحة النظام. *توليد التوثيق من المسارات لاحقًا.* |
 | 36 | System Settings | 🟡 | `SystemSetting` + صفحة إعدادات مجمّعة بالفئة (عرض). *واجهة إدارة البيانات المرجعية لاحقًا.* |
 | 37 | Background Jobs & Monitoring | 🟡 | `BackgroundJob/SystemEvent` + صفحة صحة النظام. **مولّدات حقيقية idempotent** (الفحوصات اليومية، النشر المتكرر) عبر مسارات `/api/v1/jobs/*` مسجَّلة في وظائف النظام. *مُشغّل مُجدوَل (cron) + تذكيرات الشهادات/الاشتراكات في الطور 2.5 §24.* |
@@ -124,10 +124,10 @@ all work (verified end-to-end on PostgreSQL), per the brief's own bar.
 | 44 | Entity Page Design | ✅ | صفحات 360 (Brand/Product/Campaign) بتبويبات وعلاقات ظاهرة. |
 | 45 | Table Design | 🟡 | بحث/ترتيب/فلترة متعددة/ترقيم/رؤوس ثابتة/تنقّل الصفوف. *عروض محفوظة/إظهار-إخفاء أعمدة/تحجيم/تحديد جماعي/معاينة لاحقًا.* |
 | 46 | Status Design | ✅ | نظام دلالي بخمس فئات، مقروء فاتح/داكن. |
-| 47 | Timeline & Activity | 🟡 | `ActivityTimeline` مقروء (من التدقيق) على المهام/الحالات/التسجيلات/الحملات/النشر/واتساب/التصميم + مستكشف تدقيق. *توحيد الخط الزمني عبر بقية الكيانات في الطور 2.5 §28.* |
+| 47 | Timeline & Activity | ✅ | `ActivityTimeline` مقروء (من التدقيق) على المهام/الحالات/التسجيلات/الحملات/النشر/واتساب/التصميم/الاشتراكات/المعرفة/الأجوبة/الملفات/الموافقات/الفحوص اليومية، و**بعد مسح §28**: المتاجر وسير العمل والمستخدمين (تعيينات الأدوار). تحرير/حذف رسائل النقاش يكتب الآن أثرًا في التدقيق. |
 | 48 | Favorites / Recent Items | 🧩 | `Favorite/RecentItem` مُنمذَجان. *الواجهة لاحقًا.* |
 | 49 | Saved Views | 🧩 | `SavedView` مُنمذَج + حالة الفلاتر في الـURL. *واجهة الحفظ/المشاركة لاحقًا.* |
-| 50 | Workflow Engine | 🧩 | `WorkflowTemplate` + حالات نصية قابلة للتهيئة. *المحرّك القابل للتهيئة + واجهته لاحقًا.* |
+| 50 | Workflow Engine | ✅ | محرّك سير عمل **قابل للتهيئة ومُصدَّر** (§26–27): `WorkflowDefinition` + `WorkflowVersion` (تعريف تعريفي ثابت) + `WorkflowInstance` مربوطة بالإصدار الذي بدأت عليه (تعديل المسودّة أو تفعيل إصدار جديد لا يغيّر معنى السجلّات الجارية). مراحل/انتقالات/حالة ابتدائية/حالات نهائية/حقول ومستندات وموافقات مطلوبة/أدوار مسؤولة/مهل SLA/تصعيد/صلاحيات — كلها مُتحقَّق منها قبل التفعيل. تنفيذ الانتقالات مُقيَّد بالصلاحية ضمن نطاق السجلّ، مع سجلّ انتقالات، وإشعارات للأدوار، ووظيفة **تصعيد SLA** خاملة التكرار. **باني سير عمل مرئي احترافي** (`/workflows`) + لوحة `WorkflowPanel` داخل صفحة السجلّ. مُدقَّق حيًّا على Postgres (21 فحصًا) + اختبارات تحقّق. |
 | 51 | Activity Ownership Principle | ✅ | مالك/حالة/موعد/نشاط على السجلات المهمة؛ شركة/علامة/دولة عند اللزوم. |
 | 52 | File Versioning Principle | 🧩 | `FileVersion/DesignVersion` + سجل إصدارات التصميم. *واجهة إصدارات الملفات لاحقًا.* |
 | 53 | No AI Dependency for V1 | ✅ | حتمي بالكامل، بلا اعتماد على الذكاء الاصطناعي. |

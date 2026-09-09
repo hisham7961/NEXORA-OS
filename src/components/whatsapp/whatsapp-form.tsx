@@ -1,5 +1,7 @@
 "use client";
 
+import { useCreateShortcut } from "@/lib/use-create-shortcut";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil } from "lucide-react";
@@ -29,6 +31,7 @@ export function WhatsappForm({
   defaults?: WhatsappDefaults;
 }) {
   const [open, setOpen] = useState(false);
+  useCreateShortcut(() => { if (mode === "create") setOpen(true); });
   const router = useRouter();
   const isEdit = mode === "edit";
   return (

@@ -22,6 +22,33 @@ export interface NavGroup {
   items: NavItem[];
 }
 
+/** Cmd/Ctrl-K "Create …" commands (§29). Each deep-links to the module's list
+ *  page with `?new=1`, which the list page's create control opens automatically
+ *  (see useCreateShortcut). Gated by the `<permission>` (canAnywhere). */
+export interface CreateCommand {
+  key: string;
+  label: string;
+  href: string;
+  permission: string;
+}
+
+export const CREATE_COMMANDS: CreateCommand[] = [
+  { key: "task", label: "Create task", href: "/tasks?new=1", permission: "tasks.create" },
+  { key: "campaign", label: "Create campaign", href: "/campaigns?new=1", permission: "campaigns.create" },
+  { key: "social", label: "Create social post", href: "/social?new=1", permission: "social.create" },
+  { key: "whatsapp", label: "Create WhatsApp campaign", href: "/whatsapp?new=1", permission: "whatsapp.create" },
+  { key: "design", label: "Create design request", href: "/design?new=1", permission: "design.create" },
+  { key: "registration", label: "Create registration case", href: "/registrations?new=1", permission: "registrations.create" },
+  { key: "case", label: "Create customer case", href: "/cases?new=1", permission: "cases.create" },
+  { key: "answer", label: "Create approved answer", href: "/answers?new=1", permission: "answers.create" },
+  { key: "article", label: "Create knowledge article", href: "/knowledge?new=1", permission: "knowledge.create" },
+  { key: "channel", label: "Create discussion channel", href: "/discussions?new=1", permission: "discussions.create" },
+  { key: "file", label: "Upload file", href: "/files?new=1", permission: "files.create" },
+  { key: "approval", label: "Create approval request", href: "/approvals?new=1", permission: "approvals.manage" },
+  { key: "subscription", label: "Create subscription", href: "/subscriptions?new=1", permission: "subscriptions.create" },
+  { key: "workflow", label: "Create workflow", href: "/workflows?new=1", permission: "workflows.create" },
+];
+
 export const NAVIGATION: NavGroup[] = [
   {
     labelKey: null,

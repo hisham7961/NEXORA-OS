@@ -5,9 +5,11 @@ import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
 import { canAnywhere, ForbiddenError } from "@/lib/permissions/engine";
 import { getStore } from "@/domain/stores";
+import { getActivity } from "@/domain/mutation";
 import { getLookups, refName } from "@/domain/lookups";
 import { Panel, PanelHeader, PanelBody, DataTable, StatusBadge, Metric, EmptyState } from "@/components/ui";
 import { RecordPerformanceButton } from "@/components/stores/performance-entry";
+import { ActivityTimeline, type TimelineEntry } from "@/components/activity-timeline";
 import { EntityFiles } from "@/components/files/entity-files";
 import { BrandChip, CountryChip } from "@/components/entity-chips";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
@@ -25,9 +27,13 @@ export default async function StoreDetailPage({ params }: { params: Promise<{ id
     throw e;
   }
   if (!store) notFound();
-  const lookups = await getLookups();
+  const [lookups, activity] = await Promise.all([getLookups(), getActivity("Store", store.id)]);
   const latest = store.performance[0];
   const canRecord = canAnywhere(principal, "sales.create");
+  const timeline: TimelineEntry[] = activity.map((a) => ({
+    id: a.id, at: a.at, actorName: a.actorId ? refName(lookups.users, a.actorId) : "System",
+    actorColor: a.actorId ? lookups.users.get(a.actorId)?.meta : null, action: a.action, summary: a.summary,
+  }));
 
   return (
     <>
@@ -80,8 +86,12 @@ export default async function StoreDetailPage({ params }: { params: Promise<{ id
           empty={<EmptyState title="No performance entered" description="Enter daily/weekly/monthly performance to track sales and margin." />}
         />
       </Panel>
-      <div className="mt-4">
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <EntityFiles principal={principal} entityType="Store" entityId={store.id} scope={{ companyId: store.companyId, brandId: store.brandId, countryId: store.countryId }} />
+        <Panel>
+          <PanelHeader title="Activity" />
+          <PanelBody><ActivityTimeline entries={timeline} locale={locale} empty="No activity yet." /></PanelBody>
+        </Panel>
       </div>
     </>
   );

@@ -1,5 +1,7 @@
 "use client";
 
+import { useCreateShortcut } from "@/lib/use-create-shortcut";
+
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil, RefreshCw, Ban, Archive } from "lucide-react";
@@ -19,6 +21,7 @@ export interface SubDefaults {
 
 export function SubscriptionForm({ mode, options, defaults = {} }: { mode: "create" | "edit"; options: { brands: Option[]; countries: Option[]; companies: Option[]; users: Option[] }; defaults?: SubDefaults }) {
   const [open, setOpen] = useState(false);
+  useCreateShortcut(() => { if (mode === "create") setOpen(true); });
   const router = useRouter();
   const isEdit = mode === "edit";
   return (

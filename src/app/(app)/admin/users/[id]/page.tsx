@@ -4,7 +4,10 @@ import type { Metadata } from "next";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
 import { getUserAdmin } from "@/domain/users-admin";
+import { getActivity } from "@/domain/mutation";
+import { getLookups, refName } from "@/domain/lookups";
 import { Panel, PanelHeader, PanelBody, Avatar, Badge } from "@/components/ui";
+import { ActivityTimeline, type TimelineEntry } from "@/components/activity-timeline";
 import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "User" };
@@ -16,6 +19,11 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
   const data = await getUserAdmin(id);
   if (!data) notFound();
   const { user, assignments } = data;
+  const [activity, lookups] = await Promise.all([getActivity("User", id), getLookups()]);
+  const timeline: TimelineEntry[] = activity.map((a) => ({
+    id: a.id, at: a.at, actorName: a.actorId ? refName(lookups.users, a.actorId) : "System",
+    actorColor: a.actorId ? lookups.users.get(a.actorId)?.meta : null, action: a.action, summary: a.summary,
+  }));
 
   return (
     <>
@@ -67,6 +75,10 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
               {user.employee && <div className="flex justify-between"><dt className="text-ink-3">Joined</dt><dd className="text-ink">{formatDate(user.employee.joinDate, locale)}</dd></div>}
             </dl>
           </PanelBody>
+        </Panel>
+        <Panel className="lg:col-span-3">
+          <PanelHeader title="Activity" description="Role assignment and permission changes (§28, §31)." />
+          <PanelBody><ActivityTimeline entries={timeline} locale={locale} empty="No permission changes recorded." /></PanelBody>
         </Panel>
       </div>
     </>

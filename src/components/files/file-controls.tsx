@@ -1,5 +1,7 @@
 "use client";
 
+import { useCreateShortcut } from "@/lib/use-create-shortcut";
+
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, Plus, Pencil, Archive, FolderPlus } from "lucide-react";
@@ -34,6 +36,7 @@ export function UploadFileButton({
   variant?: "primary" | "secondary";
 }) {
   const [open, setOpen] = useState(false);
+  useCreateShortcut(() => setOpen(true));
   const router = useRouter();
   return (
     <>

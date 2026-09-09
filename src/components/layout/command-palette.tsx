@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, CornerDownLeft, ArrowRight } from "lucide-react";
-import { NAVIGATION } from "@/config/navigation";
+import { Search, CornerDownLeft, ArrowRight, Plus } from "lucide-react";
+import { NAVIGATION, type CreateCommand } from "@/config/navigation";
 import { useShell } from "./shell-context";
 import { useI18n } from "@/components/providers";
 import { Kbd } from "@/components/ui";
@@ -17,7 +17,7 @@ interface SearchHit {
   href: string;
 }
 
-export function CommandPalette({ allowed }: { allowed: string[] }) {
+export function CommandPalette({ allowed, createCommands = [] }: { allowed: string[]; createCommands?: CreateCommand[] }) {
   const { commandOpen, setCommandOpen } = useShell();
   const { t } = useI18n();
   const router = useRouter();
@@ -40,13 +40,25 @@ export function CommandPalette({ allowed }: { allowed: string[] }) {
     return cmds;
   }, [allowedSet, t]);
 
+  // "Create …" commands (§29) — deep-link to the module with ?new=1.
+  const createHits = useMemo<SearchHit[]>(
+    () => createCommands.map((c) => ({ type: "create", id: c.key, title: c.label, href: c.href, subtitle: "Create" })),
+    [createCommands],
+  );
+
   const filteredNav = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return navCommands.slice(0, 8);
     return navCommands.filter((c) => c.title.toLowerCase().includes(q)).slice(0, 8);
   }, [query, navCommands]);
 
-  const results = useMemo(() => [...filteredNav, ...hits], [filteredNav, hits]);
+  const filteredCreate = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return createHits.slice(0, 5);
+    return createHits.filter((c) => c.title.toLowerCase().includes(q)).slice(0, 6);
+  }, [query, createHits]);
+
+  const results = useMemo(() => [...filteredCreate, ...filteredNav, ...hits], [filteredCreate, filteredNav, hits]);
 
   useEffect(() => {
     if (commandOpen) {
@@ -144,7 +156,7 @@ export function CommandPalette({ allowed }: { allowed: string[] }) {
                     )}
                   >
                     <span className="flex h-6 w-6 items-center justify-center rounded bg-surface-2 text-ink-3">
-                      {hit.type === "nav" ? <ArrowRight className="h-3.5 w-3.5" /> : <Search className="h-3.5 w-3.5" />}
+                      {hit.type === "create" ? <Plus className="h-3.5 w-3.5" /> : hit.type === "nav" ? <ArrowRight className="h-3.5 w-3.5" /> : <Search className="h-3.5 w-3.5" />}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13px] font-medium text-ink">{hit.title}</span>

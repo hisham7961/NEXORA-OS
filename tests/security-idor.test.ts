@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { assertRecordInScope, ForbiddenError } from "@/lib/permissions/engine";
-import { assignment, principal } from "./helpers";
+import { assertRecordInScope, scopeWhereFor, ForbiddenError } from "@/lib/permissions/engine";
+import { assignment, customAssignment, principal } from "./helpers";
 
 /**
  * §69 CRITICAL SECURITY TEST
@@ -55,5 +55,39 @@ describe("§69 cross-scope IDOR protection", () => {
     expect(() =>
       assertRecordInScope(cs, "campaigns.view", { brandId: BRAND_A, countryId: KW }, [...DIMS]),
     ).toThrow(ForbiddenError);
+  });
+});
+
+/**
+ * LIST-query IDOR (the other half of §69): the `where` filter a LIST/GET endpoint
+ * builds must restrict rows to the caller's scope. A scoped user's list can never
+ * widen to other brands/companies, and a user with no granting assignment is
+ * denied every row (fail-closed), so the parity GET endpoints cannot leak.
+ */
+describe("§69 list-query scope filtering (scopeWhereFor)", () => {
+  const DIMS = ["companyId", "brandId", "countryId"] as const;
+  const A = "brand_A", KW = "country_KW";
+
+  it("scopes a list to the caller's brand/country (no cross-brand rows)", () => {
+    const emp = principal([assignment("marketing_employee", { brandId: A, countryId: KW })]);
+    const where = scopeWhereFor(emp, "campaigns.view", [...DIMS]);
+    expect(where).toEqual({ OR: [{ brandId: A, countryId: KW }] });
+  });
+
+  it("returns a deny-all filter when the caller has no granting assignment", () => {
+    const cs = principal([customAssignment(["cases.view"], { brandId: A })]);
+    const where = scopeWhereFor(cs, "workflows.view", [...DIMS]);
+    expect(where).toEqual({ id: "__deny_all__" });
+  });
+
+  it("an unrestricted (super) grant imposes no filter", () => {
+    const admin = principal([], { isSuperAdmin: true });
+    expect(scopeWhereFor(admin, "workflows.view", [...DIMS])).toEqual({});
+  });
+
+  it("a company-scoped workflow admin only lists their company's workflows", () => {
+    const wf = principal([customAssignment(["workflows.view"], { companyId: "co_A" })]);
+    const where = scopeWhereFor(wf, "workflows.view", [...DIMS]);
+    expect(where).toEqual({ OR: [{ companyId: "co_A" }] });
   });
 });

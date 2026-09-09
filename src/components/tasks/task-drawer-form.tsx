@@ -1,5 +1,7 @@
 "use client";
 
+import { useCreateShortcut } from "@/lib/use-create-shortcut";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2 } from "lucide-react";
@@ -89,6 +91,7 @@ export function TaskDrawerForm({
   icon?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  useCreateShortcut(() => { if (mode === "create") setOpen(true); });
   const router = useRouter();
   const isEdit = mode === "edit";
   const action = isEdit ? updateTaskAction : createTaskAction;

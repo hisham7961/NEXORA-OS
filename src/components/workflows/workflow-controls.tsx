@@ -1,5 +1,7 @@
 "use client";
 
+import { useCreateShortcut } from "@/lib/use-create-shortcut";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Archive, GitBranch } from "lucide-react";
@@ -16,6 +18,7 @@ const GOVERNABLE_MODULES = [
 
 export function CreateWorkflowButton({ options }: { options: { brands: Option[]; countries: Option[]; companies: Option[] } }) {
   const [open, setOpen] = useState(false);
+  useCreateShortcut(() => setOpen(true));
   const router = useRouter();
   return (
     <>

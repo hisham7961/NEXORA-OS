@@ -1,5 +1,7 @@
 "use client";
 
+import { useCreateShortcut } from "@/lib/use-create-shortcut";
+
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, HelpCircle, Copy, Check, Send, Stamp, Archive, Pencil } from "lucide-react";
@@ -14,6 +16,7 @@ const LANGS = ["en", "ar"];
 
 export function NewAnswerButton({ options }: { options: { brands: Option[]; countries: Option[] } }) {
   const [open, setOpen] = useState(false);
+  useCreateShortcut(() => setOpen(true));
   const router = useRouter();
   return (
     <>

@@ -1,5 +1,7 @@
 "use client";
 
+import { useCreateShortcut } from "@/lib/use-create-shortcut";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
@@ -12,6 +14,7 @@ const TYPES = ["general", "brand", "company", "department", "campaign", "product
 
 export function NewChannelButton({ options }: { options: { brands: Option[]; countries: Option[]; companies: Option[] } }) {
   const [open, setOpen] = useState(false);
+  useCreateShortcut(() => setOpen(true));
   const router = useRouter();
   return (
     <>

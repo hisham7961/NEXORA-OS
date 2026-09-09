@@ -1,5 +1,7 @@
 "use client";
 
+import { useCreateShortcut } from "@/lib/use-create-shortcut";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
@@ -14,6 +16,7 @@ const PRIORITIES = ["low", "normal", "high", "urgent"];
 
 export function NewCaseButton({ options }: { options: { brands: Option[]; countries: Option[]; companies: Option[]; users: Option[] } }) {
   const [open, setOpen] = useState(false);
+  useCreateShortcut(() => setOpen(true));
   const router = useRouter();
   return (
     <>

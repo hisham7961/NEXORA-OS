@@ -1,5 +1,7 @@
 "use client";
 
+import { useCreateShortcut } from "@/lib/use-create-shortcut";
+
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil, Send, BookCheck, Archive, CheckCircle2 } from "lucide-react";
@@ -19,6 +21,7 @@ function TagsInput({ initial = "" }: { initial?: string }) {
 
 export function NewArticleButton({ options }: { options: { brands: Option[]; countries: Option[]; users: Option[] } }) {
   const [open, setOpen] = useState(false);
+  useCreateShortcut(() => setOpen(true));
   const router = useRouter();
   return (
     <>

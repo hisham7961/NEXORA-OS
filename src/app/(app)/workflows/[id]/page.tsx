@@ -7,9 +7,12 @@ import { AccessDenied } from "@/components/access-denied";
 import { canAnywhere, ForbiddenError } from "@/lib/permissions/engine";
 import { allPermissionKeys } from "@/lib/permissions/catalog";
 import { getWorkflow, listInstances, instanceQuerySchema } from "@/domain/workflows";
+import { getActivity } from "@/domain/mutation";
+import { getLookups, refName } from "@/domain/lookups";
 import { parseSpec } from "@/lib/workflow/spec";
 import { prisma } from "@/lib/db";
-import { PageHeader, Panel, PanelHeader, Badge } from "@/components/ui";
+import { PageHeader, Panel, PanelHeader, PanelBody, Badge } from "@/components/ui";
+import { ActivityTimeline, type TimelineEntry } from "@/components/activity-timeline";
 import { WorkflowBuilder } from "@/components/workflows/workflow-builder";
 import { OpenRevisionButton, ArchiveWorkflowButton } from "@/components/workflows/workflow-controls";
 import { formatDate } from "@/lib/format";
@@ -41,12 +44,18 @@ export default async function WorkflowDetailPage({ params }: { params: Promise<{
   let spec;
   try { spec = shown ? parseSpec(shown.definitionJson) : null; } catch { spec = null; }
 
-  const [roles, { rows: instances, total: instanceTotal }] = await Promise.all([
+  const [roles, { rows: instances, total: instanceTotal }, activity, lookups] = await Promise.all([
     prisma.role.findMany({ select: { key: true, name: true }, orderBy: { name: "asc" } }),
     listInstances(principal, instanceQuerySchema.parse({ page: "1", pageSize: "5", definitionId: id })),
+    getActivity("WorkflowDefinition", id),
+    getLookups(),
   ]);
   const permissions = allPermissionKeys();
   const activeInstances = instances.filter((i) => i.status === "active").length;
+  const timeline: TimelineEntry[] = activity.map((a) => ({
+    id: a.id, at: a.at, actorName: a.actorId ? refName(lookups.users, a.actorId) : "System",
+    actorColor: a.actorId ? lookups.users.get(a.actorId)?.meta : null, action: a.action, summary: a.summary,
+  }));
 
   return (
     <>
@@ -115,6 +124,12 @@ export default async function WorkflowDetailPage({ params }: { params: Promise<{
               )}
               <Link href={`/workflows?tab=instances`} className="mt-3 inline-block text-xs text-accent hover:underline">Operational monitor →</Link>
             </div>
+          </Panel>
+
+          {/* Activity (audit-derived) */}
+          <Panel>
+            <PanelHeader title="Activity" />
+            <PanelBody><ActivityTimeline entries={timeline} locale={locale} empty="No configuration changes yet." /></PanelBody>
           </Panel>
         </div>
       </div>
