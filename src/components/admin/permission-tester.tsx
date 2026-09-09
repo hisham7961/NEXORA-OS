@@ -1,0 +1,35 @@
+"use client";
+
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { Select } from "@/components/ui";
+
+/** User picker for the Permission Tester — updates ?user= so the server recomputes. */
+export function TesterUserPicker({
+  users,
+  current,
+}: {
+  users: { id: string; name: string; email: string }[];
+  current?: string;
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  function select(id: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (id) params.set("user", id);
+    else params.delete("user");
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  return (
+    <Select value={current ?? ""} onChange={(e) => select(e.target.value)} className="w-72" aria-label="Select a user to preview">
+      <option value="">Select a user…</option>
+      {users.map((u) => (
+        <option key={u.id} value={u.id}>
+          {u.name} — {u.email}
+        </option>
+      ))}
+    </Select>
+  );
+}

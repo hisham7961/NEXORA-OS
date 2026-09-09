@@ -151,6 +151,34 @@ export function scopeWhereFor(
 }
 
 /**
+ * Which ids of a given scope dimension can this principal access for a permission?
+ * Used to filter org-entity lists whose OWN id is the scope value (Brand.id is the
+ * "brandId", Company.id is the "companyId", Country.id is the "countryId"). Returns
+ * "all" for unrestricted access, or a concrete id list. An assignment restricting a
+ * DIFFERENT dimension is skipped (it scopes a context that doesn't map onto this
+ * entity type) — fail-closed.
+ */
+export function accessibleScopeIds(
+  principal: Principal,
+  permissionKey: string,
+  dimension: ScopeDimension,
+  now: Date = new Date(),
+): "all" | string[] {
+  if (principal.isSuperAdmin) return "all";
+  const ids = new Set<string>();
+  for (const a of principal.assignments) {
+    if (!notExpired(a, now)) continue;
+    if (!grantsKey(a, permissionKey)) continue;
+    if (a.moduleKey && a.moduleKey !== moduleForPermission(permissionKey)) continue;
+    const otherRestricted = SCOPE_DIMENSIONS.some((dd) => dd !== dimension && a[dd] != null);
+    if (otherRestricted) continue;
+    if (a[dimension] == null) return "all";
+    ids.add(a[dimension] as string);
+  }
+  return [...ids];
+}
+
+/**
  * Fail-closed guard for a SINGLE record (§69). `record` supplies the scope
  * values for the dimensions the model has. Throws ForbiddenError if the user has
  * no assignment granting `permissionKey` whose scope matches this record.
