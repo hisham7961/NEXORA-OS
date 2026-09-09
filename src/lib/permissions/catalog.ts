@@ -29,6 +29,13 @@ export const SPECIAL_PERMISSIONS = [
   "permissions.manage", // change roles/permissions (audited)
   "audit.view", // read the audit explorer
   "impersonate.preview", // permission tester "view as user"
+  // Accounting cross-cutting capabilities (Phase 3) — beyond standard CRUD.
+  "accounting.post", // post a journal entry to the ledger (immutable)
+  "accounting.reverse", // reverse a posted entry
+  "periods.reopen", // reopen a closed/locked period (elevated)
+  "banks.sensitive", // view sensitive bank account details (IBAN/number)
+  "reports.financial", // view financial statements
+  "reports.financial_sensitive", // view sensitive financial detail (margins, profitability)
 ] as const;
 
 /**
@@ -82,6 +89,16 @@ export const MODULES: ModuleDef[] = [
   { key: "finance", label: "Finance", group: "Finance", actions: ["view", "create", "edit", "approve", "export", "manage"] },
   { key: "expenses", label: "Expenses", group: "Finance", actions: ["view", "create", "edit", "approve", "manage"] },
   { key: "subscriptions", label: "Subscriptions", group: "Finance", actions: ["view", "create", "edit", "manage"] },
+  // Accounting (Phase 3) — financial access is a separate privilege from operational
+  // visibility (§70): viewing a Brand or Campaign never implies accounting access.
+  { key: "accounting", label: "Accounting", group: "Finance", actions: ["view", "create", "edit", "approve", "manage"] },
+  { key: "accounts", label: "Chart of Accounts", group: "Finance", actions: ["view", "manage"] },
+  { key: "ar", label: "Accounts Receivable", group: "Finance", actions: ["view", "create", "approve", "manage"] },
+  { key: "ap", label: "Accounts Payable", group: "Finance", actions: ["view", "create", "approve", "manage"] },
+  { key: "payments", label: "Payments", group: "Finance", actions: ["view", "create", "approve", "manage"] },
+  { key: "banks", label: "Bank & Cash", group: "Finance", actions: ["view", "manage"] },
+  { key: "budgets", label: "Budgets", group: "Finance", actions: ["view", "manage", "approve"] },
+  { key: "periods", label: "Accounting Periods", group: "Finance", actions: ["view", "manage"] },
   // Management intelligence
   { key: "analytics", label: "Analytics", group: "Intelligence", actions: ["view", "export"] },
   { key: "reports", label: "Reports", group: "Intelligence", actions: ["view", "create", "edit", "export", "manage"] },
@@ -216,6 +233,9 @@ export const DEFAULT_ROLES: RoleDef[] = [
     isSystem: true,
     permissions: [
       ...moduleActions(["finance", "expenses", "subscriptions"], ["view", "create", "edit", "approve", "export"]),
+      ...moduleActions(["accounting", "accounts", "ar", "ap", "payments", "banks", "budgets", "periods"], ["view", "create", "edit", "approve", "manage"]),
+      "accounting.post", "accounting.reverse", "periods.reopen", "banks.sensitive",
+      "reports.financial", "reports.financial_sensitive",
       "finance.view_values", "reports.view", "reports.export", "analytics.view",
       "approvals.view", "approvals.approve",
     ],

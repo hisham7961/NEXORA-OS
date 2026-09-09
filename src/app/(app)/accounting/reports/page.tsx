@@ -1,0 +1,101 @@
+import type { Metadata } from "next";
+import { Scale } from "lucide-react";
+import { pageGuard } from "@/lib/page-guard";
+import { AccessDenied } from "@/components/access-denied";
+import { resolveAccountingCompany } from "@/domain/accounting/access";
+import { trialBalance, profitAndLoss, balanceSheet } from "@/domain/accounting/reports";
+import Link from "next/link";
+import { PageHeader, Panel, PanelHeader, PanelBody, DataTable, Badge, EmptyState, Metric, type Column } from "@/components/ui";
+import { CompanyPicker } from "@/components/accounting/company-picker";
+
+export const metadata: Metadata = { title: "Financial Reports" };
+
+function money(v: string, locale: string) { const n = Number(v); return n === 0 ? "—" : n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 3 }); }
+
+export default async function AccountingReportsPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
+  const { principal, locale, denied } = await pageGuard("accounting.view");
+  if (denied) return <AccessDenied locale={locale} />;
+  const sp = await searchParams;
+  const { companies, current } = await resolveAccountingCompany(principal, sp.company);
+  if (!current) return <><PageHeader title="Financial Reports" /><Panel><EmptyState title="No company in scope" /></Panel></>;
+  const tab = sp.tab ?? "trial-balance";
+  const cur = current.baseCurrency;
+
+  const tabs = [
+    { key: "trial-balance", label: "Trial Balance" },
+    { key: "profit-loss", label: "Profit & Loss" },
+    { key: "balance-sheet", label: "Balance Sheet" },
+  ];
+
+  return (
+    <>
+      <PageHeader title="Financial Reports" description={`Derived only from posted ledger data for ${current.name} (${cur}).`}
+        actions={<CompanyPicker companies={companies} current={current.id} />} />
+      <div className="mb-4 flex gap-1 border-b border-line">
+        {tabs.map((t) => (
+          <Link key={t.key} href={`/accounting/reports?company=${current.id}&tab=${t.key}`}
+            className={`-mb-px border-b-2 px-3 py-2 text-[13px] ${tab === t.key ? "border-accent font-medium text-ink" : "border-transparent text-ink-3 hover:text-ink-2"}`}>{t.label}</Link>
+        ))}
+      </div>
+
+      {tab === "trial-balance" && await (async () => {
+        const tb = await trialBalance(principal, current.id);
+        const columns: Column<(typeof tb.rows)[number]>[] = [
+          { key: "code", header: "Code", render: (r) => <span className="font-mono text-ink-3">{r.code}</span> },
+          { key: "name", header: "Account", render: (r) => r.name },
+          { key: "debit", header: "Debit", align: "end", render: (r) => <span className="tabular">{money(r.debit, locale)}</span> },
+          { key: "credit", header: "Credit", align: "end", render: (r) => <span className="tabular">{money(r.credit, locale)}</span> },
+        ];
+        return (
+          <Panel>
+            <PanelHeader title="Trial Balance" icon={<Scale className="h-4 w-4" />} action={<Badge category={tb.balanced ? "success" : "critical"}>{tb.balanced ? "Balanced" : "Out of balance"}</Badge>} />
+            <DataTable columns={columns} rows={tb.rows} getRowKey={(r) => r.accountId} empty={<EmptyState title="No postings" description="Post journal entries to populate the trial balance." />} />
+            <div className="flex justify-end gap-8 border-t border-line px-4 py-2 text-[13px] font-medium">
+              <span>Total Debit <span className="ms-2 tabular text-ink">{money(tb.totalDebit, locale)} {cur}</span></span>
+              <span>Total Credit <span className="ms-2 tabular text-ink">{money(tb.totalCredit, locale)} {cur}</span></span>
+            </div>
+          </Panel>
+        );
+      })()}
+
+      {tab === "profit-loss" && await (async () => {
+        const pl = await profitAndLoss(principal, { companyId: current.id });
+        const Row = ({ label, value, strong }: { label: string; value: string; strong?: boolean }) => (
+          <div className={`flex items-center justify-between px-4 py-2 ${strong ? "border-t border-line font-semibold text-ink" : "text-ink-2"}`}><span>{label}</span><span className="tabular">{money(value, locale)} {cur}</span></div>
+        );
+        return (
+          <Panel>
+            <PanelHeader title="Profit & Loss" />
+            <div className="divide-y divide-line">
+              <Row label="Revenue" value={pl.revenue} />
+              <Row label="Cost of Sales" value={pl.cogs} />
+              <Row label="Gross Profit" value={pl.grossProfit} strong />
+              <Row label="Operating Expenses" value={pl.operatingExpense} />
+              <Row label="Operating Profit" value={pl.operatingProfit} strong />
+              <Row label="Other Income" value={pl.otherIncome} />
+              <Row label="Other Expense" value={pl.otherExpense} />
+              <Row label="Net Profit" value={pl.netProfit} strong />
+            </div>
+          </Panel>
+        );
+      })()}
+
+      {tab === "balance-sheet" && await (async () => {
+        const bs = await balanceSheet(principal, current.id);
+        return (
+          <Panel>
+            <PanelHeader title="Balance Sheet" action={<Badge category={bs.balanced ? "success" : "critical"}>{bs.balanced ? "Balanced" : "Out of balance"}</Badge>} />
+            <PanelBody>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <Metric label="Assets" value={`${money(bs.assets, locale)} ${cur}`} category="info" />
+                <Metric label="Liabilities" value={`${money(bs.liabilities, locale)} ${cur}`} category="warning" />
+                <Metric label="Equity (incl. earnings)" value={`${money(bs.totalEquity, locale)} ${cur}`} category="success" />
+              </div>
+              <p className="mt-3 text-[12px] text-ink-3">Assets {money(bs.assets, locale)} = Liabilities {money(bs.liabilities, locale)} + Equity {money(bs.totalEquity, locale)} (of which current-period earnings {money(bs.currentEarnings, locale)}).</p>
+            </PanelBody>
+          </Panel>
+        );
+      })()}
+    </>
+  );
+}

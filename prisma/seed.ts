@@ -9,6 +9,9 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { hashPassword } from "../src/lib/auth/password";
 import { DEFAULT_ROLES, allPermissionKeys } from "../src/lib/permissions/catalog";
+import { initializeCompanyAccounting } from "../src/domain/accounting/bootstrap";
+import { createFiscalYear } from "../src/domain/accounting/fiscal";
+import { postJournalEntry } from "../src/domain/accounting/posting";
 
 const prisma = new PrismaClient();
 
@@ -24,7 +27,8 @@ async function clear() {
     "featureRegistry", "systemSetting", "apiToken", "recentItem", "favorite", "savedView",
     "workflowTransitionLog", "workflowInstance", "workflowVersion", "workflowDefinition",
     "workflowTemplate", "statusDefinition",
-    "journalLine", "journalEntry", "account", "accountingPeriod", "fiscalYear", "bankAccount",
+    "journalLine", "journalEntry", "journal", "numberSequence", "companyAccountingSettings",
+    "account", "accountingPeriod", "fiscalYear", "bankAccount",
     "costCenter", "invoice", "payment", "customer", "supplier", "budget", "expense",
     "expenseCategory", "exchangeRate", "taxRate", "subscription",
     "approvalStep", "approvalRequest",
@@ -403,19 +407,29 @@ async function main() {
   const store = await prisma.store.create({ data: { companyId: lbt.id, brandId: lumiere.id, countryId: countries.AE, platform: "shopify", name: "Lumière UAE Store", currency: "AED", url: "https://lumiere.example.ae", status: "active" } });
   await prisma.storePerformance.create({ data: { storeId: store.id, periodType: "monthly", periodStart: d(-30), periodEnd: now, sales: new Prisma.Decimal(184000), orders: 1240, unitsSold: 2980, returns: 41, aov: new Prisma.Decimal(148), adSpend: new Prisma.Decimal(31000), cogs: new Prisma.Decimal(62000), grossMargin: new Prisma.Decimal(122000) } });
 
-  // Minimal finance foundation for one company
-  const fy = await prisma.fiscalYear.create({ data: { companyId: pcc.id, name: "FY2025", startDate: new Date(2025, 0, 1), endDate: new Date(2025, 11, 31), status: "open" } });
-  await prisma.accountingPeriod.create({ data: { fiscalYearId: fy.id, name: "2025", startDate: new Date(2025, 0, 1), endDate: new Date(2025, 11, 31), status: "open" } });
-  const coa = [
-    { code: "1000", name: "Cash & Bank", type: "asset" },
-    { code: "1100", name: "Accounts Receivable", type: "asset" },
-    { code: "2000", name: "Accounts Payable", type: "liability" },
-    { code: "3000", name: "Equity", type: "equity" },
-    { code: "4000", name: "Revenue", type: "income" },
-    { code: "5000", name: "Marketing Expense", type: "expense" },
-    { code: "5100", name: "Cost of Goods Sold", type: "expense" },
-  ];
-  for (const a of coa) await prisma.account.create({ data: { companyId: pcc.id, code: a.code, name: a.name, type: a.type } });
+  // ----------------------------------------- Accounting demo (Phase 3, §107)
+  console.log("• Accounting (chart, fiscal year, posted journals)");
+  const fctx = { principal: { userId: admin.user.id, isSuperAdmin: true, assignments: [] }, ip: null, userAgent: null };
+  await initializeCompanyAccounting(fctx, pcc.id, { baseCurrency: "KWD" });
+  const yr = now.getFullYear();
+  await createFiscalYear(fctx, pcc.id, { name: `FY${yr}`, startDate: new Date(yr, 0, 1), endDate: new Date(yr, 11, 31) });
+  const acc = async (code: string) => (await prisma.account.findFirstOrThrow({ where: { companyId: pcc.id, code } })).id;
+  const [cash, capital, ar, revenue, marketing, cogs, inv] = await Promise.all([acc("1000"), acc("3000"), acc("1100"), acc("4000"), acc("6000"), acc("5000"), acc("1200")]);
+  const pd = new Date(yr, now.getMonth(), 5);
+  // Opening capital
+  await postJournalEntry(fctx, { companyId: pcc.id, journalCode: "OB", date: pd, memo: "Opening capital", lines: [
+    { accountId: cash, debit: 50000 }, { accountId: capital, credit: 50000 } ] });
+  // A credit sale of KWD 12,000 attributed to Derma+ / Kuwait, with COGS
+  await postJournalEntry(fctx, { companyId: pcc.id, journalCode: "SJ", date: new Date(yr, now.getMonth(), 10), memo: "Sale — Solara KW", lines: [
+    { accountId: ar, debit: 12000, brandId: solara.id, countryId: countries.KW },
+    { accountId: revenue, credit: 12000, brandId: solara.id, countryId: countries.KW } ] });
+  await postJournalEntry(fctx, { companyId: pcc.id, journalCode: "SJ", date: new Date(yr, now.getMonth(), 10), memo: "COGS — Solara KW", lines: [
+    { accountId: cogs, debit: 4800, brandId: solara.id, countryId: countries.KW },
+    { accountId: inv, credit: 4800, brandId: solara.id, countryId: countries.KW } ] });
+  // A marketing expense paid from cash
+  await postJournalEntry(fctx, { companyId: pcc.id, journalCode: "EJ", date: new Date(yr, now.getMonth(), 12), memo: "Marketing — Solara KW", lines: [
+    { accountId: marketing, debit: 2500, brandId: solara.id, countryId: countries.KW },
+    { accountId: cash, credit: 2500 } ] });
 
   // ------------------------------------------------------------- Attendance
   console.log("• Attendance (today)");

@@ -1548,13 +1548,15 @@ model AttendanceCorrection {
 // ============================================================================
 
 model FiscalYear {
-  id        String   @id @default(cuid())
-  companyId String
-  name      String
-  startDate DateTime
-  endDate   DateTime
-  status    String   @default("open") // open | closed
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  startDate   DateTime
+  endDate     DateTime
+  status      String   @default("open") // open | closed | locked
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   periods AccountingPeriod[]
 
@@ -1562,90 +1564,145 @@ model FiscalYear {
 }
 
 model AccountingPeriod {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
+  companyId    String?
   fiscalYearId String
   name         String
+  periodType   String    @default("month") // month | adjustment
   startDate    DateTime
   endDate      DateTime
-  status       String   @default("open")
+  status       String    @default("open") // open | soft_closed | closed | locked
+  closedById   String?
+  closedAt     DateTime?
+  reopenedById String?
+  reopenNote   String?
 
   fiscalYear FiscalYear @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
 
   @@index([fiscalYearId])
+  @@index([companyId, status])
 }
 
 model Account {
-  id        String   @id @default(cuid())
-  companyId String
-  code      String
-  name      String
-  type      String // asset | liability | equity | income | expense
-  parentId  String?
-  isActive  Boolean  @default(true)
-  currency  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  companyId     String
+  code          String
+  name          String
+  nameLocalized String?
+  type          String // asset | liability | equity | revenue | cogs | expense | other_income | other_expense
+  subtype       String? // cash|bank|ar|inventory|prepayment|fixed_asset|ap|accrued|tax_payable|loan|capital|retained_earnings|sales|sales_returns|discount|cogs|marketing|shipping|payroll|professional_fees|rent|utilities|fx
+  parentId      String?
+  level         Int      @default(0)
+  normalBalance String   @default("debit") // debit | credit
+  currency      String? // optional single-currency restriction
+  allowPosting  Boolean  @default(true) // false = header/summary account
+  isSystem      Boolean  @default(false) // referenced by accounting settings; protected
+  isActive      Boolean  @default(true)
+  notes         String?
+  createdById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  archivedAt    DateTime?
+
+  lines JournalLine[]
 
   @@unique([companyId, code])
   @@index([companyId, type])
+  @@index([parentId])
 }
 
 model CostCenter {
-  id        String   @id @default(cuid())
-  companyId String?
-  name      String
-  code      String?
-  createdAt DateTime @default(now())
-}
-
-model JournalEntry {
   id           String    @id @default(cuid())
-  companyId    String
-  periodId     String?
-  date         DateTime
-  reference    String?
-  memo         String?
-  status       String    @default("draft") // draft | posted | void
-  currency     String    @default("KWD")
-  exchangeRate Decimal?
-  createdById  String?
-  postedById   String?
-  postedAt     DateTime?
+  companyId    String?
+  name         String
+  code         String?
+  parentId     String?
+  departmentId String?
+  ownerId      String?
+  status       String    @default("active") // active | inactive
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   archivedAt   DateTime?
 
+  @@index([companyId])
+  @@index([parentId])
+}
+
+model JournalEntry {
+  id              String    @id @default(cuid())
+  companyId       String
+  journalId       String?
+  journalNumber   String?
+  periodId        String?
+  date            DateTime // transaction date
+  postingDate     DateTime? // GL recognition date (defaults to transaction date)
+  documentDate    DateTime?
+  reference       String?
+  memo            String?
+  status          String    @default("draft") // draft | posted | reversed | void
+  currency        String    @default("KWD") // entry transaction currency
+  baseCurrency    String    @default("KWD")
+  exchangeRate    Decimal?
+  totalDebitBase  Decimal   @default(0) // denormalised for fast trial balance
+  totalCreditBase Decimal   @default(0)
+  // Source traceability (§80) + reversal reciprocity (§14).
+  sourceType      String? // SalesInvoice|SupplierBill|Expense|CustomerPayment|SupplierPayment|BankTransfer|CreditNote|OpeningBalance|ManualJournal
+  sourceId        String?
+  reversalOfEntryId String?
+  reversedByEntryId String?
+  createdById     String?
+  postedById      String?
+  postedAt        DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  archivedAt      DateTime?
+
   lines JournalLine[]
 
+  @@unique([companyId, journalNumber])
+  @@index([companyId, postingDate])
   @@index([companyId, date])
   @@index([status])
+  @@index([sourceType, sourceId])
 }
 
 model JournalLine {
-  id           String  @id @default(cuid())
-  entryId      String
-  accountId    String
-  description  String?
-  debit        Decimal @default(0)
-  credit       Decimal @default(0)
-  currency     String?
-  amountBase   Decimal?
-  // analytical dimensions (§26 critical requirement):
-  companyId    String?
-  brandId      String?
-  countryId    String?
-  departmentId String?
-  campaignId   String?
-  storeId      String?
-  productId    String?
-  costCenterId String?
+  id                  String  @id @default(cuid())
+  entryId             String
+  accountId           String
+  lineNo              Int     @default(0)
+  description         String?
+  // Amounts are stored in BASE (company) currency — debit/credit balance and drive
+  // the trial balance directly. Transaction-currency detail is kept alongside.
+  debit               Decimal @default(0)
+  credit              Decimal @default(0)
+  transactionCurrency String?
+  transactionAmount   Decimal? // absolute amount in transaction currency
+  exchangeRate        Decimal?
+  // analytical dimensions (§17 — Legal Company is on the entry; these are analytical):
+  companyId           String?
+  brandId             String?
+  countryId           String?
+  departmentId        String?
+  campaignId          String?
+  storeId             String?
+  productId           String?
+  costCenterId        String?
+  customerId          String?
+  supplierId          String?
 
-  entry JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  entry   JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  account Account      @relation(fields: [accountId], references: [id])
 
   @@index([entryId])
   @@index([accountId])
   @@index([brandId])
   @@index([countryId])
+  @@index([productId])
+  @@index([campaignId])
+  @@index([storeId])
+  @@index([customerId])
+  @@index([supplierId])
 }
 
 model Customer {
@@ -1776,24 +1833,110 @@ model Expense {
 }
 
 model ExchangeRate {
-  id        String   @id @default(cuid())
-  base      String
-  quote     String
-  rate      Decimal
-  date      DateTime
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  base        String // from currency
+  quote       String // to currency (usually a company base currency)
+  rate        Decimal
+  date        DateTime // effective date
+  source      String   @default("manual") // manual | api
+  enteredById String?
+  createdAt   DateTime @default(now())
 
   @@unique([base, quote, date])
+  @@index([base, quote, date])
+}
+
+// ============================================================================
+// ACCOUNTING FOUNDATION (Phase 3 — Increment A). Per-company settings, journals
+// configuration and concurrency-safe number sequences.
+// ============================================================================
+
+/** Per-company accounting configuration (§4). System-account mappings are stored
+ *  as stable account IDs, never resolved by English name (§6). */
+model CompanyAccountingSettings {
+  id                    String   @id @default(cuid())
+  companyId             String   @unique
+  baseCurrency          String   @default("KWD")
+  fiscalYearStartMonth  Int      @default(1)
+  timezone              String   @default("Asia/Kuwait")
+  roundingPolicy        String   @default("half_up") // half_up | half_even | down | up
+  balancingToleranceJson String? // per-currency minor-unit tolerance overrides
+  // System-account mappings (account IDs).
+  receivableAccountId   String?
+  payableAccountId      String?
+  revenueAccountId      String?
+  cogsAccountId         String?
+  inventoryAccountId    String?
+  bankClearingAccountId String?
+  cashAccountId         String?
+  inputTaxAccountId     String?
+  outputTaxAccountId    String?
+  retainedEarningsAccountId String?
+  fxGainAccountId       String?
+  fxLossAccountId       String?
+  suspenseAccountId     String?
+  roundingAccountId     String?
+  // Numbering + terms.
+  journalPrefix         String   @default("GJ")
+  invoicePrefix         String   @default("INV")
+  billPrefix            String   @default("BILL")
+  paymentPrefix         String   @default("PAY")
+  defaultPaymentTerms   Int      @default(30) // days
+  lockDate              DateTime? // hard lock — no posting on/before
+  softCloseDate         DateTime? // authorized users only on/before
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+/** Journal configuration (§9). A Journal is config; a JournalEntry is the txn. */
+model Journal {
+  id         String    @id @default(cuid())
+  companyId  String
+  code       String // GJ | SJ | PJ | BJ | CJ | EJ | AJ | OB
+  name       String
+  type       String    @default("general") // general|sales|purchase|bank|cash|expense|adjustment|opening
+  numberPrefix String?
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  archivedAt DateTime?
+
+  @@unique([companyId, code])
+  @@index([companyId])
+}
+
+/** Concurrency-safe monotonic number sequences (§13/§75). Allocation uses an
+ *  atomic UPDATE ... RETURNING inside the posting transaction so simultaneous
+ *  posts can never receive the same number. */
+model NumberSequence {
+  id        String   @id @default(cuid())
+  companyId String
+  key       String // e.g. journal:GJ:2026, invoice:2026
+  prefix    String
+  year      Int
+  nextValue Int      @default(1)
+  padding   Int      @default(6)
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, key])
 }
 
 model TaxRate {
-  id        String  @id @default(cuid())
-  companyId String?
-  countryId String?
-  name      String
-  rate      Decimal
-  isActive  Boolean @default(true)
-  createdAt DateTime @default(now())
+  id                 String   @id @default(cuid())
+  companyId          String?
+  countryId          String?
+  name               String
+  rate               Decimal // percentage, e.g. 5.000
+  computation        String   @default("exclusive") // exclusive | inclusive
+  inputTaxAccountId  String? // recoverable (on purchases)
+  outputTaxAccountId String? // payable (on sales)
+  effectiveDate      DateTime?
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([companyId])
 }
 
 // ============================================================================
