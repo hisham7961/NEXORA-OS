@@ -3,10 +3,13 @@ import type { DesignRequest } from "@prisma/client";
 import { Palette } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
+import { canAnywhere } from "@/lib/permissions/engine";
 import { listDesign, designQuerySchema } from "@/domain/design";
+import { getScopedOptions } from "@/domain/options";
 import { getLookups, refName } from "@/domain/lookups";
 import { StatusBadge, EmptyState, type Column } from "@/components/ui";
 import { ResourceList } from "@/components/list/resource-list";
+import { DesignForm } from "@/components/design/design-form";
 import { BrandChip, UserChip } from "@/components/entity-chips";
 import { formatDateShort } from "@/lib/format";
 
@@ -17,7 +20,12 @@ export default async function DesignPage({ searchParams }: { searchParams: Promi
   if (denied) return <AccessDenied locale={locale} />;
   const sp = await searchParams;
   const query = designQuerySchema.parse(sp);
-  const [{ rows, total }, lookups] = await Promise.all([listDesign(principal, query), getLookups()]);
+  const canCreate = canAnywhere(principal, "design.create");
+  const [{ rows, total }, lookups, options] = await Promise.all([
+    listDesign(principal, query),
+    getLookups(),
+    canCreate ? getScopedOptions(principal, "design.create") : Promise.resolve(null),
+  ]);
   const now = new Date();
 
   const columns: Column<DesignRequest>[] = [
@@ -32,6 +40,7 @@ export default async function DesignPage({ searchParams }: { searchParams: Promi
     <ResourceList title="Design Requests" description="Creative operations from brief to approved delivery (§12)." countLabel="requests"
       searchPlaceholder="Search design requests…"
       filters={[{ name: "status", label: "Status", options: ["requested", "assigned", "designing", "internal_review", "revision", "waiting_approval", "approved", "delivered"].map((v) => ({ value: v, label: v.replace(/_/g, " ") })) }]}
+      actions={canCreate && options ? <DesignForm mode="create" options={{ brands: options.brands, countries: options.countries, companies: options.companies, users: options.users }} /> : undefined}
       columns={columns} rows={rows} getRowKey={(d) => d.id} getRowHref={(d) => `/design/${d.id}`}
       page={query.page} pageSize={query.pageSize} total={total} params={sp}
       empty={<EmptyState icon={<Palette className="h-5 w-5" />} title="No design requests" description="Marketing requests creative here; designers pick it up and deliver approved assets." />} />

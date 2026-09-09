@@ -127,3 +127,19 @@ describe("whatsapp workflow scope + approval (Part N)", () => {
     expect(() => assertRecordInScope(manager, "whatsapp.edit", { brandId: B, countryId: KW }, ["brandId", "countryId"])).toThrow(ForbiddenError);
   });
 });
+
+describe("creative request + version approval scope (Part O)", () => {
+  const employee3 = principal([assignment("marketing_employee", { brandId: A, countryId: KW })]);
+  const manager = principal([assignment("marketing_manager", { brandId: A, countryId: KW })]);
+  it("an employee can create/edit a request but cannot approve a version", () => {
+    expect(can(employee3, "design.create", { brandId: A, countryId: KW })).toBe(true);
+    expect(can(employee3, "design.approve", { brandId: A, countryId: KW })).toBe(false);
+  });
+  it("a manager can approve a version within scope only", () => {
+    expect(can(manager, "design.approve", { brandId: A, countryId: KW })).toBe(true);
+    expect(can(manager, "design.approve", { brandId: B, countryId: KW })).toBe(false);
+  });
+  it("blocks editing (IDOR) a request outside scope", () => {
+    expect(() => assertRecordInScope(manager, "design.edit", { brandId: B, countryId: KW }, [...DIMS])).toThrow(ForbiddenError);
+  });
+});
