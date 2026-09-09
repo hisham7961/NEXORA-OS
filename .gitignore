@@ -42,3 +42,6 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# Local file-platform object storage (dev)
+.nexora-storage/

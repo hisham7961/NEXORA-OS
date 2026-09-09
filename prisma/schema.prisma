@@ -532,24 +532,34 @@ model Folder {
 model File {
   id               String    @id @default(cuid())
   name             String
-  mimeType         String?
-  sizeBytes        Int?
-  storageKey       String
+  mimeType         String? // mime of the current version (denormalized for lists)
+  sizeBytes        Int? // size of the current version
+  storageKey       String // storage key of the current version (denormalized)
   checksum         String?
+  category         String    @default("document") // document|image|video|creative|regulatory|contract|spreadsheet|other
+  tagsJson         String? // JSON string[] (portability: no scalar lists)
+  description      String?
   folderId         String?
   ownerId          String?
+  // Scope for server-side permission (mirrors other domain models).
+  companyId        String?
+  brandId          String?
+  countryId        String?
   visibility       String    @default("internal") // internal | restricted
-  relatedType      String?
+  relatedType      String? // primary entity this file was created against
   relatedId        String?
   currentVersionId String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   archivedAt       DateTime?
 
-  versions FileVersion[]
+  versions    FileVersion[]
+  attachments FileAttachment[]
 
   @@index([folderId])
   @@index([relatedType, relatedId])
+  @@index([brandId])
+  @@index([category])
 }
 
 model FileVersion {
@@ -558,6 +568,8 @@ model FileVersion {
   version      Int
   storageKey   String
   sizeBytes    Int?
+  mimeType     String?
+  checksum     String?
   uploadedById String?
   note         String?
   createdAt    DateTime @default(now())
@@ -565,6 +577,22 @@ model FileVersion {
   file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
   @@unique([fileId, version])
+}
+
+// Links one file to any number of NEXORA entities (§5) — one file platform,
+// many attachment points. The file's own scope still governs access.
+model FileAttachment {
+  id          String   @id @default(cuid())
+  fileId      String
+  entityType  String
+  entityId    String
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, entityType, entityId])
+  @@index([entityType, entityId])
 }
 
 // ============================================================================
