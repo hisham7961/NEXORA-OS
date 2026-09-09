@@ -13,7 +13,15 @@ async function clock(fn: (ctx: Parameters<typeof Att.checkIn>[0]) => Promise<voi
   return res;
 }
 
-export const checkInAction = () => clock(Att.checkIn);
-export const startBreakAction = () => clock(Att.startBreak);
-export const endBreakAction = () => clock(Att.endBreak);
-export const checkOutAction = () => clock(Att.checkOut);
+export async function checkInAction(): Promise<ActionResult> {
+  return clock(Att.checkIn);
+}
+export async function startBreakAction(): Promise<ActionResult> {
+  return clock(Att.startBreak);
+}
+export async function endBreakAction(): Promise<ActionResult> {
+  return clock(Att.endBreak);
+}
+export async function checkOutAction(): Promise<ActionResult> {
+  return clock(Att.checkOut);
+}
