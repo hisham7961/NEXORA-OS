@@ -1,5 +1,7 @@
 # NEXORA OS
 
+[![CI](https://github.com/hisham7961/NEXORA-OS/actions/workflows/ci.yml/badge.svg)](https://github.com/hisham7961/NEXORA-OS/actions/workflows/ci.yml)
+
 **The central operating system for a multi-company, multi-brand cosmetics group.**
 
 NEXORA OS unifies companies, brands, markets, products, marketing, creative,
