@@ -7,6 +7,7 @@ import { canAnywhere, ForbiddenError } from "@/lib/permissions/engine";
 import { getRegistration, getAuthorityNames } from "@/domain/registrations";
 import { RegistrationActions } from "@/components/registrations/registration-actions";
 import { EntityFiles } from "@/components/files/entity-files";
+import { WorkflowPanel } from "@/components/workflows/workflow-panel";
 import { getLookups, refName } from "@/domain/lookups";
 import { Panel, PanelHeader, PanelBody, StatusBadge, Badge } from "@/components/ui";
 import { BrandChip, CountryChip, UserChip } from "@/components/entity-chips";
@@ -92,6 +93,14 @@ export default async function RegistrationDetailPage({ params }: { params: Promi
               )}
             </PanelBody>
           </Panel>
+          <WorkflowPanel
+            principal={principal}
+            entityType="RegistrationCase"
+            entityId={r.id}
+            module="registrations"
+            scope={{ companyId: r.companyId, brandId: r.brandId, countryId: r.countryId }}
+            locale={locale}
+          />
           <EntityFiles
             principal={principal}
             entityType="RegistrationCase"

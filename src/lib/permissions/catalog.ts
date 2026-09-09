@@ -87,6 +87,7 @@ export const MODULES: ModuleDef[] = [
   { key: "reports", label: "Reports", group: "Intelligence", actions: ["view", "create", "edit", "export", "manage"] },
   // Administration
   { key: "users", label: "Users", group: "Administration", actions: ["view", "create", "edit", "delete", "manage"] },
+  { key: "workflows", label: "Workflows", group: "Administration", actions: ["view", "create", "edit", "manage"] },
   { key: "settings", label: "Settings", group: "Administration", actions: ["view", "manage"] },
   { key: "developer", label: "Developer Portal", group: "Administration", actions: ["view", "manage"] },
 ];

@@ -22,6 +22,7 @@ async function clear() {
   const tables = [
     "auditLog", "notification", "notificationPreference", "systemEvent", "backgroundJob",
     "featureRegistry", "systemSetting", "apiToken", "recentItem", "favorite", "savedView",
+    "workflowTransitionLog", "workflowInstance", "workflowVersion", "workflowDefinition",
     "workflowTemplate", "statusDefinition",
     "journalLine", "journalEntry", "account", "accountingPeriod", "fiscalYear", "bankAccount",
     "costCenter", "invoice", "payment", "customer", "supplier", "budget", "expense",
@@ -458,9 +459,40 @@ async function main() {
       { name: "Generate recurring daily checks", type: "recurring", status: "success", scheduleCron: "0 0 * * *", lastRunAt: startOfToday, nextRunAt: d(1) },
       { name: "Certificate expiry reminders", type: "recurring", status: "success", scheduleCron: "0 6 * * *", lastRunAt: startOfToday, nextRunAt: d(1) },
       { name: "Subscription renewal reminders", type: "recurring", status: "success", scheduleCron: "0 7 * * *", lastRunAt: startOfToday, nextRunAt: d(1) },
+      { id: "workflow-escalations", name: "Workflow SLA escalations", type: "recurring", status: "success", scheduleCron: "0 * * * *", lastRunAt: startOfToday, nextRunAt: d(1) },
       { name: "Notification digest delivery", type: "queue", status: "running", lastRunAt: now },
     ],
   });
+
+  // Configurable Workflow Engine (§26–27) — a real, active, versioned workflow
+  // that governs regulatory registrations, so the engine ships with a worked
+  // example rather than an empty admin screen.
+  console.log("• Workflow engine (registration approval)");
+  const registrationWorkflowSpec = {
+    stages: [
+      { key: "preparation", name: "Preparation", category: "neutral", isInitial: true, slaHours: 72, responsibleRoles: ["regulatory_specialist"], requiredDocuments: ["dossier"] },
+      { key: "documents_review", name: "Documents Review", category: "info", slaHours: 48, responsibleRoles: ["regulatory_specialist"] },
+      { key: "submitted", name: "Submitted to Authority", category: "info", slaHours: 24, responsibleRoles: ["regulatory_specialist"] },
+      { key: "authority_review", name: "Authority Review", category: "warning", slaHours: 720, responsibleRoles: ["regulatory_specialist"], escalation: { afterHours: 720, toRoles: ["group_management"], note: "Authority review is overdue — escalate." } },
+      { key: "approved", name: "Approved", category: "success", isTerminal: true },
+      { key: "rejected", name: "Rejected", category: "critical", isTerminal: true },
+    ],
+    transitions: [
+      { key: "start_review", name: "Send to documents review", from: "preparation", to: "documents_review", permission: "registrations.edit" },
+      { key: "submit", name: "Submit to authority", from: "documents_review", to: "submitted", permission: "registrations.edit" },
+      { key: "return_to_prep", name: "Return for more documents", from: "documents_review", to: "preparation", permission: "registrations.edit" },
+      { key: "under_review", name: "Mark under authority review", from: "submitted", to: "authority_review", permission: "registrations.edit" },
+      { key: "approve", name: "Record approval", from: "authority_review", to: "approved", permission: "registrations.edit" },
+      { key: "reject", name: "Record rejection", from: "authority_review", to: "rejected", permission: "registrations.edit" },
+    ],
+  };
+  const regWorkflow = await prisma.workflowDefinition.create({
+    data: { key: "registration_approval", name: "Product Registration Approval", module: "registrations", description: "Standard regulatory registration lifecycle from dossier preparation to authority decision.", status: "active", createdById: admin.user.id },
+  });
+  const regWorkflowVersion = await prisma.workflowVersion.create({
+    data: { definitionId: regWorkflow.id, version: 1, status: "active", definitionJson: JSON.stringify(registrationWorkflowSpec), changeNote: "Initial published version", activatedAt: now, activatedById: admin.user.id, createdById: admin.user.id },
+  });
+  await prisma.workflowDefinition.update({ where: { id: regWorkflow.id }, data: { currentVersionId: regWorkflowVersion.id } });
   await prisma.systemSetting.createMany({
     data: [
       { key: "group.name", valueJson: JSON.stringify("PremierCare Group"), category: "general" },

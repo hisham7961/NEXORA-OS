@@ -4,7 +4,7 @@ import {
   Package, FileCheck, Award, FileText, LifeBuoy, MessagesSquare, Building2, Gem,
   Globe, Users, UserRound, Clock, BookOpen, Folder, MessageSquare, Wallet,
   Receipt, CreditCard, BarChart3, PieChart, UserCog, KeyRound, History, Terminal,
-  Activity, Settings, type LucideIcon,
+  Activity, Settings, Workflow, type LucideIcon,
 } from "lucide-react";
 import type { TranslationKey } from "@/i18n";
 
@@ -121,6 +121,7 @@ export const NAVIGATION: NavGroup[] = [
     labelKey: "nav.group.administration",
     items: [
       { key: "users", labelKey: "nav.users", href: "/admin/users", icon: UserCog, permission: "users.view" },
+      { key: "workflows", labelKey: "nav.workflows", href: "/workflows", icon: Workflow, permission: "workflows.view" },
       { key: "permissions", labelKey: "nav.permissions", href: "/admin/permissions", icon: KeyRound, permission: "permissions.manage" },
       { key: "audit", labelKey: "nav.auditLog", href: "/admin/audit", icon: History, permission: "audit.view" },
       { key: "developer", labelKey: "nav.developer", href: "/admin/developer", icon: Terminal, permission: "developer.view" },

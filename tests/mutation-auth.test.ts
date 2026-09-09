@@ -186,6 +186,38 @@ describe("subscriptions finance-value scope (Part §23-24)", () => {
   });
 });
 
+describe("workflow engine authoring + instance scope (Part §26-27)", () => {
+  // Workflow authoring is gated by the `workflows` module. An operator with only
+  // module-level view cannot author; a workflow admin can, but only in scope.
+  const viewer = principal([customAssignment(["workflows.view"], { companyId: "co_A" })]);
+  const admin = principal([customAssignment(["workflows.view", "workflows.create", "workflows.edit", "workflows.manage"], { companyId: "co_A" })]);
+  const DIMS3 = ["companyId", "brandId", "countryId"] as const;
+
+  it("a viewer cannot create or edit workflows", () => {
+    expect(can(viewer, "workflows.create", { companyId: "co_A" })).toBe(false);
+    expect(can(viewer, "workflows.edit", { companyId: "co_A" })).toBe(false);
+  });
+  it("a workflow admin authors only within its company scope", () => {
+    expect(can(admin, "workflows.create", { companyId: "co_A" })).toBe(true);
+    expect(can(admin, "workflows.create", { companyId: "co_B" })).toBe(false);
+  });
+  it("blocks editing (IDOR) a workflow definition in another company", () => {
+    expect(() => assertRecordInScope(admin, "workflows.edit", { companyId: "co_A", brandId: null, countryId: null }, [...DIMS3])).not.toThrow();
+    expect(() => assertRecordInScope(admin, "workflows.edit", { companyId: "co_B", brandId: null, countryId: null }, [...DIMS3])).toThrow(ForbiddenError);
+  });
+  it("a transition's declared permission is enforced in the record's scope", () => {
+    // A regulatory specialist in Brand A may perform a registrations.edit transition
+    // on a Brand-A record, but not on another brand's record (transition IDOR).
+    const reg = principal([assignment("regulatory_specialist", { brandId: A })]);
+    expect(() => assertRecordInScope(reg, "registrations.edit", { companyId: null, brandId: A, countryId: KW }, [...DIMS3])).not.toThrow();
+    expect(() => assertRecordInScope(reg, "registrations.edit", { companyId: null, brandId: B, countryId: KW }, [...DIMS3])).toThrow(ForbiddenError);
+  });
+  it("workflow instance visibility is scoped to the governed record (IDOR)", () => {
+    expect(() => assertRecordInScope(viewer, "workflows.view", { companyId: "co_A", brandId: null, countryId: null }, [...DIMS3])).not.toThrow();
+    expect(() => assertRecordInScope(viewer, "workflows.view", { companyId: "co_B", brandId: null, countryId: null }, [...DIMS3])).toThrow(ForbiddenError);
+  });
+});
+
 describe("attendance correction approval gate (Part §25)", () => {
   const employee5 = principal([customAssignment(["attendance.view"], {})]);
   const manager = principal([customAssignment(["attendance.view", "attendance.manage"], {})]);

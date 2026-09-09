@@ -1881,6 +1881,107 @@ model WorkflowTemplate {
   @@index([module])
 }
 
+// ============================================================================
+// CONFIGURABLE WORKFLOW ENGINE (§26–27, §50)
+// Versioned declarative workflows. A WorkflowDefinition is the stable identity;
+// each WorkflowVersion is an immutable declarative spec (stages / transitions /
+// required fields, documents, approvals, roles, SLA, escalation, permissions).
+// Live records run as WorkflowInstances BOUND to the exact version they started
+// under, so editing a draft or activating a new version never silently changes
+// the meaning of records already in flight. A definition is validated before a
+// version can be activated.
+// ============================================================================
+
+model WorkflowDefinition {
+  id               String    @id @default(cuid())
+  key              String    @unique // stable machine key, e.g. "registration_approval"
+  name             String
+  module           String // module the workflow governs (registrations, cases, ...)
+  description      String?
+  status           String    @default("draft") // draft | active | archived
+  // Optional scoping — a workflow may be group-wide (nulls) or scoped.
+  companyId        String?
+  brandId          String?
+  countryId        String?
+  currentVersionId String? // the active published version
+  createdById      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  archivedAt       DateTime?
+
+  versions  WorkflowVersion[]  @relation("DefinitionVersions")
+  instances WorkflowInstance[]
+
+  @@index([module])
+  @@index([status])
+}
+
+model WorkflowVersion {
+  id             String    @id @default(cuid())
+  definitionId   String
+  version        Int
+  status         String    @default("draft") // draft | active | retired
+  definitionJson String // declarative spec (stages/transitions/rules) as text (§4)
+  changeNote     String?
+  activatedAt    DateTime?
+  activatedById  String?
+  retiredAt      DateTime?
+  createdById    String?
+  createdAt      DateTime  @default(now())
+
+  definition WorkflowDefinition @relation("DefinitionVersions", fields: [definitionId], references: [id], onDelete: Cascade)
+  instances  WorkflowInstance[]
+
+  @@unique([definitionId, version])
+  @@index([definitionId])
+  @@index([status])
+}
+
+model WorkflowInstance {
+  id           String    @id @default(cuid())
+  definitionId String
+  versionId    String // BOUND version — never changes without an explicit migration
+  entityType   String // governed record type, e.g. "RegistrationCase"
+  entityId     String
+  currentStage String
+  status       String    @default("active") // active | completed | cancelled
+  // Denormalized scope of the target record (for scoped lists + IDOR guard).
+  companyId    String?
+  brandId      String?
+  countryId    String?
+  dataJson     String? // collected required-field values, as JSON text
+  dueAt        DateTime? // SLA deadline for the current stage
+  escalatedAt  DateTime? // last escalation fired for the current stage (idempotency)
+  startedById  String?
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  definition WorkflowDefinition      @relation(fields: [definitionId], references: [id])
+  version    WorkflowVersion         @relation(fields: [versionId], references: [id])
+  logs       WorkflowTransitionLog[]
+
+  @@unique([entityType, entityId])
+  @@index([definitionId])
+  @@index([status, dueAt])
+  @@index([currentStage])
+}
+
+model WorkflowTransitionLog {
+  id            String   @id @default(cuid())
+  instanceId    String
+  fromStage     String?
+  toStage       String
+  transitionKey String?
+  actorId       String?
+  note          String?
+  at            DateTime @default(now())
+
+  instance WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId])
+}
+
 model SavedView {
   id          String   @id @default(cuid())
   userId      String?
