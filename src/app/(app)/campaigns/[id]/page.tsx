@@ -5,12 +5,21 @@ import type { Metadata } from "next";
 import { Megaphone } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
-import { ForbiddenError } from "@/lib/permissions/engine";
+import { canAnywhere, ForbiddenError } from "@/lib/permissions/engine";
 import { getCampaign } from "@/domain/campaigns";
+import { getActivity } from "@/domain/mutation";
+import { getScopedOptions } from "@/domain/options";
 import { getLookups, refName } from "@/domain/lookups";
 import { Panel, PanelHeader, PanelBody, DataTable, StatusBadge, Badge, TabBar, EmptyState, Metric, type Column, type TabItem } from "@/components/ui";
+import { ActivityTimeline, type TimelineEntry } from "@/components/activity-timeline";
+import { CampaignDrawerForm } from "@/components/campaigns/campaign-drawer-form";
+import { CampaignStatusBar, AddMetricButton } from "@/components/campaigns/campaign-actions";
 import { BrandChip, CountryChip, UserChip } from "@/components/entity-chips";
 import { formatDate, formatCurrency, formatNumber } from "@/lib/format";
+
+function isoDate(d: Date | null | undefined): string {
+  return d ? new Date(d).toISOString().slice(0, 10) : "";
+}
 
 export const metadata: Metadata = { title: "Campaign" };
 
@@ -35,7 +44,16 @@ export default async function CampaignDetailPage({
   if (!data) notFound();
 
   const { campaign, campaignProducts, metrics, reports, tasks } = data;
-  const lookups = await getLookups();
+  const canEdit = canAnywhere(principal, "campaigns.edit");
+  const [lookups, activity, options] = await Promise.all([
+    getLookups(),
+    getActivity("Campaign", id),
+    canEdit ? getScopedOptions(principal, "campaigns.edit") : Promise.resolve(null),
+  ]);
+  const timeline: TimelineEntry[] = activity.map((a) => ({
+    id: a.id, at: a.at, actorName: a.actorId ? refName(lookups.users, a.actorId) : "System",
+    actorColor: a.actorId ? lookups.users.get(a.actorId)?.meta : null, action: a.action, summary: a.summary,
+  }));
 
   const planned = Number(campaign.plannedBudget ?? 0);
   const spend = Number(campaign.actualSpend ?? 0);
@@ -48,6 +66,7 @@ export default async function CampaignDetailPage({
     { key: "products", label: "Products", count: campaignProducts.length },
     { key: "reports", label: "Reports", count: reports.length },
     { key: "tasks", label: "Tasks", count: tasks.length },
+    { key: "activity", label: "Activity" },
   ];
 
   return (
@@ -73,6 +92,20 @@ export default async function CampaignDetailPage({
             </div>
           </div>
         </div>
+        {canEdit && options && (
+          <CampaignDrawerForm
+            mode="edit"
+            options={{ brands: options.brands, countries: options.countries, companies: options.companies, users: options.users }}
+            defaults={{
+              id: campaign.id, name: campaign.name, type: campaign.type, objective: campaign.objective,
+              ownerId: campaign.ownerId, currency: campaign.currency,
+              plannedBudget: campaign.plannedBudget != null ? String(campaign.plannedBudget) : "",
+              actualSpend: campaign.actualSpend != null ? String(campaign.actualSpend) : "",
+              targetAudience: campaign.targetAudience, notes: campaign.notes,
+              startDate: isoDate(campaign.startDate), endDate: isoDate(campaign.endDate),
+            }}
+          />
+        )}
       </div>
 
       <TabBar tabs={tabs} current={tab} className="mb-4" />
@@ -119,11 +152,22 @@ export default async function CampaignDetailPage({
               </div>
             </PanelBody>
           </Panel>
+          {canEdit && (
+            <Panel className="lg:col-span-3">
+              <PanelHeader title="Actions" description="Advance the campaign through its lifecycle. Every change is audited." />
+              <PanelBody><CampaignStatusBar campaignId={campaign.id} status={campaign.status} /></PanelBody>
+            </Panel>
+          )}
         </div>
       )}
 
       {tab === "metrics" && (
         <Panel>
+          <PanelHeader
+            title="Performance metrics"
+            description="Actual results and targets. Spend rolls up into the campaign budget."
+            action={canEdit ? <AddMetricButton campaignId={campaign.id} /> : undefined}
+          />
           <DataTable
             columns={[
               { key: "name", header: "Metric", render: (m) => <span className="capitalize">{m.name}</span> },
@@ -183,6 +227,13 @@ export default async function CampaignDetailPage({
             getRowKey={(t) => t.id}
             empty={<EmptyState title="No related tasks" description="Work items linked to this campaign will appear here, so the team can see everything this campaign depends on in one place." />}
           />
+        </Panel>
+      )}
+
+      {tab === "activity" && (
+        <Panel>
+          <PanelHeader title="Activity" description="Every change to this campaign, from the audit trail." />
+          <PanelBody><ActivityTimeline entries={timeline} locale={locale} empty="No activity yet." /></PanelBody>
         </Panel>
       )}
     </>

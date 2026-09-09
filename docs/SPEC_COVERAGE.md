@@ -57,18 +57,18 @@ all work (verified end-to-end on PostgreSQL), per the brief's own bar.
 | T | Audit everything | ✅* | Every implemented mutation audits (create/edit/status/assign/approval/attendance/registration/permission changes) and is readable in the Audit Explorer. *Grows with each remaining write path. |
 | U | API parity | ✅* | Each implemented action is exposed under `/api/v1` sharing the exact domain logic. |
 | V | Transactions & concurrency | ✅ | Multi-record ops (task+assignees+checklist, approval decisions, registration stage+event, break accounting, role+permissions) run in `prisma.$transaction`; generator + dependencies are idempotent/guarded. |
-| K | Marketing Campaign write path | 🟡 | **Next increment.** Read/detail exist; create/edit/status/metrics follow the same proven pattern. |
+| **K** | **Marketing Campaign** write path | ✅ | create/edit (drawer), lifecycle transitions, manual metrics with atomic spend roll-up into the budget, activity timeline. Combined-dimension scope (brand + country) enforced on create + IDOR edit. Verified live on Postgres + unit tests. |
 | L,M | Social publishing actions + recurring | 🟡 | **Next increment.** |
 | N | WhatsApp workflow | 🟡 | **Next increment.** |
 | O | Creative request actions | 🟡 | **Next increment.** |
 | P | Store performance entry | 🟡 | **Next increment.** |
 | W | UX quality | ✅ | Drawers, inline controls, toasts, dirty-guard, activity timelines, validation — premium; RTL + dark verified across the foundation. |
 | Y | Accounting UI deferred | ✅ | Schema + dimensions preserved; no accounting UI built this phase (as instructed). |
-| Z | Verification + tests + coverage | ✅ | typecheck + build + 31 tests (incl. mutation-authorization suite) + clean-DB migration + seed; each write path verified live on Postgres. This document updated. |
+| Z | Verification + tests + coverage | ✅ | typecheck + build + 35 tests (incl. mutation-authorization suite) + clean-DB migration + seed; each write path verified live on Postgres. This document updated. |
 
 **Changelog (this phase):** branches (A) → security hardening (B) → PostgreSQL + migrations (C) → CI (D) → action/form foundation (F) → Tasks (G) → Daily Checks + generator (H,I) → Approvals (J) → Attendance (S) → Customer Cases (Q) → Regulatory (R) → Permission administration (X) → verification (Z). Each shipped as its own commit with an end-to-end Postgres verification.
 
-**Remaining gaps (next increment), in priority order:** Campaign write path + manual metrics (K); Store performance entry (P); Social publishing actions + coverage matrix + recurring generator (L, M); WhatsApp workflow (N); Creative request lifecycle + version approval (O). Then: employee-initiated attendance-correction approval loop; file uploads to object storage (§21/§52); the configurable Workflow engine UI (§50); the full accounting posting + statements (§26, the dedicated next phase per Part Y); rate-limiting + MFA (§38).
+**Remaining gaps (next increment), in priority order:** Store performance entry (P); Social publishing actions + coverage matrix + recurring generator (L, M); WhatsApp workflow (N); Creative request lifecycle + version approval (O). Then: employee-initiated attendance-correction approval loop; file uploads to object storage (§21/§52); the configurable Workflow engine UI (§50); the full accounting posting + statements (§26, the dedicated next phase per Part Y); rate-limiting + MFA (§38).
 
 ---
 

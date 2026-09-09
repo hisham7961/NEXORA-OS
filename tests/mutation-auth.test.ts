@@ -58,3 +58,26 @@ describe("cross-brand customer/regulatory mutation IDOR → denied", () => {
     expect(() => assertRecordInScope(reg, "registrations.edit", { brandId: B, countryId: KW }, [...DIMS])).toThrow(ForbiddenError);
   });
 });
+
+describe("campaign write path scope (Part K)", () => {
+  // Marketing manager scoped to Brand A in Kuwait + UAE (combined dims).
+  const mgr = principal([
+    assignment("marketing_manager", { brandId: A, countryId: KW }),
+    assignment("marketing_manager", { brandId: A, countryId: AE }),
+  ]);
+  it("can create a campaign inside either granted country", () => {
+    expect(can(mgr, "campaigns.create", { brandId: A, countryId: KW })).toBe(true);
+    expect(can(mgr, "campaigns.create", { brandId: A, countryId: AE })).toBe(true);
+  });
+  it("cannot create in the same brand but an ungranted country", () => {
+    expect(can(mgr, "campaigns.create", { brandId: A, countryId: "country_SA" })).toBe(false);
+  });
+  it("cannot create in another brand", () => {
+    expect(can(mgr, "campaigns.create", { brandId: B, countryId: KW })).toBe(false);
+  });
+  it("blocks editing (IDOR) a campaign outside the granted scope", () => {
+    expect(() => assertRecordInScope(mgr, "campaigns.edit", { brandId: A, countryId: KW }, [...DIMS])).not.toThrow();
+    expect(() => assertRecordInScope(mgr, "campaigns.edit", { brandId: B, countryId: KW }, [...DIMS])).toThrow(ForbiddenError);
+    expect(() => assertRecordInScope(mgr, "campaigns.edit", { brandId: A, countryId: "country_SA" }, [...DIMS])).toThrow(ForbiddenError);
+  });
+});

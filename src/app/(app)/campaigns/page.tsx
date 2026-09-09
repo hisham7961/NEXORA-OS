@@ -3,11 +3,14 @@ import type { Campaign } from "@prisma/client";
 import { Megaphone } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
+import { canAnywhere } from "@/lib/permissions/engine";
 import { listCampaigns, campaignQuerySchema } from "@/domain/campaigns";
+import { getScopedOptions } from "@/domain/options";
 import { getLookups, refName } from "@/domain/lookups";
 import { PageHeader, Panel, DataTable, StatusBadge, Badge, type Column } from "@/components/ui";
 import { ListToolbar } from "@/components/list/toolbar";
 import { Pagination } from "@/components/list/pagination";
+import { CampaignDrawerForm } from "@/components/campaigns/campaign-drawer-form";
 import { BrandChip, CountryChip } from "@/components/entity-chips";
 import { formatCurrency } from "@/lib/format";
 import { humanize } from "@/lib/status";
@@ -29,8 +32,12 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
 
   const sp = await searchParams;
   const query = campaignQuerySchema.parse(sp);
-  const { rows, total } = await listCampaigns(principal, query);
-  const lookups = await getLookups();
+  const canCreate = canAnywhere(principal, "campaigns.create");
+  const [{ rows, total }, lookups, options] = await Promise.all([
+    listCampaigns(principal, query),
+    getLookups(),
+    canCreate ? getScopedOptions(principal, "campaigns.create") : Promise.resolve(null),
+  ]);
 
   const brandOptions = [...lookups.brands.values()].map((b) => ({ value: b.id, label: b.name }));
 
@@ -50,6 +57,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
         title="Campaigns"
         description="Every marketing campaign across brands and markets — budget, spend and lifecycle at a glance."
         meta={<Badge category="neutral">{total} campaigns</Badge>}
+        actions={canCreate && options ? <CampaignDrawerForm mode="create" options={{ brands: options.brands, countries: options.countries, companies: options.companies, users: options.users }} /> : undefined}
       />
       <ListToolbar
         placeholder="Search campaigns…"
