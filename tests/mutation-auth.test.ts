@@ -1,0 +1,60 @@
+import { describe, it, expect } from "vitest";
+import { can, assertRecordInScope, ForbiddenError } from "@/lib/permissions/engine";
+import { assignment, principal } from "./helpers";
+
+/**
+ * Phase 2, Part Z — critical mutation-authorization cases. These assert the
+ * server-side checks every write path runs (create/edit/status/approve) refuse
+ * actions outside the caller's scope. Pure (no DB) so they run in CI.
+ */
+const DIMS = ["companyId", "brandId", "countryId"] as const;
+const A = "brand_A", B = "brand_B", KW = "country_KW", AE = "country_AE";
+
+// Marketing employee: Brand A, Kuwait only.
+const employee = principal([assignment("marketing_employee", { brandId: A, countryId: KW })]);
+
+describe("create outside authorized scope → denied", () => {
+  it("allows create inside scope", () => {
+    expect(can(employee, "tasks.create", { brandId: A, countryId: KW })).toBe(true);
+  });
+  it("denies create in another country of the same brand", () => {
+    expect(can(employee, "tasks.create", { brandId: A, countryId: AE })).toBe(false);
+  });
+  it("denies create in another brand", () => {
+    expect(can(employee, "tasks.create", { brandId: B, countryId: KW })).toBe(false);
+  });
+});
+
+describe("edit / status mutation outside scope → denied (IDOR on the record)", () => {
+  it("allows editing an in-scope record", () => {
+    expect(() => assertRecordInScope(employee, "tasks.edit", { brandId: A, countryId: KW }, [...DIMS])).not.toThrow();
+  });
+  it("blocks editing a record in another country", () => {
+    expect(() => assertRecordInScope(employee, "tasks.edit", { brandId: A, countryId: AE }, [...DIMS])).toThrow(ForbiddenError);
+  });
+  it("blocks a cross-brand status mutation", () => {
+    expect(() => assertRecordInScope(employee, "tasks.edit", { brandId: B, countryId: KW }, [...DIMS])).toThrow(ForbiddenError);
+  });
+});
+
+describe("approval / privileged actions by unauthorized user → denied", () => {
+  it("a marketing employee cannot approve", () => {
+    expect(can(employee, "approvals.approve", { brandId: A, countryId: KW })).toBe(false);
+  });
+  it("a marketing manager (scoped) can approve within scope but not outside", () => {
+    const mgr = principal([assignment("marketing_manager", { brandId: A, countryId: KW })]);
+    expect(can(mgr, "approvals.approve", { brandId: A, countryId: KW })).toBe(true);
+    expect(can(mgr, "approvals.approve", { brandId: B, countryId: KW })).toBe(false);
+  });
+});
+
+describe("cross-brand customer/regulatory mutation IDOR → denied", () => {
+  const cs = principal([assignment("customer_service", { brandId: A, countryId: KW })]);
+  it("customer-service edit blocked on another brand's case", () => {
+    expect(() => assertRecordInScope(cs, "cases.edit", { brandId: B, countryId: KW }, [...DIMS])).toThrow(ForbiddenError);
+  });
+  const reg = principal([assignment("regulatory_specialist", { brandId: A })]);
+  it("regulatory edit blocked on another brand's registration", () => {
+    expect(() => assertRecordInScope(reg, "registrations.edit", { brandId: B, countryId: KW }, [...DIMS])).toThrow(ForbiddenError);
+  });
+});

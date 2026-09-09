@@ -5,3 +5,4 @@ export { Input, Textarea, Select, Label, Field } from "./field";
 export { DataTable, type Column } from "./table";
 export { TabBar, type TabItem } from "./tabs";
 export { Avatar, Skeleton, Kbd, EmptyState, PageHeader, Divider, Metric } from "./misc";
+export { Drawer } from "./drawer";

@@ -3,8 +3,11 @@ import type { Task } from "@prisma/client";
 import { ListTodo } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
+import { canAnywhere } from "@/lib/permissions/engine";
 import { listTasks, taskQuerySchema } from "@/domain/tasks";
+import { getScopedOptions } from "@/domain/options";
 import { getLookups, refName } from "@/domain/lookups";
+import { TaskDrawerForm } from "@/components/tasks/task-drawer-form";
 import { PageHeader, Panel, DataTable, StatusBadge, Badge, EmptyState, type Column } from "@/components/ui";
 import { ListToolbar } from "@/components/list/toolbar";
 import { Pagination } from "@/components/list/pagination";
@@ -19,7 +22,12 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   if (denied) return <AccessDenied locale={locale} />;
   const sp = await searchParams;
   const query = taskQuerySchema.parse(sp);
-  const [{ rows, total }, lookups] = await Promise.all([listTasks(principal, query), getLookups()]);
+  const canCreate = canAnywhere(principal, "tasks.create");
+  const [{ rows, total }, lookups, options] = await Promise.all([
+    listTasks(principal, query),
+    getLookups(),
+    canCreate ? getScopedOptions(principal, "tasks.create") : Promise.resolve(null),
+  ]);
   const now = new Date();
 
   const columns: Column<Task>[] = [
@@ -33,7 +41,12 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <PageHeader title="Tasks" description="One universal task engine across the whole platform." meta={<Badge>{total} tasks</Badge>} />
+      <PageHeader
+        title="Tasks"
+        description="One universal task engine across the whole platform."
+        meta={<Badge>{total} tasks</Badge>}
+        actions={canCreate && options ? <TaskDrawerForm mode="create" options={options} /> : undefined}
+      />
       <ListToolbar
         placeholder="Search tasks…"
         filters={[
