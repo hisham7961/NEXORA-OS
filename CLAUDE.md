@@ -6,9 +6,11 @@ Read this before adding a module so new code matches the established pattern.
 ## Stack & commands
 
 - Next.js 15 (App Router, RSC, Server Actions) · TypeScript (strict) · Tailwind v4.
-- Prisma ORM. **Local dev = SQLite**, **production = PostgreSQL** (schema is portable).
-- `npm run dev` · `npm run build` · `npm run setup` (generate+push+seed) · `npm run db:seed`
-  · `npm run typecheck` · `npm run test` (Vitest).
+- Prisma ORM + **PostgreSQL** (local dev + production; `docker compose up -d db`).
+  Deployment uses **migrations** (`prisma/migrations`), never `prisma db push`.
+  New migration: `npm run db:migrate -- --name <x>`; apply: `npm run db:deploy`.
+- `npm run dev` · `npm run build` · `npm run setup` (generate+migrate+seed)
+  · `npm run db:seed` · `npm run typecheck` · `npm run test` (Vitest).
 
 ## Non-negotiable rules
 
@@ -28,9 +30,10 @@ Read this before adding a module so new code matches the established pattern.
 3. **Statuses/types are Strings** backed by `StatusDefinition`/`WorkflowTemplate`
    (configurable). Render with `<StatusBadge module="…" status={value} />`; the five
    semantic categories live in `src/lib/status.ts`.
-4. **Portability:** never use Prisma `enum`, scalar lists, `Json` type, or
-   `mode: "insensitive"` (unsupported on SQLite). JSON is stored as `*Json` strings.
-   Money is `Decimal`.
+4. **DB conventions (PostgreSQL):** avoid DB `enum`s and scalar lists (statuses are
+   configurable Strings). JSON is stored as `*Json` **text** columns. Money is
+   `Decimal` (Postgres `NUMERIC`). Free-text search uses `contains` with
+   `mode: "insensitive"`. Migrations live in `prisma/migrations`.
 5. **API-first:** business logic lives in `src/domain/*` services shared by web pages
    and the `/api/v1` REST routes (`route()` wrapper enforces auth + error mapping).
 6. **Audit** sensitive mutations via `writeAudit(...)`. **Soft-delete** important

@@ -20,7 +20,7 @@ export async function listCases(principal: Principal, query: CaseQuery): Promise
       ...(query.status ? { status: query.status } : {}),
       ...(query.type ? { type: query.type } : {}),
       ...(query.brandId ? { brandId: query.brandId } : {}),
-      ...(query.q ? { OR: [{ description: { contains: query.q } }, { customerRef: { contains: query.q } }] } : {}),
+      ...(query.q ? { OR: [{ description: { contains: query.q, mode: "insensitive" } }, { customerRef: { contains: query.q, mode: "insensitive" } }] } : {}),
     }),
   };
   const [rows, total] = await Promise.all([

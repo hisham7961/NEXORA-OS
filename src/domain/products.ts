@@ -36,7 +36,7 @@ export async function listProducts(
       ...(query.status ? { status: query.status } : {}),
       ...(query.brandId ? { brandId: query.brandId } : {}),
       ...(query.category ? { category: query.category } : {}),
-      ...(query.q ? { OR: [{ name: { contains: query.q } }, { sku: { contains: query.q } }] } : {}),
+      ...(query.q ? { OR: [{ name: { contains: query.q, mode: "insensitive" } }, { sku: { contains: query.q, mode: "insensitive" } }] } : {}),
     }),
   };
 

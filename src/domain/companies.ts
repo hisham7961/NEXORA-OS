@@ -35,7 +35,7 @@ export async function listCompanies(
     archivedAt: null,
     ...companyScopeWhere(principal),
     ...(query.status ? { status: query.status } : {}),
-    ...(query.q ? { OR: [{ name: { contains: query.q } }, { code: { contains: query.q } }] } : {}),
+    ...(query.q ? { OR: [{ name: { contains: query.q, mode: "insensitive" } }, { code: { contains: query.q, mode: "insensitive" } }] } : {}),
   };
 
   const [companies, total] = await Promise.all([

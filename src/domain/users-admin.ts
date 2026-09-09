@@ -11,7 +11,7 @@ export async function listUsers(query: UserQuery) {
   const where: Record<string, unknown> = {
     archivedAt: null,
     ...(query.status ? { status: query.status } : {}),
-    ...(query.q ? { OR: [{ name: { contains: query.q } }, { email: { contains: query.q } }] } : {}),
+    ...(query.q ? { OR: [{ name: { contains: query.q, mode: "insensitive" } }, { email: { contains: query.q, mode: "insensitive" } }] } : {}),
   };
   const [rows, total] = await Promise.all([
     prisma.user.findMany({

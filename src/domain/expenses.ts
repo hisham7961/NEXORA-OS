@@ -15,7 +15,7 @@ export async function listExpenses(principal: Principal, query: ExpenseQuery): P
     ...scopedWhere(principal, "expenses.view", DIMS_CBC, {
       ...(query.status ? { status: query.status } : {}),
       ...(query.brandId ? { brandId: query.brandId } : {}),
-      ...(query.q ? { OR: [{ description: { contains: query.q } }] } : {}),
+      ...(query.q ? { OR: [{ description: { contains: query.q, mode: "insensitive" } }] } : {}),
     }),
   };
   const [rows, total] = await Promise.all([

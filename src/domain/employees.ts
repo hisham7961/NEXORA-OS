@@ -29,7 +29,7 @@ export async function listEmployees(principal: Principal, query: EmployeeQuery):
     archivedAt: null,
     ...scopedWhere(principal, "employees.view", DIMS_EMPLOYEE, {
       ...(query.status ? { employmentStatus: query.status } : {}),
-      ...(query.q ? { OR: [{ position: { contains: query.q } }, { user: { name: { contains: query.q } } }] } : {}),
+      ...(query.q ? { OR: [{ position: { contains: query.q, mode: "insensitive" } }, { user: { name: { contains: query.q, mode: "insensitive" } } }] } : {}),
     }),
   };
 

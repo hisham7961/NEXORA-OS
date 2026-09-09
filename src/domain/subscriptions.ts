@@ -13,7 +13,7 @@ export async function listSubscriptions(principal: Principal, query: Subscriptio
   const in30 = new Date(Date.now() + 30 * 86_400_000);
   const extra: Record<string, unknown> = {
     ...(query.status ? { status: query.status } : {}),
-    ...(query.q ? { OR: [{ provider: { contains: query.q } }] } : {}),
+    ...(query.q ? { OR: [{ provider: { contains: query.q, mode: "insensitive" } }] } : {}),
     ...(query.filter === "renewing" ? { renewalDate: { lte: in30 }, status: { not: "cancelled" } } : {}),
   };
   const where: Record<string, unknown> = { archivedAt: null, ...scopedWhere(principal, "subscriptions.view", DIMS_CBC, extra) };

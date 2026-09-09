@@ -15,7 +15,7 @@ export async function listApprovals(principal: Principal, query: ApprovalQuery):
     ...scopedWhere(principal, "approvals.view", ["companyId", "brandId"], {
       ...(query.status ? { status: query.status } : {}),
       ...(query.type ? { type: query.type } : {}),
-      ...(query.q ? { OR: [{ title: { contains: query.q } }] } : {}),
+      ...(query.q ? { OR: [{ title: { contains: query.q, mode: "insensitive" } }] } : {}),
     }),
   };
   const [rows, total] = await Promise.all([

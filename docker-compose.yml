@@ -1,0 +1,23 @@
+# Local development database. `docker compose up -d db` then:
+#   cp .env.example .env   (DATABASE_URL already points at this)
+#   npm run setup          (prisma migrate deploy + seed)
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: nexora-db
+    environment:
+      POSTGRES_USER: nexora
+      POSTGRES_PASSWORD: nexora
+      POSTGRES_DB: nexora
+    ports:
+      - "5432:5432"
+    volumes:
+      - nexora-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexora -d nexora"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  nexora-pgdata:

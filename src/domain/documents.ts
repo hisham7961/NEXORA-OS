@@ -30,7 +30,7 @@ export async function listDocuments(
       ...restrict,
       ...(query.status ? { status: query.status } : {}),
       ...(query.brandId ? { brandId: query.brandId } : {}),
-      ...(query.q ? { OR: [{ title: { contains: query.q } }, { number: { contains: query.q } }] } : {}),
+      ...(query.q ? { OR: [{ title: { contains: query.q, mode: "insensitive" } }, { number: { contains: query.q, mode: "insensitive" } }] } : {}),
     }),
   };
 

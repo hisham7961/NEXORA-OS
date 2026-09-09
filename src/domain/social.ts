@@ -16,7 +16,7 @@ export async function listPublishing(principal: Principal, query: SocialQuery): 
       ...(query.status ? { status: query.status } : {}),
       ...(query.platform ? { platform: query.platform } : {}),
       ...(query.brandId ? { brandId: query.brandId } : {}),
-      ...(query.q ? { OR: [{ caption: { contains: query.q } }] } : {}),
+      ...(query.q ? { OR: [{ caption: { contains: query.q, mode: "insensitive" } }] } : {}),
     }),
   };
   const [rows, total] = await Promise.all([

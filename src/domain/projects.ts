@@ -14,7 +14,7 @@ export async function listProjects(principal: Principal, query: ProjectQuery): P
     ...scopedWhere(principal, "projects.view", ["companyId", "brandId"], {
       ...(query.status ? { status: query.status } : {}),
       ...(query.brandId ? { brandId: query.brandId } : {}),
-      ...(query.q ? { OR: [{ name: { contains: query.q } }] } : {}),
+      ...(query.q ? { OR: [{ name: { contains: query.q, mode: "insensitive" } }] } : {}),
     }),
   };
   const [rows, total] = await Promise.all([

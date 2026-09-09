@@ -15,7 +15,7 @@ export async function listCreativeAssets(principal: Principal, query: CreativeQu
     ...(ids === "all" ? {} : { brandId: { in: ids } }),
     ...(query.platform ? { platform: query.platform } : {}),
     ...(query.brandId ? { brandId: query.brandId } : {}),
-    ...(query.q ? { assetType: { contains: query.q } } : {}),
+    ...(query.q ? { assetType: { contains: query.q, mode: "insensitive" } } : {}),
   };
   const [rows, total] = await Promise.all([
     prisma.creativeAsset.findMany({ where, orderBy: { createdAt: "desc" }, skip: (query.page - 1) * query.pageSize, take: query.pageSize }),

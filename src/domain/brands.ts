@@ -29,7 +29,7 @@ export async function listBrands(principal: Principal, query: BrandQuery): Promi
     archivedAt: null,
     ...brandScopeWhere(principal),
     ...(query.status ? { status: query.status } : {}),
-    ...(query.q ? { OR: [{ name: { contains: query.q } }, { code: { contains: query.q } }] } : {}),
+    ...(query.q ? { OR: [{ name: { contains: query.q, mode: "insensitive" } }, { code: { contains: query.q, mode: "insensitive" } }] } : {}),
   };
 
   const [brands, total] = await Promise.all([

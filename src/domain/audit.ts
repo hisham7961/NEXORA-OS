@@ -9,8 +9,8 @@ export type AuditQuery = z.infer<typeof auditQuerySchema>;
 export async function listAudit(query: AuditQuery) {
   const where: Record<string, unknown> = {
     ...(query.entityType ? { entityType: query.entityType } : {}),
-    ...(query.action ? { action: { contains: query.action } } : {}),
-    ...(query.q ? { OR: [{ action: { contains: query.q } }, { summary: { contains: query.q } }] } : {}),
+    ...(query.action ? { action: { contains: query.action, mode: "insensitive" } } : {}),
+    ...(query.q ? { OR: [{ action: { contains: query.q, mode: "insensitive" } }, { summary: { contains: query.q, mode: "insensitive" } }] } : {}),
   };
   const [logs, total] = await Promise.all([
     prisma.auditLog.findMany({ where, orderBy: { createdAt: "desc" }, skip: (query.page - 1) * query.pageSize, take: query.pageSize }),

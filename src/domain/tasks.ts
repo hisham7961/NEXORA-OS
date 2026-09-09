@@ -21,7 +21,7 @@ export async function listTasks(principal: Principal, query: TaskQuery): Promise
     ...(query.status ? { status: query.status } : {}),
     ...(query.priority ? { priority: query.priority } : {}),
     ...(query.brandId ? { brandId: query.brandId } : {}),
-    ...(query.q ? { OR: [{ title: { contains: query.q } }] } : {}),
+    ...(query.q ? { OR: [{ title: { contains: query.q, mode: "insensitive" } }] } : {}),
     ...(query.filter === "overdue" ? { dueDate: { lt: new Date() }, status: OPEN } : {}),
   };
   const where: Record<string, unknown> = { archivedAt: null, ...scopedWhere(principal, "tasks.view", DIMS_CBC, extra) };

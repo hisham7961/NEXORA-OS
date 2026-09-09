@@ -24,7 +24,7 @@ export async function listTeams(principal: Principal, query: TeamQuery): Promise
     archivedAt: null,
     ...scopedWhere(principal, "teams.view", DIMS_BRAND, {
       ...(query.brandId ? { brandId: query.brandId } : {}),
-      ...(query.q ? { OR: [{ name: { contains: query.q } }] } : {}),
+      ...(query.q ? { OR: [{ name: { contains: query.q, mode: "insensitive" } }] } : {}),
     }),
   };
 

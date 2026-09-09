@@ -3,10 +3,10 @@
 // ----------------------------------------------------------------------------
 // The central operating system for a multi-company, multi-brand cosmetics group.
 //
-// DATABASE PORTABILITY
-//   Local dev uses SQLite (zero external infrastructure — Prisma's bundled engine).
-//   Production uses PostgreSQL: change `provider` below to "postgresql" and point
-//   DATABASE_URL at your Postgres instance. The schema is written portably:
+// DATABASE (PostgreSQL — local dev + production, Phase 2 Part C)
+//   Both local dev and production run PostgreSQL (docker-compose.yml for local).
+//   Deployment applies versioned migrations in prisma/migrations (never db push).
+//   The schema deliberately stays clean and portable:
 //     * statuses/types are Strings backed by configurable StatusDefinition /
 //       WorkflowTemplate rows (§7 "statuses must be configurable", §50 workflow
 //       engine) rather than hard-coded DB enums.
@@ -37,8 +37,11 @@ generator client {
 }
 
 datasource db {
-  // Local dev: sqlite. Production: change to "postgresql" (schema is portable).
-  provider = "sqlite"
+  // PostgreSQL is the production AND local database (Phase 2, Part C). The schema
+  // avoids DB enums / scalar lists / Json columns so it stays clean and portable,
+  // but Postgres is now the single source of truth — migrations live in
+  // prisma/migrations and are the deployment path (never `prisma db push` in prod).
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

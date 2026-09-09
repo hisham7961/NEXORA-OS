@@ -24,11 +24,13 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (keep .env for local dev DB so the foundation runs out-of-the-box;
-# never commit real secrets — production uses managed secrets, see README)
+# env files — NEVER commit real secrets. Local dev copies .env.example → .env.
+# Production injects secrets via a managed secrets store.
+.env
 .env.local
 .env.production
 .env*.local
+!.env.example
 
 # database (local sqlite dev database + prisma engine cache)
 /prisma/*.db

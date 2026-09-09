@@ -15,7 +15,7 @@ export async function listWhatsapp(principal: Principal, query: WhatsappQuery): 
     ...scopedWhere(principal, "whatsapp.view", ["brandId", "countryId"], {
       ...(query.status ? { status: query.status } : {}),
       ...(query.brandId ? { brandId: query.brandId } : {}),
-      ...(query.q ? { OR: [{ objective: { contains: query.q } }, { audience: { contains: query.q } }] } : {}),
+      ...(query.q ? { OR: [{ objective: { contains: query.q, mode: "insensitive" } }, { audience: { contains: query.q, mode: "insensitive" } }] } : {}),
     }),
   };
   const [rows, total] = await Promise.all([

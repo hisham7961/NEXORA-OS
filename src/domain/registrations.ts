@@ -45,7 +45,7 @@ export async function listRegistrations(
       ...statusFilter,
       ...(query.brandId ? { brandId: query.brandId } : {}),
       ...(query.countryId ? { countryId: query.countryId } : {}),
-      ...(query.q ? { OR: [{ registrationNumber: { contains: query.q } }] } : {}),
+      ...(query.q ? { OR: [{ registrationNumber: { contains: query.q, mode: "insensitive" } }] } : {}),
     }),
   };
 

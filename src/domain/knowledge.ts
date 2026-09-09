@@ -15,7 +15,7 @@ export async function listKnowledge(principal: Principal, query: KnowledgeQuery)
     ...(ids === "all" ? {} : { OR: [{ brandId: null }, { brandId: { in: ids } }] }),
     ...(query.category ? { category: query.category } : {}),
     ...(query.status ? { status: query.status } : {}),
-    ...(query.q ? { title: { contains: query.q } } : {}),
+    ...(query.q ? { title: { contains: query.q, mode: "insensitive" } } : {}),
   };
   const [rows, total] = await Promise.all([
     prisma.knowledgeArticle.findMany({ where, orderBy: { updatedAt: "desc" }, skip: (query.page - 1) * query.pageSize, take: query.pageSize }),

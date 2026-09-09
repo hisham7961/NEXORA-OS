@@ -15,7 +15,7 @@ export async function listStores(principal: Principal, query: StoreQuery): Promi
     ...scopedWhere(principal, "stores.view", DIMS_CBC, {
       ...(query.platform ? { platform: query.platform } : {}),
       ...(query.brandId ? { brandId: query.brandId } : {}),
-      ...(query.q ? { OR: [{ name: { contains: query.q } }] } : {}),
+      ...(query.q ? { OR: [{ name: { contains: query.q, mode: "insensitive" } }] } : {}),
     }),
   };
   const [rows, total] = await Promise.all([

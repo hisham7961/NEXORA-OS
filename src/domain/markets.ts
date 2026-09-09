@@ -24,7 +24,7 @@ export interface MarketRow {
 export async function listMarkets(query: MarketQuery): Promise<{ rows: MarketRow[]; total: number }> {
   const where: Record<string, unknown> = {
     ...(query.region ? { region: query.region } : {}),
-    ...(query.q ? { OR: [{ name: { contains: query.q } }, { iso2: { contains: query.q } }] } : {}),
+    ...(query.q ? { OR: [{ name: { contains: query.q, mode: "insensitive" } }, { iso2: { contains: query.q, mode: "insensitive" } }] } : {}),
   };
 
   const [countries, total] = await Promise.all([

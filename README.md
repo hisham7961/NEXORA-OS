@@ -39,31 +39,35 @@ API-first platform — not a collection of disconnected CRUD pages.
 |-----------|--------|
 | Framework | Next.js 15 (App Router, RSC, Server Actions) · TypeScript |
 | UI        | Tailwind CSS v4 · a bespoke component library · lucide icons |
-| Data      | Prisma ORM · **SQLite for local dev** (zero infra) · **PostgreSQL for production** |
+| Data      | Prisma ORM · **PostgreSQL** (local dev + production) · versioned migrations |
 | Auth      | Cookie sessions (HMAC-hashed tokens) · scrypt password hashing |
 | Validation| Zod |
 | Tests     | Vitest |
 
-### Local dev vs. production database
+### Database (PostgreSQL, migrations)
 
-The Prisma schema is written **portably**. Local development uses SQLite so the
-whole platform runs with **no external services**. For production, switch to
-PostgreSQL:
+PostgreSQL is the single database for **both** local dev and production — no
+schema divergence. Deployment uses **Prisma migrations** (`prisma/migrations/`),
+never `prisma db push`. Money is `Decimal` (Postgres `NUMERIC`); statuses/types
+are Strings backed by configurable `StatusDefinition` / `WorkflowTemplate` rows.
 
-1. In `prisma/schema.prisma`, set `datasource db { provider = "postgresql" }`.
-2. Point `DATABASE_URL` at your Postgres instance.
-3. `npx prisma migrate deploy`.
+```bash
+docker compose up -d db      # local Postgres on :5432 (or use any Postgres)
+cp .env.example .env         # DATABASE_URL already points at it
+npm run setup                # prisma generate + migrate deploy + seed
+```
 
-Statuses/types are Strings backed by configurable `StatusDefinition` /
-`WorkflowTemplate` rows (statuses are meant to be configurable), and JSON blobs
-are stored as text — so the schema is identical on both engines.
+- New migration after a schema change: `npm run db:migrate -- --name <change>`
+- Apply migrations (CI / prod): `npm run db:deploy`
 
 ## Getting started
 
 ```bash
+docker compose up -d db   # local PostgreSQL (or point .env at your own)
 npm install
-npm run setup     # prisma generate + db push + seed the demo world
-npm run dev       # http://localhost:3000
+cp .env.example .env
+npm run setup             # prisma generate + migrate deploy + seed the demo world
+npm run dev               # http://localhost:3000
 ```
 
 `npm run setup` seeds a realistic multi-company / multi-brand world. Sign in with

@@ -15,7 +15,7 @@ export async function listDesign(principal: Principal, query: DesignQuery): Prom
     ...scopedWhere(principal, "design.view", DIMS_CBC, {
       ...(query.status ? { status: query.status } : {}),
       ...(query.brandId ? { brandId: query.brandId } : {}),
-      ...(query.q ? { OR: [{ assetType: { contains: query.q } }, { copy: { contains: query.q } }] } : {}),
+      ...(query.q ? { OR: [{ assetType: { contains: query.q, mode: "insensitive" } }, { copy: { contains: query.q, mode: "insensitive" } }] } : {}),
     }),
   };
   const [rows, total] = await Promise.all([

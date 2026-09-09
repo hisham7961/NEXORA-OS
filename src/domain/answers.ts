@@ -23,7 +23,7 @@ export async function listAnswers(principal: Principal, query: AnswerQuery): Pro
     ...(query.category ? { category: query.category } : {}),
     ...(query.language ? { language: query.language } : {}),
     ...(query.brandId ? { brandId: query.brandId } : {}),
-    ...(query.q ? { question: { contains: query.q } } : {}),
+    ...(query.q ? { question: { contains: query.q, mode: "insensitive" } } : {}),
   };
   const [rows, total] = await Promise.all([
     prisma.approvedAnswer.findMany({ where, orderBy: { updatedAt: "desc" }, skip: (query.page - 1) * query.pageSize, take: query.pageSize }),

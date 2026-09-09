@@ -52,7 +52,27 @@ async function clear() {
   }
 }
 
+/**
+ * Seed guard (Phase 2, Part B): demo data — including the well-known demo
+ * password — must never be created against a production database. Running the
+ * seed in production requires an explicit, deliberate override.
+ */
+function assertSeedAllowed() {
+  const isProd = process.env.NODE_ENV === "production";
+  const url = process.env.DATABASE_URL ?? "";
+  const looksProd = /(^|@)(?!.*(localhost|127\.0\.0\.1|::1))/.test(url) && !url.startsWith("file:");
+  const override = process.env.NEXORA_ALLOW_SEED === "true";
+  if ((isProd || looksProd) && !override) {
+    throw new Error(
+      "REFUSING TO SEED: NODE_ENV=production or DATABASE_URL points at a non-local host. " +
+        "The demo seed (with the shared demo password) is development-only. " +
+        "If you REALLY intend to seed this database, set NEXORA_ALLOW_SEED=true explicitly.",
+    );
+  }
+}
+
 async function main() {
+  assertSeedAllowed();
   console.log("• Resetting database…");
   await clear();
 

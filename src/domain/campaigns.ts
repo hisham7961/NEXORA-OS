@@ -27,7 +27,7 @@ export async function listCampaigns(
       ...(query.status ? { status: query.status } : {}),
       ...(query.brandId ? { brandId: query.brandId } : {}),
       ...(query.type ? { type: query.type } : {}),
-      ...(query.q ? { OR: [{ name: { contains: query.q } }] } : {}),
+      ...(query.q ? { OR: [{ name: { contains: query.q, mode: "insensitive" } }] } : {}),
     }),
   };
 
