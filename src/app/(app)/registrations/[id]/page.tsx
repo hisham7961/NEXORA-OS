@@ -3,8 +3,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
-import { ForbiddenError } from "@/lib/permissions/engine";
+import { canAnywhere, ForbiddenError } from "@/lib/permissions/engine";
 import { getRegistration, getAuthorityNames } from "@/domain/registrations";
+import { RegistrationActions } from "@/components/registrations/registration-actions";
 import { getLookups, refName } from "@/domain/lookups";
 import { Panel, PanelHeader, PanelBody, StatusBadge, Badge } from "@/components/ui";
 import { BrandChip, CountryChip, UserChip } from "@/components/entity-chips";
@@ -25,6 +26,7 @@ export default async function RegistrationDetailPage({ params }: { params: Promi
   if (!data) notFound();
   const { registration: r, events, docReqs } = data;
   const [lookups, authorities] = await Promise.all([getLookups(), getAuthorityNames()]);
+  const canEdit = canAnywhere(principal, "registrations.edit");
 
   return (
     <>
@@ -71,9 +73,13 @@ export default async function RegistrationDetailPage({ params }: { params: Promi
             </PanelBody>
           </Panel>
           <Panel>
-            <PanelHeader title="Required documents" />
+            <PanelHeader title={canEdit ? "Actions" : "Required documents"} description={canEdit ? "Advance the stage, track documents, record responses." : undefined} />
             <PanelBody>
-              {docReqs.length === 0 ? <p className="text-[13px] text-ink-3">No documents tracked.</p> : (
+              {canEdit ? (
+                <RegistrationActions caseId={r.id} status={r.status} requirements={docReqs.map((d) => ({ id: d.id, name: d.name, status: d.status }))} />
+              ) : docReqs.length === 0 ? (
+                <p className="text-[13px] text-ink-3">No documents tracked.</p>
+              ) : (
                 <ul className="space-y-1.5">
                   {docReqs.map((d) => (
                     <li key={d.id} className="flex items-center justify-between text-[13px]">

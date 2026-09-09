@@ -3,8 +3,11 @@ import { ClipboardCheck } from "lucide-react";
 import type { RegistrationCase } from "@prisma/client";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
+import { canAnywhere } from "@/lib/permissions/engine";
 import { listRegistrations, getAuthorityNames, registrationQuerySchema } from "@/domain/registrations";
+import { getScopedOptions } from "@/domain/options";
 import { getLookups, refName } from "@/domain/lookups";
+import { NewRegistrationButton } from "@/components/registrations/new-registration-button";
 import { PageHeader, Panel, DataTable, StatusBadge, Badge, type Column } from "@/components/ui";
 import { ListToolbar } from "@/components/list/toolbar";
 import { Pagination } from "@/components/list/pagination";
@@ -36,7 +39,13 @@ export default async function RegistrationsPage({ searchParams }: { searchParams
   const sp = await searchParams;
   const query = registrationQuerySchema.parse(sp);
   const { rows, total } = await listRegistrations(principal, query);
-  const [lookups, authorities] = await Promise.all([getLookups(), getAuthorityNames()]);
+  const canCreate = canAnywhere(principal, "registrations.create");
+  const [lookups, authorities, options] = await Promise.all([
+    getLookups(),
+    getAuthorityNames(),
+    canCreate ? getScopedOptions(principal, "registrations.create") : Promise.resolve(null),
+  ]);
+  const authorityOptions = [...authorities.entries()].map(([id, name]) => ({ id, label: name }));
 
   const brandOptions = [...lookups.brands.values()]
     .sort((a, b) => a.name.localeCompare(b.name))
@@ -68,6 +77,7 @@ export default async function RegistrationsPage({ searchParams }: { searchParams
             {blocked && <Badge category="warning">Blocked stages only</Badge>}
           </div>
         }
+        actions={canCreate && options ? <NewRegistrationButton countries={options.countries} brands={options.brands} users={options.users} authorities={authorityOptions} /> : undefined}
       />
       <ListToolbar
         placeholder="Search by registration number…"
