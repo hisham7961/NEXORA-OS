@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/components/providers";
 
 /**
  * Side drawer for quick create/edit and detail peeks (§43, §78 — never a giant
@@ -25,6 +26,7 @@ export function Drawer({
   children: ReactNode;
   width?: string;
 }) {
+  const { t } = useI18n();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -52,7 +54,7 @@ export function Drawer({
             <h2 className="text-[14px] font-semibold text-ink truncate">{title}</h2>
             {description && <p className="mt-0.5 text-xs text-ink-3">{description}</p>}
           </div>
-          <button onClick={onClose} className="rounded-md p-1.5 text-ink-3 hover:bg-surface-2 hover:text-ink" aria-label="Close">
+          <button onClick={onClose} className="rounded-md p-1.5 text-ink-3 hover:bg-surface-2 hover:text-ink" aria-label={t("actions.close")}>
             <X className="h-4 w-4" />
           </button>
         </header>

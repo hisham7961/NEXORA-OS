@@ -42,7 +42,7 @@ export function Topbar({ user, unread = 0 }: { user: TopbarUser; unread?: number
       <button
         className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-md text-ink-2 hover:bg-surface-2"
         onClick={() => setMobileNavOpen(true)}
-        aria-label="Open navigation"
+        aria-label={t("actions.openNav")}
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -82,7 +82,7 @@ export function Topbar({ user, unread = 0 }: { user: TopbarUser; unread?: number
         <Link
           href="/notifications"
           className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-ink-2 hover:bg-surface-2"
-          title="Notifications"
+          title={t("nav.notifications")}
         >
           <Bell className="h-4 w-4" />
           {unread > 0 && (
