@@ -44,6 +44,7 @@ export default async function BrandDetailPage({
     { key: "regulatory", label: "Regulatory", count: registrations.length },
     { key: "documents", label: "Documents", count: documents.length },
     { key: "customer-service", label: "Customer Service", count: cases.length },
+    ...(canAnywhere(principal, "accounting.view") ? [{ key: "financial", label: "Financial" }] : []),
   ];
 
   return (
@@ -193,6 +194,28 @@ export default async function BrandDetailPage({
           />
         </Panel>
       )}
+
+      {tab === "financial" && canAnywhere(principal, "accounting.view") && await (async () => {
+        const { entityFinancials } = await import("@/domain/accounting/intelligence");
+        const fin = await entityFinancials(principal, "brand", brand.id);
+        const num = (v: unknown) => Number(v).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+        return (
+          <Panel>
+            <PanelHeader title="Financial (posted ledger, YTD)" description="Revenue and profit attributed to this brand, per legal company." action={<Link href={`/accounting/intelligence?dim=brand`} className="text-[12px] text-accent hover:underline">Full intelligence →</Link>} />
+            {!fin.hasActivity ? <EmptyState title="No ledger activity" description="No posted journal lines carry this brand yet." /> : (
+              <DataTable
+                columns={[
+                  { key: "company", header: "Company", render: (r) => <span className="text-ink">{r.companyName}</span> },
+                  { key: "revenue", header: "Revenue", align: "end", render: (r) => <span className="tabular text-ink-2">{num(r.revenue)} {r.baseCurrency}</span> },
+                  { key: "gross", header: "Gross profit", align: "end", render: (r) => <span className="tabular text-ink-2">{num(r.grossProfit)}</span> },
+                  { key: "net", header: "Net profit", align: "end", render: (r) => { const v = Number(r.netProfit); return <span className={`tabular font-medium ${v < 0 ? "text-critical" : "text-success"}`}>{num(r.netProfit)}</span>; } },
+                ] as Column<(typeof fin.rows)[number]>[]}
+                rows={fin.rows} getRowKey={(r) => r.companyId}
+              />
+            )}
+          </Panel>
+        );
+      })()}
     </>
   );
 }

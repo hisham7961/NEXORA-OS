@@ -98,7 +98,12 @@ optional analytical-dimension scope, a Budget-vs-Actual variance report against
 posted GL, and a direct-method Cash Flow statement (movements attributed to their
 counterpart accounts, grouped operating/investing/financing). AR/AP aging shipped
 in C/D. `budgets.ts` and `statements.ts`; verified against the seeded ledger.
-Pending increments: the Financial Intelligence dashboards / 360 integrations.
+**Financial Intelligence (Increment G)** — analytical P&L by any dimension (brand /
+country / product / store / campaign / department), a management company overview
+(headline P&L, cash, AR/AP outstanding, top brands), and the 360 financial
+integration (`entityFinancials` powers a Financial tab on the Brand 360, one row per
+legal company). `intelligence.ts`, all from posted ledger lines.
+Pending increment: final hardening (H).
 
 `bank.ts` holds bank accounts, transfers, reconciliation and cash position;
 transfers post in base currency through the engine, plugging any cross-currency

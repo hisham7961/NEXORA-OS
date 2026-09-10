@@ -162,6 +162,7 @@ export const NAVIGATION: NavGroup[] = [
       { key: "acc-bank", labelKey: "nav.bankCash", href: "/accounting/bank", icon: Landmark, permission: "banks.view" },
       { key: "acc-budgets", labelKey: "nav.budgets", href: "/accounting/budgets", icon: PieChart, permission: "budgets.view" },
       { key: "acc-reports", labelKey: "nav.financialReports", href: "/accounting/reports", icon: Scale, permission: "accounting.view" },
+      { key: "acc-intelligence", labelKey: "nav.financialIntelligence", href: "/accounting/intelligence", icon: BarChart4, permission: "accounting.view" },
     ],
   },
   {
