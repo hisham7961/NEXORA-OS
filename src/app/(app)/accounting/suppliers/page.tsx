@@ -8,6 +8,7 @@ import { resolveAccountingCompany } from "@/domain/accounting/access";
 import { listSuppliers } from "@/domain/accounting/suppliers";
 import { PageHeader, Panel, DataTable, Badge, EmptyState, type Column } from "@/components/ui";
 import { CompanyPicker } from "@/components/accounting/company-picker";
+import { ExportButton } from "@/components/list/export-button";
 import { NewSupplierButton, EditSupplierButton } from "@/components/accounting/ap-controls";
 
 export const metadata: Metadata = { title: "Suppliers" };
@@ -36,7 +37,7 @@ export default async function SuppliersPage({ searchParams }: { searchParams: Pr
   return (
     <>
       <PageHeader title="Suppliers" description={`Accounts payable parties for ${current.name}.`}
-        actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} />{canManage && <NewSupplierButton companyId={current.id} />}</div>} />
+        actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} /><ExportButton resource="suppliers" />{canManage && <NewSupplierButton companyId={current.id} />}</div>} />
       <Panel>
         <DataTable columns={columns} rows={rows} getRowKey={(s) => s.id}
           empty={<EmptyState icon={<Building2 className="h-5 w-5" />} title="No suppliers" description="Add a supplier to record bills." />} />

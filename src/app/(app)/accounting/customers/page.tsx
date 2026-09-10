@@ -8,6 +8,7 @@ import { resolveAccountingCompany } from "@/domain/accounting/access";
 import { listCustomers } from "@/domain/accounting/customers";
 import { PageHeader, Panel, DataTable, Badge, EmptyState, type Column } from "@/components/ui";
 import { CompanyPicker } from "@/components/accounting/company-picker";
+import { ExportButton } from "@/components/list/export-button";
 import { NewCustomerButton, EditCustomerButton } from "@/components/accounting/ar-controls";
 
 export const metadata: Metadata = { title: "Customers" };
@@ -36,7 +37,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   return (
     <>
       <PageHeader title="Customers" description={`Accounts receivable parties for ${current.name}.`}
-        actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} />{canManage && <NewCustomerButton companyId={current.id} />}</div>} />
+        actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} /><ExportButton resource="customers" />{canManage && <NewCustomerButton companyId={current.id} />}</div>} />
       <Panel>
         <DataTable columns={columns} rows={rows} getRowKey={(c) => c.id}
           empty={<EmptyState icon={<Users className="h-5 w-5" />} title="No customers" description="Add a customer to start invoicing." />} />

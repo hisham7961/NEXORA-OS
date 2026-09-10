@@ -8,6 +8,7 @@ import { resolveAccountingCompany } from "@/domain/accounting/access";
 import { listBills } from "@/domain/accounting/ap";
 import { PageHeader, Panel, DataTable, Badge, EmptyState, Button, type Column } from "@/components/ui";
 import { CompanyPicker } from "@/components/accounting/company-picker";
+import { ExportButton } from "@/components/list/export-button";
 import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Supplier Bills" };
@@ -40,7 +41,7 @@ export default async function BillsPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHeader title="Supplier Bills" description={`Accounts payable for ${current.name} (${current.baseCurrency}).`}
-        actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} />{canCreate && <Link href={`/accounting/bills/new?company=${current.id}`}><Button variant="primary" size="sm"><Plus className="h-4 w-4" /> New bill</Button></Link>}</div>} />
+        actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} /><ExportButton resource="bills" />{canCreate && <Link href={`/accounting/bills/new?company=${current.id}`}><Button variant="primary" size="sm"><Plus className="h-4 w-4" /> New bill</Button></Link>}</div>} />
       <Panel>
         <DataTable columns={columns} rows={rows} getRowKey={(b) => b.id}
           empty={<EmptyState icon={<ReceiptText className="h-5 w-5" />} title="No bills" description="Record a supplier bill to post an expense and payable." />} />

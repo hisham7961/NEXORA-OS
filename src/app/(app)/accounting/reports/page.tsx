@@ -10,6 +10,7 @@ import { cashFlow } from "@/domain/accounting/statements";
 import Link from "next/link";
 import { PageHeader, Panel, PanelHeader, PanelBody, DataTable, Badge, EmptyState, Metric, type Column } from "@/components/ui";
 import { CompanyPicker } from "@/components/accounting/company-picker";
+import { ExportButton } from "@/components/list/export-button";
 
 export const metadata: Metadata = { title: "Financial Reports" };
 
@@ -36,7 +37,7 @@ export default async function AccountingReportsPage({ searchParams }: { searchPa
   return (
     <>
       <PageHeader title="Financial Reports" description={`Derived only from posted ledger data for ${current.name} (${cur}).`}
-        actions={<CompanyPicker companies={companies} current={current.id} />} />
+        actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} />{["trial-balance", "ar-aging", "ap-aging"].includes(tab) && <ExportButton resource={tab} />}</div>} />
       <div className="mb-4 flex gap-1 border-b border-line">
         {tabs.map((t) => (
           <Link key={t.key} href={`/accounting/reports?company=${current.id}&tab=${t.key}`}

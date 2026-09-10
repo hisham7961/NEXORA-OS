@@ -8,6 +8,7 @@ import { resolveAccountingCompany } from "@/domain/accounting/access";
 import { listInvoices } from "@/domain/accounting/ar";
 import { PageHeader, Panel, DataTable, Badge, EmptyState, Button, type Column } from "@/components/ui";
 import { CompanyPicker } from "@/components/accounting/company-picker";
+import { ExportButton } from "@/components/list/export-button";
 import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Sales Invoices" };
@@ -40,7 +41,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader title="Sales Invoices" description={`Accounts receivable for ${current.name} (${cur}).`}
-        actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} />{canCreate && <Link href={`/accounting/invoices/new?company=${current.id}`}><Button variant="primary" size="sm"><Plus className="h-4 w-4" /> New invoice</Button></Link>}</div>} />
+        actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} /><ExportButton resource="invoices" />{canCreate && <Link href={`/accounting/invoices/new?company=${current.id}`}><Button variant="primary" size="sm"><Plus className="h-4 w-4" /> New invoice</Button></Link>}</div>} />
       <Panel>
         <DataTable columns={columns} rows={rows} getRowKey={(i) => i.id}
           empty={<EmptyState icon={<FileText className="h-5 w-5" />} title="No invoices" description="Create a sales invoice to post revenue and receivables." />} />
