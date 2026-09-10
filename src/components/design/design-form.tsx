@@ -9,6 +9,7 @@ import { Button, Input, Textarea, Select, Drawer } from "@/components/ui";
 import { ActionForm, FormField, FormSection } from "@/components/form/action-form";
 import { createDesignAction, updateDesignAction } from "@/app/actions/design";
 import type { Option } from "@/domain/options";
+import { useI18n } from "@/components/providers";
 import { humanize } from "@/lib/status";
 
 const ASSET_TYPES = ["post", "story", "reel", "banner", "packaging", "video", "print", "email", "web", "other"];
@@ -39,6 +40,7 @@ export function DesignForm({
   defaults?: DesignDefaults;
 }) {
   const [open, setOpen] = useState(false);
+  const { t } = useI18n();
   useCreateShortcut(() => { if (mode === "create") setOpen(true); });
   const router = useRouter();
   const isEdit = mode === "edit";
@@ -46,49 +48,49 @@ export function DesignForm({
     <>
       <Button variant={isEdit ? "secondary" : "primary"} size={isEdit ? "sm" : "md"} onClick={() => setOpen(true)}>
         {isEdit ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-        {isEdit ? "Edit brief" : "New request"}
+        {isEdit ? t("dsf.editBrief") : t("dsf.newRequest")}
       </Button>
-      <Drawer open={open} onClose={() => setOpen(false)} title={isEdit ? "Edit design request" : "New design request"} description="Brief a creative request; versions are reviewed and approved without overwriting history." width="620px">
-        <ActionForm action={isEdit ? updateDesignAction : createDesignAction} submitLabel={isEdit ? "Save" : "Create request"} onCancel={() => setOpen(false)} onSuccess={() => { setOpen(false); router.refresh(); }}>
+      <Drawer open={open} onClose={() => setOpen(false)} title={isEdit ? t("dsf.editDesignReq") : t("dsf.newDesignReq")} description={t("dsf.designSub")} width="620px">
+        <ActionForm action={isEdit ? updateDesignAction : createDesignAction} submitLabel={isEdit ? t("common.save") : t("dsf.createRequest")} onCancel={() => setOpen(false)} onSuccess={() => { setOpen(false); router.refresh(); }}>
           {isEdit && <input type="hidden" name="requestId" value={defaults.id} />}
           <FormSection>
-            <FormField label="Asset type" name="assetType" required>
+            <FormField label={t("dsf.assetType")} name="assetType" required>
               <Select name="assetType" defaultValue={defaults.assetType ?? "post"}>{ASSET_TYPES.map((t) => <option key={t} value={t}>{humanize(t)}</option>)}</Select>
             </FormField>
-            <FormField label="Priority" name="priority">
+            <FormField label={t("common.priority")} name="priority">
               <Select name="priority" defaultValue={defaults.priority ?? "normal"}>{PRIORITIES.map((p) => <option key={p} value={p}>{humanize(p)}</option>)}</Select>
             </FormField>
             {!isEdit && (
               <>
-                <FormField label="Company" name="companyId">
+                <FormField label={t("common.company")} name="companyId">
                   <Select name="companyId" defaultValue={defaults.companyId ?? ""}><option value="">—</option>{options.companies.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</Select>
                 </FormField>
-                <FormField label="Brand" name="brandId">
+                <FormField label={t("common.brand")} name="brandId">
                   <Select name="brandId" defaultValue={defaults.brandId ?? ""}><option value="">—</option>{options.brands.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}</Select>
                 </FormField>
-                <FormField label="Market" name="countryId">
+                <FormField label={t("common.market")} name="countryId">
                   <Select name="countryId" defaultValue={defaults.countryId ?? ""}><option value="">—</option>{options.countries.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</Select>
                 </FormField>
               </>
             )}
-            <FormField label="Dimensions" name="dimensions">
+            <FormField label={t("dsf.dimensions")} name="dimensions">
               <Input name="dimensions" defaultValue={defaults.dimensions ?? ""} placeholder="e.g. 1080×1080" />
             </FormField>
-            <FormField label="Platform" name="platform">
-              <Input name="platform" defaultValue={defaults.platform ?? ""} placeholder="e.g. Instagram" />
+            <FormField label={t("dp.platform")} name="platform">
+              <Input name="platform" defaultValue={defaults.platform ?? ""} placeholder={t("dsf.phPlatform")} />
             </FormField>
-            <FormField label="Deadline" name="deadline">
+            <FormField label={t("dp.deadline")} name="deadline">
               <Input type="date" name="deadline" defaultValue={defaults.deadline ?? ""} />
             </FormField>
-            <FormField label="Designer" name="designerId">
-              <Select name="designerId" defaultValue={defaults.designerId ?? ""}><option value="">Unassigned</option>{options.users.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}</Select>
+            <FormField label={t("dp.designer")} name="designerId">
+              <Select name="designerId" defaultValue={defaults.designerId ?? ""}><option value="">{t("campf.unassigned")}</option>{options.users.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}</Select>
             </FormField>
-            <FormField label="Reviewer" name="reviewerId">
+            <FormField label={t("dp.reviewer")} name="reviewerId">
               <Select name="reviewerId" defaultValue={defaults.reviewerId ?? ""}><option value="">—</option>{options.users.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}</Select>
             </FormField>
           </FormSection>
-          <FormField label="Copy / brief" name="copy">
-            <Textarea name="copy" defaultValue={defaults.copy ?? ""} placeholder="What should this creative say and show?" />
+          <FormField label={t("dsf.copyBrief")} name="copy">
+            <Textarea name="copy" defaultValue={defaults.copy ?? ""} placeholder={t("dsf.phCopyBrief")} />
           </FormField>
         </ActionForm>
       </Drawer>

@@ -9,6 +9,7 @@ import { Button, Input, Textarea, Select, Drawer } from "@/components/ui";
 import { ActionForm, FormField, FormSection } from "@/components/form/action-form";
 import { createWhatsappAction, updateWhatsappAction } from "@/app/actions/whatsapp";
 import type { Option } from "@/domain/options";
+import { useI18n } from "@/components/providers";
 
 export interface WhatsappDefaults {
   id?: string;
@@ -31,6 +32,7 @@ export function WhatsappForm({
   defaults?: WhatsappDefaults;
 }) {
   const [open, setOpen] = useState(false);
+  const { t } = useI18n();
   useCreateShortcut(() => { if (mode === "create") setOpen(true); });
   const router = useRouter();
   const isEdit = mode === "edit";
@@ -38,37 +40,37 @@ export function WhatsappForm({
     <>
       <Button variant={isEdit ? "secondary" : "primary"} size={isEdit ? "sm" : "md"} onClick={() => setOpen(true)}>
         {isEdit ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-        {isEdit ? "Edit" : "New campaign"}
+        {isEdit ? t("actions.edit") : t("campf.newCampaign")}
       </Button>
-      <Drawer open={open} onClose={() => setOpen(false)} title={isEdit ? "Edit WhatsApp campaign" : "New WhatsApp campaign"} description="Third-party executed — you run the internal brief → approval → sent → results workflow." width="600px">
-        <ActionForm action={isEdit ? updateWhatsappAction : createWhatsappAction} submitLabel={isEdit ? "Save" : "Create"} onCancel={() => setOpen(false)} onSuccess={() => { setOpen(false); router.refresh(); }}>
+      <Drawer open={open} onClose={() => setOpen(false)} title={isEdit ? t("waf.editWaCampaign") : t("waf.newWaCampaign")} description={t("waf.waSub")} width="600px">
+        <ActionForm action={isEdit ? updateWhatsappAction : createWhatsappAction} submitLabel={isEdit ? t("common.save") : t("common.create")} onCancel={() => setOpen(false)} onSuccess={() => { setOpen(false); router.refresh(); }}>
           {isEdit && <input type="hidden" name="waId" value={defaults.id} />}
-          <FormField label="Objective" name="objective" required>
-            <Input name="objective" defaultValue={defaults.objective ?? ""} placeholder="e.g. Eid offer blast" required />
+          <FormField label={t("camp.objective")} name="objective" required>
+            <Input name="objective" defaultValue={defaults.objective ?? ""} placeholder={t("waf.phObjective")} required />
           </FormField>
           <FormSection>
             {!isEdit && (
               <>
-                <FormField label="Brand" name="brandId">
+                <FormField label={t("common.brand")} name="brandId">
                   <Select name="brandId" defaultValue={defaults.brandId ?? ""}><option value="">—</option>{options.brands.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}</Select>
                 </FormField>
-                <FormField label="Market" name="countryId">
+                <FormField label={t("common.market")} name="countryId">
                   <Select name="countryId" defaultValue={defaults.countryId ?? ""}><option value="">—</option>{options.countries.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</Select>
                 </FormField>
               </>
             )}
-            <FormField label="Audience" name="audience">
-              <Input name="audience" defaultValue={defaults.audience ?? ""} placeholder="e.g. VIP customers, KW" />
+            <FormField label={t("waf.audience")} name="audience">
+              <Input name="audience" defaultValue={defaults.audience ?? ""} placeholder={t("waf.phAudience")} />
             </FormField>
-            <FormField label="Planned date" name="plannedDate">
+            <FormField label={t("waf.plannedDate")} name="plannedDate">
               <Input type="date" name="plannedDate" defaultValue={defaults.plannedDate ?? ""} />
             </FormField>
-            <FormField label="Responsible" name="responsibleUserId">
-              <Select name="responsibleUserId" defaultValue={defaults.responsibleUserId ?? ""}><option value="">Unassigned</option>{options.users.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}</Select>
+            <FormField label={t("waf.responsible")} name="responsibleUserId">
+              <Select name="responsibleUserId" defaultValue={defaults.responsibleUserId ?? ""}><option value="">{t("campf.unassigned")}</option>{options.users.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}</Select>
             </FormField>
           </FormSection>
-          <FormField label="Message copy" name="messageCopy">
-            <Textarea name="messageCopy" defaultValue={defaults.messageCopy ?? ""} placeholder="The message to be sent…" />
+          <FormField label={t("waf.messageCopy")} name="messageCopy">
+            <Textarea name="messageCopy" defaultValue={defaults.messageCopy ?? ""} placeholder={t("waf.phMessage")} />
           </FormField>
         </ActionForm>
       </Drawer>
