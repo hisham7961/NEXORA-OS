@@ -54,6 +54,17 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Localization gate (EN/AR parity + hard-coded-string ratchet)
+        # The parity test (tests/i18n-parity.test.ts) also runs under `npm run test`,
+        # but is surfaced here as an explicit release gate (§6, §50): it fails on any
+        # EN/AR structural key mismatch, empty value, or untranslated Arabic copy.
+        # The detector then fails the build if the hard-coded user-facing English
+        # string count rises above the recorded baseline — the count can only ratchet
+        # down, never up, so no new un-localized UI can merge.
+        run: |
+          npx vitest run tests/i18n-parity.test.ts
+          npm run i18n:scan
+
       - name: Tests
         run: npm run test
 
