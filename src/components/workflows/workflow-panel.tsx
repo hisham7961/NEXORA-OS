@@ -4,6 +4,7 @@ import { canAnywhere } from "@/lib/permissions/engine";
 import { getInstanceForEntity, findActiveWorkflowForModule, availableTransitions, specOf, stageByKey } from "@/domain/workflows";
 import { Panel, PanelHeader, Badge } from "@/components/ui";
 import { TransitionControls, StartWorkflowControls, type TransitionOption } from "@/components/workflows/workflow-run-controls";
+import { getServerI18n } from "@/lib/server-i18n";
 
 interface Scope { companyId: string | null; brandId: string | null; countryId: string | null }
 
@@ -16,6 +17,7 @@ interface Scope { companyId: string | null; brandId: string | null; countryId: s
 export async function WorkflowPanel({ principal, entityType, entityId, module, scope, locale }: { principal: Principal; entityType: string; entityId: string; module: string; scope: Scope; locale?: string }) {
   if (!canAnywhere(principal, "workflows.view")) return null;
   void locale;
+  const { t } = await getServerI18n();
 
   const instance = await getInstanceForEntity(principal, entityType, entityId).catch(() => null);
 
@@ -24,9 +26,9 @@ export async function WorkflowPanel({ principal, entityType, entityId, module, s
     if (!def) return null;
     return (
       <Panel>
-        <PanelHeader title="Workflow" icon={<WorkflowIcon className="h-4 w-4" />} />
+        <PanelHeader title={t("wf.workflow")} icon={<WorkflowIcon className="h-4 w-4" />} />
         <div className="flex items-center justify-between gap-3 px-4 py-3">
-          <div><div className="text-[13px] text-ink">{def.name}</div><div className="text-[12px] text-ink-3">Not started for this record.</div></div>
+          <div><div className="text-[13px] text-ink">{def.name}</div><div className="text-[12px] text-ink-3">{t("wf.notStarted")}</div></div>
           {canAnywhere(principal, "workflows.edit") && <StartWorkflowControls definitionId={def.id} entityType={entityType} entityId={entityId} scope={scope} label={def.name} />}
         </div>
       </Panel>
@@ -42,17 +44,17 @@ export async function WorkflowPanel({ principal, entityType, entityId, module, s
   return (
     <Panel>
       <PanelHeader
-        title="Workflow"
+        title={t("wf.workflow")}
         icon={<WorkflowIcon className="h-4 w-4" />}
         action={<span className="text-[11px] text-ink-3">{instance.definition.name} · v{instance.version.version}</span>}
       />
       <div className="space-y-3 px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[12px] text-ink-2">Current stage:</span>
+          <span className="text-[12px] text-ink-2">{t("wf.currentStage")}</span>
           <Badge category={stage?.category ?? "neutral"} dot>{stage?.name ?? instance.currentStage}</Badge>
-          {instance.status !== "active" && <Badge category="neutral">{instance.status}</Badge>}
+          {instance.status !== "active" && <Badge category="neutral">{t(`status.${instance.status}`)}</Badge>}
           {instance.dueAt && instance.status === "active" && (
-            <span className={`inline-flex items-center gap-1 text-[11.5px] ${overdue ? "text-critical" : "text-ink-3"} tabular`}><Clock className="h-3 w-3" /> due {instance.dueAt.toISOString().slice(0, 10)}{overdue ? " · overdue" : ""}</span>
+            <span className={`inline-flex items-center gap-1 text-[11.5px] ${overdue ? "text-critical" : "text-ink-3"} tabular`}><Clock className="h-3 w-3" /> {t("wf.due", { date: instance.dueAt.toISOString().slice(0, 10) })}{overdue ? t("wf.overdueSuffix") : ""}</span>
           )}
         </div>
 

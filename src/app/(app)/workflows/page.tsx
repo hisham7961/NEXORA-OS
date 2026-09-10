@@ -31,17 +31,17 @@ export default async function WorkflowsPage({ searchParams }: { searchParams: Pr
   const columns: Column<WorkflowDefinition>[] = [
     { key: "name", header: t("workflows.col.workflow"), render: (w) => <div><div className="text-[13px] font-medium text-ink">{w.name}</div><div className="font-mono text-[11px] text-ink-3">{w.key}</div></div> },
     { key: "module", header: t("workflows.col.governs"), render: (w) => <span className="capitalize text-ink-2">{w.module}</span> },
-    { key: "status", header: t("common.status"), render: (w) => <Badge category={STATUS_CAT[w.status] ?? "neutral"}>{w.status}</Badge> },
+    { key: "status", header: t("common.status"), render: (w) => <Badge category={STATUS_CAT[w.status] ?? "neutral"}>{t(`status.${w.status}`)}</Badge> },
     { key: "updated", header: t("common.updated"), align: "end", render: (w) => <span className="text-ink-3 tabular">{formatDate(w.updatedAt, locale)}</span> },
   ];
 
   return (
     <ResourceList title={t("workflows.title")} description={t("workflows.subtitle")}
       countLabel={t("workflows.count")} searchPlaceholder={t("workflows.searchPlaceholder")}
-      filters={[{ name: "status", label: "Status", options: ["draft", "active", "archived"].map((v) => ({ value: v, label: v })) }]}
+      filters={[{ name: "status", label: t("common.status"), options: ["draft", "active", "archived"].map((v) => ({ value: v, label: t(`status.${v}`) })) }]}
       actions={canCreate && options ? <CreateWorkflowButton options={{ brands: options.brands, countries: options.countries, companies: options.companies }} /> : undefined}
       columns={columns} rows={rows} getRowKey={(w) => w.id} getRowHref={(w) => `/workflows/${w.id}`}
       page={query.page} pageSize={query.pageSize} total={total} params={sp}
-      empty={<EmptyState icon={<Workflow className="h-5 w-5" />} title={t("workflows.empty")} description="Model an approval or lifecycle process once, version it safely, and let records run through it." />} />
+      empty={<EmptyState icon={<Workflow className="h-5 w-5" />} title={t("workflows.empty")} description={t("wf.emptyBody")} />} />
   );
 }
