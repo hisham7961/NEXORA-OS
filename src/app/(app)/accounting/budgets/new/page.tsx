@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { pageGuard } from "@/lib/page-guard";
+import { getServerI18n } from "@/lib/server-i18n";
 import { AccessDenied } from "@/components/access-denied";
 import { resolveAccountingCompany } from "@/domain/accounting/access";
 import { listFiscalYears } from "@/domain/accounting/fiscal";
@@ -13,9 +14,10 @@ export const metadata: Metadata = { title: "New Budget" };
 export default async function NewBudgetPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { principal, locale, denied } = await pageGuard("budgets.manage");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const sp = await searchParams;
   const { current } = await resolveAccountingCompany(principal, sp.company);
-  if (!current) return <><PageHeader title="New Budget" /><Panel><EmptyState title="No company in scope" /></Panel></>;
+  if (!current) return <><PageHeader title={t("acct.newBudget")} /><Panel><EmptyState title={t("acct.noCompany")} /></Panel></>;
 
   const [fys, accounts] = await Promise.all([
     listFiscalYears(principal, current.id).catch(() => []),
@@ -25,7 +27,7 @@ export default async function NewBudgetPage({ searchParams }: { searchParams: Pr
   return (
     <>
       <div className="mb-1 text-xs text-ink-3"><Link href={`/accounting/budgets?company=${current.id}`} className="hover:text-ink-2">Budgets</Link> / New</div>
-      <PageHeader title="New Budget" description={`Legal company ${current.name} · ${current.baseCurrency}`} />
+      <PageHeader title={t("acct.newBudget")} description={`Legal company ${current.name} · ${current.baseCurrency}`} />
       <Panel>
         <PanelBody>
           <BudgetComposer companyId={current.id} accounts={accounts.map((a) => ({ id: a.id, label: `${a.code} ${a.name}` }))} fiscalYears={fys.map((f) => ({ id: f.id, name: f.name }))} />

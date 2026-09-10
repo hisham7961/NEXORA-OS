@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Landmark } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
+import { getServerI18n } from "@/lib/server-i18n";
 import { AccessDenied } from "@/components/access-denied";
 import { prisma } from "@/lib/db";
 import { resolveAccountingCompany } from "@/domain/accounting/access";
@@ -17,10 +18,11 @@ const PERIOD_CAT: Record<string, "neutral" | "info" | "success" | "warning" | "c
 export default async function AccountingPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { principal, locale, denied } = await pageGuard("accounting.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const sp = await searchParams;
   const { companies, current } = await resolveAccountingCompany(principal, sp.company);
 
-  if (!current) return <><PageHeader title="Accounting" /><Panel><EmptyState icon={<Landmark className="h-5 w-5" />} title="No company in scope" description="You don't have accounting access to any legal company." /></Panel></>;
+  if (!current) return <><PageHeader title={t("acct.title")} /><Panel><EmptyState icon={<Landmark className="h-5 w-5" />} title={t("acct.noCompany")} description="You don't have accounting access to any legal company." /></Panel></>;
 
   const [settings, fiscalYears, accountCount, postedCount] = await Promise.all([
     prisma.companyAccountingSettings.findUnique({ where: { companyId: current.id } }),
@@ -31,7 +33,7 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
 
   return (
     <>
-      <PageHeader title="Accounting" description="The financial system of record for each legal company — double-entry, immutable postings (Phase 3)."
+      <PageHeader title={t("acct.title")} description="The financial system of record for each legal company — double-entry, immutable postings (Phase 3)."
         actions={<CompanyPicker companies={companies} current={current.id} />} />
 
       {!settings ? (

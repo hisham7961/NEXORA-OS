@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
+import { getServerI18n } from "@/lib/server-i18n";
 import { AccessDenied } from "@/components/access-denied";
 import { canAnywhere } from "@/lib/permissions/engine";
 import { prisma } from "@/lib/db";
@@ -19,9 +20,10 @@ const STATUS_CAT: Record<string, "neutral" | "info" | "success" | "warning" | "c
 export default async function JournalPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { principal, locale, denied } = await pageGuard("accounting.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const sp = await searchParams;
   const { companies, current } = await resolveAccountingCompany(principal, sp.company);
-  if (!current) return <><PageHeader title="Journal Entries" /><Panel><EmptyState title="No company in scope" /></Panel></>;
+  if (!current) return <><PageHeader title={t("acct.journal")} /><Panel><EmptyState title={t("acct.noCompany")} /></Panel></>;
 
   const [settings, accounts, journals, entries] = await Promise.all([
     prisma.companyAccountingSettings.findUnique({ where: { companyId: current.id } }),
@@ -34,17 +36,17 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
 
   type Row = (typeof entries)[number];
   const columns: Column<Row>[] = [
-    { key: "num", header: "Number", render: (e) => <Link href={`/accounting/journal/${e.id}?company=${current.id}`} className="font-mono text-accent hover:underline">{e.journalNumber}</Link> },
-    { key: "date", header: "Date", render: (e) => <span className="tabular text-ink-3">{formatDate(e.postingDate ?? e.date, locale)}</span> },
+    { key: "num", header: t("acct.col.number"), render: (e) => <Link href={`/accounting/journal/${e.id}?company=${current.id}`} className="font-mono text-accent hover:underline">{e.journalNumber}</Link> },
+    { key: "date", header: t("common.date"), render: (e) => <span className="tabular text-ink-3">{formatDate(e.postingDate ?? e.date, locale)}</span> },
     { key: "memo", header: "Memo", render: (e) => <span className="text-ink">{e.memo ?? e.reference ?? "—"}</span> },
-    { key: "amount", header: "Amount", align: "end", render: (e) => <span className="tabular text-ink">{Number(e.totalDebitBase).toLocaleString(locale, { minimumFractionDigits: 2 })} {e.baseCurrency}</span> },
-    { key: "status", header: "Status", render: (e) => <Badge category={STATUS_CAT[e.status] ?? "neutral"}>{e.status}</Badge> },
+    { key: "amount", header: t("common.amount"), align: "end", render: (e) => <span className="tabular text-ink">{Number(e.totalDebitBase).toLocaleString(locale, { minimumFractionDigits: 2 })} {e.baseCurrency}</span> },
+    { key: "status", header: t("common.status"), render: (e) => <Badge category={STATUS_CAT[e.status] ?? "neutral"}>{e.status}</Badge> },
     { key: "act", header: "", align: "end", render: (e) => (canReverse && e.status === "posted" ? <ReverseEntryButton entryId={e.id} /> : null) },
   ];
 
   return (
     <>
-      <PageHeader title="Journal Entries" description={`Post double-entry journals to ${current.name}'s ledger — balanced and immutable.`}
+      <PageHeader title={t("acct.journal")} description={`Post double-entry journals to ${current.name}'s ledger — balanced and immutable.`}
         actions={<CompanyPicker companies={companies} current={current.id} />} />
 
       {!settings ? (

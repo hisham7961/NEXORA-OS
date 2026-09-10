@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Landmark } from "lucide-react";
 import Link from "next/link";
 import { pageGuard } from "@/lib/page-guard";
+import { getServerI18n } from "@/lib/server-i18n";
 import { AccessDenied } from "@/components/access-denied";
 import { canAnywhere } from "@/lib/permissions/engine";
 import { resolveAccountingCompany } from "@/domain/accounting/access";
@@ -18,9 +19,10 @@ export const metadata: Metadata = { title: "Bank & Cash" };
 export default async function BankPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { principal, locale, denied } = await pageGuard("banks.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const sp = await searchParams;
   const { companies, current } = await resolveAccountingCompany(principal, sp.company);
-  if (!current) return <><PageHeader title="Bank & Cash" /><Panel><EmptyState title="No company in scope" /></Panel></>;
+  if (!current) return <><PageHeader title={t("acct.bankCash")} /><Panel><EmptyState title={t("acct.noCompany")} /></Panel></>;
 
   const canManage = canAnywhere(principal, "banks.manage");
   const [accounts, position, transfers, recs, postable] = await Promise.all([
@@ -36,17 +38,17 @@ export default async function BankPage({ searchParams }: { searchParams: Promise
   const bankOptions = accounts.filter((a) => a.isActive).map((a) => ({ id: a.id, name: a.name, currency: a.currency }));
 
   const acctCols: Column<(typeof accounts)[number]>[] = [
-    { key: "name", header: "Account", render: (a) => <span className="text-ink">{a.name}</span> },
-    { key: "type", header: "Type", align: "center", render: (a) => <Badge category={a.type === "cash" ? "neutral" : "info"}>{a.type}</Badge> },
-    { key: "currency", header: "Currency", align: "center", render: (a) => <span className="text-ink-3">{a.currency}</span> },
+    { key: "name", header: t("acct.col.account"), render: (a) => <span className="text-ink">{a.name}</span> },
+    { key: "type", header: t("common.type"), align: "center", render: (a) => <Badge category={a.type === "cash" ? "neutral" : "info"}>{a.type}</Badge> },
+    { key: "currency", header: t("common.currency"), align: "center", render: (a) => <span className="text-ink-3">{a.currency}</span> },
     { key: "balance", header: `Book balance (${cur})`, align: "end", render: (a) => { const r = position.rows.find((p) => p.id === a.id); return <span className="tabular text-ink">{r ? num(r.balance) : "—"}</span>; } },
-    { key: "status", header: "Status", align: "center", render: (a) => <Badge category={a.isActive ? "success" : "neutral"}>{a.isActive ? "active" : "inactive"}</Badge> },
+    { key: "status", header: t("common.status"), align: "center", render: (a) => <Badge category={a.isActive ? "success" : "neutral"}>{a.isActive ? "active" : "inactive"}</Badge> },
     ...(canManage ? [{ key: "act", header: "", align: "end" as const, render: (a: (typeof accounts)[number]) => <EditBankAccountButton account={a} accounts={accountOptions} /> }] : []),
   ];
 
   return (
     <>
-      <PageHeader title="Bank & Cash" description={`Accounts, transfers and reconciliation for ${current.name} (${cur}).`}
+      <PageHeader title={t("acct.bankCash")} description={`Accounts, transfers and reconciliation for ${current.name} (${cur}).`}
         actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} />
           {canManage && bankOptions.length >= 2 && <TransferButton companyId={current.id} banks={bankOptions} />}
           {canManage && bankOptions.length >= 1 && <ImportStatementButton companyId={current.id} banks={bankOptions} />}
@@ -69,10 +71,10 @@ export default async function BankPage({ searchParams }: { searchParams: Promise
           <PanelHeader title="Recent transfers" />
           <DataTable
             columns={[
-              { key: "num", header: "Number", render: (t: (typeof transfers)[number]) => <span className="font-mono text-ink-2">{t.transferNumber}</span> },
+              { key: "num", header: t("acct.col.number"), render: (t: (typeof transfers)[number]) => <span className="font-mono text-ink-2">{t.transferNumber}</span> },
               { key: "route", header: "From → To", render: (t: (typeof transfers)[number]) => <span className="text-ink-2">{t.fromBankAccount.name} → {t.toBankAccount.name}</span> },
-              { key: "amt", header: "Amount", align: "end", render: (t: (typeof transfers)[number]) => <span className="tabular text-ink">{num(t.fromAmount)} {t.fromCurrency}</span> },
-              { key: "date", header: "Date", align: "end", render: (t: (typeof transfers)[number]) => <span className="text-ink-3">{formatDate(t.date, locale)}</span> },
+              { key: "amt", header: t("common.amount"), align: "end", render: (t: (typeof transfers)[number]) => <span className="tabular text-ink">{num(t.fromAmount)} {t.fromCurrency}</span> },
+              { key: "date", header: t("common.date"), align: "end", render: (t: (typeof transfers)[number]) => <span className="text-ink-3">{formatDate(t.date, locale)}</span> },
             ]}
             rows={transfers.slice(0, 10)} getRowKey={(t) => t.id} empty={<EmptyState title="No transfers" />} />
         </Panel>
@@ -80,10 +82,10 @@ export default async function BankPage({ searchParams }: { searchParams: Promise
           <PanelHeader title="Reconciliations" />
           <DataTable
             columns={[
-              { key: "bank", header: "Account", render: (r: (typeof recs)[number]) => <Link href={`/accounting/bank/reconcile/${r.id}`} className="text-ink hover:text-accent">{r.bankAccount.name}</Link> },
+              { key: "bank", header: t("acct.col.account"), render: (r: (typeof recs)[number]) => <Link href={`/accounting/bank/reconcile/${r.id}`} className="text-ink hover:text-accent">{r.bankAccount.name}</Link> },
               { key: "date", header: "Statement", render: (r: (typeof recs)[number]) => <span className="text-ink-3">{formatDate(r.statementDate, locale)}</span> },
               { key: "bal", header: "Statement bal.", align: "end", render: (r: (typeof recs)[number]) => <span className="tabular text-ink-2">{num(r.statementBalance)}</span> },
-              { key: "status", header: "Status", align: "center", render: (r: (typeof recs)[number]) => <Badge category={r.status === "completed" ? "success" : "warning"}>{r.status}</Badge> },
+              { key: "status", header: t("common.status"), align: "center", render: (r: (typeof recs)[number]) => <Badge category={r.status === "completed" ? "success" : "warning"}>{r.status}</Badge> },
             ]}
             rows={recs.slice(0, 10)} getRowKey={(r) => r.id} empty={<EmptyState title="No reconciliations" />} />
         </Panel>

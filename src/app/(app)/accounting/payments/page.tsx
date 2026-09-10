@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Wallet } from "lucide-react";
 import Link from "next/link";
 import { pageGuard } from "@/lib/page-guard";
+import { getServerI18n } from "@/lib/server-i18n";
 import { AccessDenied } from "@/components/access-denied";
 import { canAnywhere } from "@/lib/permissions/engine";
 import { resolveAccountingCompany } from "@/domain/accounting/access";
@@ -17,9 +18,10 @@ export const metadata: Metadata = { title: "Supplier Payments" };
 export default async function PaymentsPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { principal, locale, denied } = await pageGuard("payments.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const sp = await searchParams;
   const { companies, current } = await resolveAccountingCompany(principal, sp.company);
-  if (!current) return <><PageHeader title="Supplier Payments" /><Panel><EmptyState title="No company in scope" /></Panel></>;
+  if (!current) return <><PageHeader title="Supplier Payments" /><Panel><EmptyState title={t("acct.noCompany")} /></Panel></>;
 
   const canCreate = canAnywhere(principal, "payments.create");
   const [{ rows }, suppliersRes, openBillsRes] = await Promise.all([
@@ -32,12 +34,12 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
   const num = (v: unknown) => Number(v).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 3 });
   type Row = (typeof rows)[number];
   const columns: Column<Row>[] = [
-    { key: "number", header: "Number", render: (r) => <span className="font-mono text-ink">{r.paymentNumber}</span> },
-    { key: "supplier", header: "Supplier", render: (r) => <span className="text-ink-2">{r.supplier.name}</span> },
-    { key: "date", header: "Date", render: (r) => <span className="text-ink-3">{formatDate(r.paymentDate, locale)}</span> },
-    { key: "method", header: "Method", align: "center", render: (r) => <span className="text-ink-3 capitalize">{r.method ?? "—"}</span> },
-    { key: "amount", header: "Amount", align: "end", render: (r) => <span className="tabular text-ink-2">{num(r.amount)} {r.currency}</span> },
-    { key: "unapplied", header: "Unapplied", align: "end", render: (r) => <span className="tabular text-ink">{Number(r.unappliedAmount) ? num(r.unappliedAmount) : "—"}</span> },
+    { key: "number", header: t("acct.col.number"), render: (r) => <span className="font-mono text-ink">{r.paymentNumber}</span> },
+    { key: "supplier", header: t("acct.col.supplier"), render: (r) => <span className="text-ink-2">{r.supplier.name}</span> },
+    { key: "date", header: t("common.date"), render: (r) => <span className="text-ink-3">{formatDate(r.paymentDate, locale)}</span> },
+    { key: "method", header: t("acct.col.method"), align: "center", render: (r) => <span className="text-ink-3 capitalize">{r.method ?? "—"}</span> },
+    { key: "amount", header: t("common.amount"), align: "end", render: (r) => <span className="tabular text-ink-2">{num(r.amount)} {r.currency}</span> },
+    { key: "unapplied", header: t("acct.col.unapplied"), align: "end", render: (r) => <span className="tabular text-ink">{Number(r.unappliedAmount) ? num(r.unappliedAmount) : "—"}</span> },
     { key: "gl", header: "", align: "end", render: (r) => r.journalEntryId ? <Link href={`/accounting/journal/${r.journalEntryId}`} className="text-[12px] text-accent hover:underline">GL →</Link> : null },
   ];
 

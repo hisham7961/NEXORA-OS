@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { pageGuard } from "@/lib/page-guard";
+import { getServerI18n } from "@/lib/server-i18n";
 import { AccessDenied } from "@/components/access-denied";
 import { resolveAccountingCompany } from "@/domain/accounting/access";
 import { listOpeningAccounts, openingBalancesStatus } from "@/domain/accounting/opening-balances";
@@ -12,6 +13,7 @@ export const metadata: Metadata = { title: "Opening Balances" };
 export default async function OpeningBalancesPage({ searchParams }: { searchParams: Promise<{ company?: string }> }) {
   const { principal, locale, denied } = await pageGuard("accounting.post");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const sp = await searchParams;
   const { companies, current } = await resolveAccountingCompany(principal, sp.company);
   if (!current) return <AccessDenied locale={locale} />;
@@ -24,7 +26,7 @@ export default async function OpeningBalancesPage({ searchParams }: { searchPara
   return (
     <>
       <PageHeader
-        title="Opening Balances"
+        title={t("nav.openingBalances")}
         description={`Carry ${current.name}'s existing account balances into the ledger at go-live. Entered once, posted as a single balanced opening journal in ${current.baseCurrency}.`}
         actions={<CompanyPicker companies={companies} current={current.id} />}
       />

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { BarChart4 } from "lucide-react";
 import Link from "next/link";
 import { pageGuard } from "@/lib/page-guard";
+import { getServerI18n } from "@/lib/server-i18n";
 import { AccessDenied } from "@/components/access-denied";
 import { resolveAccountingCompany } from "@/domain/accounting/access";
 import { companyFinancialOverview, dimensionPnl, type PnlDimension } from "@/domain/accounting/intelligence";
@@ -18,9 +19,10 @@ const DIMS: { key: PnlDimension; label: string }[] = [
 export default async function IntelligencePage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { principal, locale, denied } = await pageGuard("accounting.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const sp = await searchParams;
   const { companies, current } = await resolveAccountingCompany(principal, sp.company);
-  if (!current) return <><PageHeader title="Financial Intelligence" /><Panel><EmptyState title="No company in scope" /></Panel></>;
+  if (!current) return <><PageHeader title={t("acct.intelligence")} /><Panel><EmptyState title={t("acct.noCompany")} /></Panel></>;
   const dim = (DIMS.find((d) => d.key === sp.dim)?.key ?? "brand") as PnlDimension;
   const cur = current.baseCurrency;
 
@@ -42,7 +44,7 @@ export default async function IntelligencePage({ searchParams }: { searchParams:
 
   return (
     <>
-      <PageHeader title="Financial Intelligence" description={`Posted-ledger profitability for ${current.name} (${cur}) — sliced by your business dimensions.`}
+      <PageHeader title={t("acct.intelligence")} description={`Posted-ledger profitability for ${current.name} (${cur}) — sliced by your business dimensions.`}
         actions={<CompanyPicker companies={companies} current={current.id} />} />
 
       <div className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">

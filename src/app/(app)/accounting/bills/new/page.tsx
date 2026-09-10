@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { pageGuard } from "@/lib/page-guard";
+import { getServerI18n } from "@/lib/server-i18n";
 import { AccessDenied } from "@/components/access-denied";
 import { resolveAccountingCompany } from "@/domain/accounting/access";
 import { listSuppliers } from "@/domain/accounting/suppliers";
@@ -14,9 +15,10 @@ export const metadata: Metadata = { title: "New Bill" };
 export default async function NewBillPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { principal, locale, denied } = await pageGuard("ap.create");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const sp = await searchParams;
   const { current } = await resolveAccountingCompany(principal, sp.company);
-  if (!current) return <><PageHeader title="New Bill" /><Panel><EmptyState title="No company in scope" /></Panel></>;
+  if (!current) return <><PageHeader title={t("acct.newBill")} /><Panel><EmptyState title={t("acct.noCompany")} /></Panel></>;
 
   const [{ rows: suppliers }, taxRates, accounts] = await Promise.all([
     listSuppliers(principal, current.id, { active: "active", pageSize: 500 }),
@@ -27,7 +29,7 @@ export default async function NewBillPage({ searchParams }: { searchParams: Prom
   return (
     <>
       <div className="mb-1 text-xs text-ink-3"><Link href={`/accounting/bills?company=${current.id}`} className="hover:text-ink-2">Supplier Bills</Link> / New</div>
-      <PageHeader title="New Bill" description={`Legal company ${current.name} · ${current.baseCurrency}`} />
+      <PageHeader title={t("acct.newBill")} description={`Legal company ${current.name} · ${current.baseCurrency}`} />
       <Panel>
         <PanelBody>
           <BillComposer companyId={current.id} kind="bill" baseCurrency={current.baseCurrency}

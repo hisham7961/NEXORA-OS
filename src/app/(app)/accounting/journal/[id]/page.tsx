@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { pageGuard } from "@/lib/page-guard";
+import { getServerI18n } from "@/lib/server-i18n";
 import { AccessDenied } from "@/components/access-denied";
 import { canAnywhere, ForbiddenError } from "@/lib/permissions/engine";
 import { getJournalEntry } from "@/domain/accounting/posting";
@@ -18,6 +19,7 @@ const STATUS_CAT: Record<string, "neutral" | "info" | "success" | "warning" | "c
 export default async function JournalEntryPage({ params }: { params: Promise<{ id: string }> }) {
   const { principal, locale, denied } = await pageGuard("accounting.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const { id } = await params;
   let entry;
   try { entry = await getJournalEntry(principal, id); } catch (e) { if (e instanceof ForbiddenError) return <AccessDenied locale={locale} />; throw e; }
@@ -31,11 +33,11 @@ export default async function JournalEntryPage({ params }: { params: Promise<{ i
 
   type L = (typeof entry.lines)[number];
   const columns: Column<L>[] = [
-    { key: "account", header: "Account", render: (l) => <span className="text-ink">{acctName(l.accountId)}</span> },
-    { key: "desc", header: "Description", render: (l) => <span className="text-ink-2">{l.description ?? "—"}</span> },
+    { key: "account", header: t("acct.col.account"), render: (l) => <span className="text-ink">{acctName(l.accountId)}</span> },
+    { key: "desc", header: t("common.description"), render: (l) => <span className="text-ink-2">{l.description ?? "—"}</span> },
     { key: "dims", header: "Dimensions", render: (l) => <span className="text-[11px] text-ink-3">{[l.brandId && refName(lookups.brands, l.brandId), l.countryId && refName(lookups.countries, l.countryId), l.productId && refName(lookups.products, l.productId)].filter(Boolean).join(" · ") || "—"}</span> },
-    { key: "debit", header: "Debit", align: "end", render: (l) => <span className="tabular">{Number(l.debit) ? Number(l.debit).toLocaleString(locale, { minimumFractionDigits: 2 }) : ""}</span> },
-    { key: "credit", header: "Credit", align: "end", render: (l) => <span className="tabular">{Number(l.credit) ? Number(l.credit).toLocaleString(locale, { minimumFractionDigits: 2 }) : ""}</span> },
+    { key: "debit", header: t("acct.col.debit"), align: "end", render: (l) => <span className="tabular">{Number(l.debit) ? Number(l.debit).toLocaleString(locale, { minimumFractionDigits: 2 }) : ""}</span> },
+    { key: "credit", header: t("acct.col.credit"), align: "end", render: (l) => <span className="tabular">{Number(l.credit) ? Number(l.credit).toLocaleString(locale, { minimumFractionDigits: 2 }) : ""}</span> },
   ];
 
   return (
@@ -48,7 +50,7 @@ export default async function JournalEntryPage({ params }: { params: Promise<{ i
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_280px]">
         <Panel>
-          <PanelHeader title="Lines" />
+          <PanelHeader title={t("acct.lines")} />
           <DataTable columns={columns} rows={entry.lines} getRowKey={(l) => l.id} />
           <div className="flex justify-end gap-8 border-t border-line px-4 py-2 text-[13px] font-medium">
             <span>Debit <span className="ms-2 tabular text-ink">{Number(entry.totalDebitBase).toLocaleString(locale, { minimumFractionDigits: 2 })}</span></span>
@@ -56,7 +58,7 @@ export default async function JournalEntryPage({ params }: { params: Promise<{ i
           </div>
         </Panel>
         <Panel>
-          <PanelHeader title="Details" />
+          <PanelHeader title={t("acct.details")} />
           <dl className="space-y-2 px-4 py-3 text-[13px]">
             <div className="flex justify-between"><dt className="text-ink-3">Currency</dt><dd className="text-ink">{entry.currency}{entry.currency !== entry.baseCurrency ? ` @ ${entry.exchangeRate}` : ""}</dd></div>
             <div className="flex justify-between"><dt className="text-ink-3">Source</dt><dd className="text-ink">{entry.sourceType ?? "ManualJournal"}</dd></div>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { pageGuard } from "@/lib/page-guard";
+import { getServerI18n } from "@/lib/server-i18n";
 import { AccessDenied } from "@/components/access-denied";
 import { canAnywhere, ForbiddenError } from "@/lib/permissions/engine";
 import { getBudget, budgetVsActual, budgetVsActualMonthly } from "@/domain/accounting/budgets";
@@ -13,6 +14,7 @@ export const metadata: Metadata = { title: "Budget" };
 export default async function BudgetDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { principal, locale, denied } = await pageGuard("budgets.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const { id } = await params;
   let budget;
   try { budget = await getBudget(principal, id); } catch (e) { if (e instanceof ForbiddenError) return <AccessDenied locale={locale} />; throw e; }
@@ -26,8 +28,8 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ i
 
   type Row = (typeof report.rows)[number];
   const columns: Column<Row>[] = [
-    { key: "code", header: "Account", render: (r) => <span className="text-ink"><span className="font-mono text-ink-3">{r.code}</span> {r.name}</span> },
-    { key: "budget", header: "Budget", align: "end", render: (r) => <span className="tabular text-ink-2">{num(r.budget)}</span> },
+    { key: "code", header: t("acct.col.account"), render: (r) => <span className="text-ink"><span className="font-mono text-ink-3">{r.code}</span> {r.name}</span> },
+    { key: "budget", header: t("acct.col.budget"), align: "end", render: (r) => <span className="tabular text-ink-2">{num(r.budget)}</span> },
     { key: "actual", header: "Actual", align: "end", render: (r) => <span className="tabular text-ink-2">{num(r.actual)}</span> },
     { key: "variance", header: "Variance", align: "end", render: (r) => { const v = Number(r.variance); return <span className={`tabular ${v < 0 ? "text-critical" : "text-success"}`}>{num(r.variance)}</span>; } },
     { key: "pct", header: "% used", align: "end", render: (r) => <span className="tabular text-ink-3">{r.pctUsed != null ? `${r.pctUsed}%` : "—"}</span> },
@@ -40,7 +42,7 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ i
         meta={<Badge category={budget.status === "active" ? "success" : "neutral"}>{budget.status}</Badge>}
         actions={<div className="flex items-center gap-2">{canManage && <><Link href={`/accounting/budgets/${budget.id}/edit`} className="text-[12px] text-accent hover:underline">Edit</Link><BudgetStatusButton id={budget.id} status={budget.status} /></>}</div>} />
       <Panel>
-        <PanelHeader title="Budget vs Actual" />
+        <PanelHeader title={t("acct.rep.budgetVsActual")} />
         <DataTable columns={columns} rows={report.rows} getRowKey={(r) => r.accountId} />
         <div className="flex flex-wrap justify-end gap-8 border-t border-line px-4 py-2 text-[13px] font-medium">
           <span>Budget <span className="ms-1 tabular text-ink">{num(report.totalBudget)}</span></span>
@@ -51,7 +53,7 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ i
 
       {monthly && (
         <Panel className="mt-4">
-          <PanelHeader title="Monthly Budget vs Actual" description={`Budget (B) vs posted actual (A) per month · ${budget.periodicity}`} />
+          <PanelHeader title={t("acct.rep.monthlyBudgetVsActual")} description={`Budget (B) vs posted actual (A) per month · ${budget.periodicity}`} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px] text-[12px]">
               <thead>

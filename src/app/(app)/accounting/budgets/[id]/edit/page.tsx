@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { pageGuard } from "@/lib/page-guard";
+import { getServerI18n } from "@/lib/server-i18n";
 import { AccessDenied } from "@/components/access-denied";
 import { ForbiddenError } from "@/lib/permissions/engine";
 import { getBudget } from "@/domain/accounting/budgets";
@@ -15,6 +16,7 @@ export const metadata: Metadata = { title: "Edit Budget" };
 export default async function EditBudgetPage({ params }: { params: Promise<{ id: string }> }) {
   const { principal, locale, denied } = await pageGuard("budgets.manage");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const { id } = await params;
   let budget;
   try { budget = await getBudget(principal, id); } catch (e) { if (e instanceof ForbiddenError) return <AccessDenied locale={locale} />; throw e; }

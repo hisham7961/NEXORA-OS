@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { pageGuard } from "@/lib/page-guard";
+import { getServerI18n } from "@/lib/server-i18n";
 import { AccessDenied } from "@/components/access-denied";
 import { canAnywhere, ForbiddenError } from "@/lib/permissions/engine";
 import { getReconciliation } from "@/domain/accounting/bank";
@@ -15,6 +16,7 @@ export const metadata: Metadata = { title: "Reconcile" };
 export default async function ReconcilePage({ params }: { params: Promise<{ id: string }> }) {
   const { principal, locale, denied } = await pageGuard("banks.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const { id } = await params;
   let data;
   try { data = await getReconciliation(principal, id); } catch (e) { if (e instanceof ForbiddenError) return <AccessDenied locale={locale} />; throw e; }
@@ -44,13 +46,13 @@ export default async function ReconcilePage({ params }: { params: Promise<{ id: 
 
       {!completed && canManage && (
         <Panel className="mb-4">
-          <PanelHeader title="Suggested matches" description="Imported statement lines matched to unreconciled ledger lines by amount, date and reference." />
+          <PanelHeader title={t("acct.suggestedMatches")} description="Imported statement lines matched to unreconciled ledger lines by amount, date and reference." />
           <div className="px-4 py-3"><SuggestedMatches reconciliationId={rec.id} completed={completed} /></div>
         </Panel>
       )}
 
       <Panel>
-        <PanelHeader title="Ledger lines" action={<span className="text-[12px] text-ink-3">{lines.filter((l) => l.reconciliationId).length} / {lines.length} cleared</span>} />
+        <PanelHeader title={t("acct.ledgerLines")} action={<span className="text-[12px] text-ink-3">{lines.filter((l) => l.reconciliationId).length} / {lines.length} cleared</span>} />
         {lines.length === 0 ? <EmptyState title="No unreconciled lines" description="No posted ledger movements on this account up to the statement date." /> : (
           <div className="divide-y divide-line">
             {lines.map((l) => {
