@@ -85,8 +85,17 @@ reports; **Accounts Receivable (Increment C)** — customers, sales invoices
 transaction-safe allocation, AR aging and customer statements, all verified by 24
 live double-entry invariants; the `/api/v1/accounting/*` surface; a balanced
 posted-journal + AR demo seed.
-Pending increments: AP + Expenses, Bank/Cash/FX/reconciliation, Budgets + Cash Flow,
-and the Financial Intelligence dashboards / 360 integrations.
+**Accounts Payable (Increment D)** — suppliers, supplier bills (draft→post→GL),
+supplier credits (post + application), supplier payments with transaction-safe
+allocation, plus the Expense→GL bridge (approved expenses post Dr Expense / Cr
+Cash|Payable); AP aging and supplier statements, verified by 22 live invariants.
+Pending increments: Bank/Cash/FX/reconciliation, Budgets + Cash Flow, and the
+Financial Intelligence dashboards / 360 integrations.
+
+The AP domain mirrors AR: `suppliers.ts` (party master, `ap.*`), `ap.ts` (bills,
+credits, payments, allocations, AP aging / supplier statement) and
+`expenses-gl.ts` (the expense posting bridge). All post through the engine's
+`prepareForPost` + `writePostedEntry` so sub-ledger and GL commit atomically.
 
 ### AR domain (`src/domain/accounting/`)
 - `customers.ts` — the AR party master (company-scoped, `ar.*`).

@@ -47,19 +47,28 @@ atomic transaction; allocations can never exceed the receipt amount or an invoic
 balance due. Unapplied receipt value is retained as customer credit and can be
 allocated later.
 
-## Supplier Bill (pending — Increment D)
-**Dr Expense/Asset/Inventory** (per line) · **Dr Input Tax** (recoverable) · **Cr
-Payable** (total). `sourceType = SupplierBill`.
+## Supplier Bill (built — Increment D)
+On post: **Dr Expense/Asset/Inventory** (per line, to the line's chosen account with
+full analytical dimensions) · **Dr Input Tax** (recoverable, aggregated by input-tax
+account) · **Cr Payable** (total, `supplierId` dimension). Journal `PJ`,
+`sourceType = SupplierBill`. Draft → open on post; void reverses the GL.
 
-## Supplier Credit (pending — D)
-Mirror of the bill against payable, per configured accounts.
+## Supplier Credit (built — D)
+On post, mirrors the bill against payable: **Dr Payable · Cr Expense · Cr Input
+Tax**. Journal `PJ`, `sourceType = SupplierCredit`. Applying to an open bill is a
+sub-ledger contra (no new GL); unapplied credit is tracked.
 
-## Supplier Payment (pending — D)
-**Dr Payable · Cr Bank/Cash**, allocated across bills.
+## Supplier Payment (built — D)
+**Dr Payable · Cr Bank/Cash** (`supplierId` dimension), journal `BJ`,
+`sourceType = SupplierPayment`. Allocated to open bills atomically with no
+over-allocation; unapplied value retained for later allocation.
 
-## Expense (pending — D)
-Company-paid: **Dr Expense · Cr Bank/Cash/Payable**. Employee-reimbursable: **Dr
-Expense · Cr Employee/Clearing account**. Category maps a default GL account + tax.
+## Expense (built — D)
+An approved Expense posts on demand: **Dr Expense** (the category's mapped GL
+account, or an override) · **Dr Input Tax** (if any) · **Cr Bank/Cash** (company-paid)
+or **Cr Payable** (when a supplier is linked). Journal `EJ`, `sourceType = Expense`.
+Posting requires the expense be approved and the actor hold `accounting.post`; an
+already-posted expense cannot be posted twice.
 
 ## Bank Transfer (pending — Increment E)
 Same currency: **Dr destination bank · Cr source bank**. Cross-currency: convert at

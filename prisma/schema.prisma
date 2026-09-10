@@ -1737,13 +1737,239 @@ model Customer {
 }
 
 model Supplier {
+  id               String    @id @default(cuid())
+  companyId        String?
+  name             String
+  code             String?
+  currency         String?
+  contact          String?
+  email            String?
+  phone            String?
+  addressJson      String?
+  taxId            String?
+  paymentTermsDays Int?
+  payableAccountId String? // override AP control account (else settings.payable)
+  brandId          String?
+  countryId        String?
+  isActive         Boolean   @default(true)
+  notes            String?
+  createdById      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @default(now()) @updatedAt
+  archivedAt       DateTime?
+
+  bills    SupplierBill[]
+  credits  SupplierCredit[]
+  payments SupplierPayment[]
+
+  @@index([companyId, isActive])
+}
+
+// ============================================================================
+// ACCOUNTS PAYABLE (Phase 3 — Increment D). Supplier bills, credits and payments.
+// Same discipline as AR: documents drive the GL only via the posting engine; rows
+// are the AP sub-ledger and carry the posted JournalEntry id (§80).
+// ============================================================================
+
+model SupplierBill {
+  id             String    @id @default(cuid())
+  companyId      String
+  supplierId     String
+  billNumber     String? // internal number (allocated at post)
+  supplierRef    String? // supplier's own invoice number
+  status         String    @default("draft") // draft | open | partially_paid | paid | void
+  issueDate      DateTime
+  dueDate        DateTime?
+  currency       String    @default("KWD")
+  baseCurrency   String    @default("KWD")
+  exchangeRate   Decimal?
+  subtotal       Decimal   @default(0)
+  taxTotal       Decimal   @default(0)
+  total          Decimal   @default(0)
+  amountPaid     Decimal   @default(0)
+  amountDue      Decimal   @default(0)
+  totalBase      Decimal   @default(0)
+  brandId        String?
+  countryId      String?
+  departmentId   String?
+  campaignId     String?
+  storeId        String?
+  reference      String?
+  notes          String?
+  journalEntryId String?
+  createdById    String?
+  postedById     String?
+  postedAt       DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  archivedAt     DateTime?
+
+  supplier           Supplier                    @relation(fields: [supplierId], references: [id])
+  lines              SupplierBillLine[]
+  allocations        BillPaymentAllocation[]
+  creditApplications SupplierCreditApplication[]
+
+  @@unique([companyId, billNumber])
+  @@index([companyId, status])
+  @@index([supplierId])
+  @@index([dueDate])
+}
+
+model SupplierBillLine {
+  id               String  @id @default(cuid())
+  billId           String
+  lineNo           Int     @default(0)
+  description      String
+  quantity         Decimal @default(1)
+  unitPrice        Decimal @default(0)
+  discountPct      Decimal @default(0)
+  lineNet          Decimal @default(0)
+  taxRateId        String?
+  taxAmount        Decimal @default(0)
+  expenseAccountId String? // Dr account (expense/asset/inventory); else category/settings
+  productId        String?
+  brandId          String?
+  countryId        String?
+  departmentId     String?
+  campaignId       String?
+  storeId          String?
+  costCenterId     String?
+
+  bill SupplierBill @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@index([billId])
+}
+
+model SupplierCredit {
+  id              String    @id @default(cuid())
+  companyId       String
+  supplierId      String
+  creditNumber    String?
+  status          String    @default("draft") // draft | open | applied | void
+  issueDate       DateTime
+  currency        String    @default("KWD")
+  baseCurrency    String    @default("KWD")
+  exchangeRate    Decimal?
+  subtotal        Decimal   @default(0)
+  taxTotal        Decimal   @default(0)
+  total           Decimal   @default(0)
+  amountApplied   Decimal   @default(0)
+  amountRemaining Decimal   @default(0)
+  totalBase       Decimal   @default(0)
+  brandId         String?
+  countryId       String?
+  reason          String?
+  reference       String?
+  journalEntryId  String?
+  createdById     String?
+  postedById      String?
+  postedAt        DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  archivedAt      DateTime?
+
+  supplier     Supplier                    @relation(fields: [supplierId], references: [id])
+  lines        SupplierCreditLine[]
+  applications SupplierCreditApplication[]
+
+  @@unique([companyId, creditNumber])
+  @@index([companyId, status])
+  @@index([supplierId])
+}
+
+model SupplierCreditLine {
+  id               String  @id @default(cuid())
+  creditId         String
+  lineNo           Int     @default(0)
+  description      String
+  quantity         Decimal @default(1)
+  unitPrice        Decimal @default(0)
+  lineNet          Decimal @default(0)
+  taxRateId        String?
+  taxAmount        Decimal @default(0)
+  expenseAccountId String?
+  productId        String?
+  brandId          String?
+  countryId        String?
+  departmentId     String?
+  campaignId       String?
+  storeId          String?
+  costCenterId     String?
+
+  credit SupplierCredit @relation(fields: [creditId], references: [id], onDelete: Cascade)
+
+  @@index([creditId])
+}
+
+model SupplierPayment {
+  id              String    @id @default(cuid())
+  companyId       String
+  supplierId      String
+  paymentNumber   String?
+  status          String    @default("draft") // draft | posted | void
+  paymentDate     DateTime
+  currency        String    @default("KWD")
+  baseCurrency    String    @default("KWD")
+  exchangeRate    Decimal?
+  amount          Decimal   @default(0)
+  allocatedAmount Decimal   @default(0)
+  unappliedAmount Decimal   @default(0)
+  amountBase      Decimal   @default(0)
+  bankAccountId   String? // funding account override (else settings.cash)
+  method          String?
+  reference       String?
+  notes           String?
+  brandId         String?
+  countryId       String?
+  journalEntryId  String?
+  createdById     String?
+  postedById      String?
+  postedAt        DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  archivedAt      DateTime?
+
+  supplier    Supplier                @relation(fields: [supplierId], references: [id])
+  allocations BillPaymentAllocation[]
+
+  @@unique([companyId, paymentNumber])
+  @@index([companyId, status])
+  @@index([supplierId])
+}
+
+/**
+ * A supplier payment applied to a specific open bill (sub-ledger; the payment
+ * already debited Payable). No over-allocation, enforced transactionally.
+ */
+model BillPaymentAllocation {
   id        String   @id @default(cuid())
-  companyId String?
-  name      String
-  code      String?
-  currency  String?
-  contact   String?
+  paymentId String
+  billId    String
+  amount    Decimal
   createdAt DateTime @default(now())
+
+  payment SupplierPayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  bill    SupplierBill    @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@unique([paymentId, billId])
+  @@index([billId])
+}
+
+/**
+ * A supplier credit applied to an open bill (sub-ledger contra; no new GL).
+ */
+model SupplierCreditApplication {
+  id        String   @id @default(cuid())
+  creditId  String
+  billId    String
+  amount    Decimal
+  createdAt DateTime @default(now())
+
+  credit SupplierCredit @relation(fields: [creditId], references: [id], onDelete: Cascade)
+  bill   SupplierBill   @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@unique([creditId, billId])
+  @@index([billId])
 }
 
 model Invoice {
@@ -1820,33 +2046,42 @@ model Budget {
 }
 
 model ExpenseCategory {
-  id        String  @id @default(cuid())
-  name      String
-  code      String?
-  parentId  String?
-  companyId String?
+  id               String  @id @default(cuid())
+  name             String
+  code             String?
+  parentId         String?
+  companyId        String?
+  defaultAccountId String? // GL expense account this category maps to (§D)
+  taxRateId        String? // default input-tax rate
 }
 
 model Expense {
-  id            String    @id @default(cuid())
-  companyId     String?
-  brandId       String?
-  countryId     String?
-  departmentId  String?
-  campaignId    String?
-  storeId       String?
-  categoryId    String?
-  amount        Decimal
-  currency      String    @default("KWD")
-  date          DateTime
-  description   String?
-  status        String    @default("pending") // draft|pending|approved|rejected|paid
-  submittedById String?
-  approvedById  String?
-  fileId        String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  archivedAt    DateTime?
+  id               String    @id @default(cuid())
+  companyId        String?
+  brandId          String?
+  countryId        String?
+  departmentId     String?
+  campaignId       String?
+  storeId          String?
+  categoryId       String?
+  amount           Decimal
+  currency         String    @default("KWD")
+  date             DateTime
+  description      String?
+  status           String    @default("pending") // draft|pending|approved|rejected|posted|paid
+  submittedById    String?
+  approvedById     String?
+  fileId           String?
+  // GL integration (§D): once approved, an expense posts Dr Expense / Cr Cash|Payable.
+  supplierId       String? // when the expense is billed by a supplier (Cr Payable)
+  paymentAccountId String? // cash/bank account funding a company-paid expense
+  taxAmount        Decimal?  @default(0)
+  journalEntryId   String?
+  postedById       String?
+  postedAt         DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  archivedAt       DateTime?
 
   @@index([brandId])
   @@index([companyId, status])

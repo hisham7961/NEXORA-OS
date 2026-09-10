@@ -15,6 +15,8 @@ import { postJournalEntry } from "../src/domain/accounting/posting";
 import { createTaxRate } from "../src/domain/accounting/setup";
 import { createCustomer } from "../src/domain/accounting/customers";
 import { createInvoice, issueInvoice, postReceipt, createCreditNote, issueCreditNote, applyCreditNote } from "../src/domain/accounting/ar";
+import { createSupplier } from "../src/domain/accounting/suppliers";
+import { createBill, postBill, postPayment } from "../src/domain/accounting/ap";
 
 const prisma = new PrismaClient();
 
@@ -32,6 +34,8 @@ async function clear() {
     "workflowTemplate", "statusDefinition",
     "receiptAllocation", "creditNoteApplication", "customerReceipt",
     "creditNoteLine", "creditNote", "salesInvoiceLine", "salesInvoice",
+    "billPaymentAllocation", "supplierCreditApplication", "supplierPayment",
+    "supplierCreditLine", "supplierCredit", "supplierBillLine", "supplierBill",
     "journalLine", "journalEntry", "journal", "numberSequence", "companyAccountingSettings",
     "account", "accountingPeriod", "fiscalYear", "bankAccount",
     "costCenter", "invoice", "payment", "customer", "supplier", "budget", "expense",
@@ -454,6 +458,19 @@ async function main() {
     lines: [ { description: "Returned gift sets (2)", quantity: 2, unitPrice: 25, taxRateId: vat.id, countryId: countries.KW } ] });
   await issueCreditNote(fctx, cnB.id);
   await applyCreditNote(fctx, cnB.id, [{ invoiceId: invB.id, amount: 52.5 }]);
+
+  // ---------------------------------------------- Accounts Payable demo (§D)
+  console.log("• Accounts Payable (suppliers, bills, payment)");
+  const [marketingAcc, rentAcc] = await Promise.all([acc("6000"), acc("6400")]);
+  const supGulf = await createSupplier(fctx, pcc.id, { name: "Gulf Media Agency", code: "S-2001", currency: "KWD", paymentTermsDays: 30, countryId: countries.KW });
+  const supFacilities = await createSupplier(fctx, pcc.id, { name: "Kuwait Facilities Co", code: "S-2002", currency: "KWD", paymentTermsDays: 45, countryId: countries.KW });
+  const billA = await createBill(fctx, pcc.id, { supplierId: supGulf.id, issueDate: new Date(yr, now.getMonth(), 7), supplierRef: "GMA-4471",
+    lines: [ { description: "Solara KW media buy", quantity: 1, unitPrice: 3000, taxRateId: vat.id, expenseAccountId: marketingAcc, brandId: solara.id, countryId: countries.KW } ] });
+  await postBill(fctx, billA.id);
+  await postPayment(fctx, pcc.id, { supplierId: supGulf.id, paymentDate: new Date(yr, now.getMonth(), 22), amount: 1500, method: "bank", reference: "OUT-5521", allocations: [{ billId: billA.id, amount: 1500 }] });
+  const billB = await createBill(fctx, pcc.id, { supplierId: supFacilities.id, issueDate: new Date(yr, now.getMonth(), 3), dueDate: new Date(yr, now.getMonth(), 3),
+    lines: [ { description: "Office rent — month", quantity: 1, unitPrice: 800, expenseAccountId: rentAcc, countryId: countries.KW } ] });
+  await postBill(fctx, billB.id);
 
   // ------------------------------------------------------------- Attendance
   console.log("• Attendance (today)");

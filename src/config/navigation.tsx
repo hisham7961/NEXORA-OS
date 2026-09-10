@@ -5,7 +5,7 @@ import {
   Globe, Users, UserRound, Clock, BookOpen, Folder, MessageSquare, Wallet,
   Receipt, CreditCard, BarChart3, PieChart, UserCog, KeyRound, History, Terminal,
   Activity, Settings, Workflow, BookOpenCheck, Scale, BarChart4, Landmark,
-  FileMinus, HandCoins, type LucideIcon,
+  FileMinus, HandCoins, ReceiptText, type LucideIcon,
 } from "lucide-react";
 import type { TranslationKey } from "@/i18n";
 
@@ -155,6 +155,10 @@ export const NAVIGATION: NavGroup[] = [
       { key: "acc-invoices", labelKey: "nav.invoices", href: "/accounting/invoices", icon: FileText, permission: "ar.view" },
       { key: "acc-credit-notes", labelKey: "nav.creditNotes", href: "/accounting/credit-notes", icon: FileMinus, permission: "ar.view" },
       { key: "acc-receipts", labelKey: "nav.receipts", href: "/accounting/receipts", icon: HandCoins, permission: "payments.view" },
+      { key: "acc-suppliers", labelKey: "nav.suppliers", href: "/accounting/suppliers", icon: Building2, permission: "ap.view" },
+      { key: "acc-bills", labelKey: "nav.bills", href: "/accounting/bills", icon: ReceiptText, permission: "ap.view" },
+      { key: "acc-supplier-credits", labelKey: "nav.supplierCredits", href: "/accounting/supplier-credits", icon: FileMinus, permission: "ap.view" },
+      { key: "acc-payments", labelKey: "nav.supplierPayments", href: "/accounting/payments", icon: Wallet, permission: "payments.view" },
       { key: "acc-reports", labelKey: "nav.financialReports", href: "/accounting/reports", icon: Scale, permission: "accounting.view" },
     ],
   },
