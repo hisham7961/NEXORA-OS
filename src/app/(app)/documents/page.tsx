@@ -29,7 +29,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
   ];
 
   return (
-    <ResourceList title="Documents" description="Official documents with expiration tracking and configurable reminders." countLabel="documents"
+    <ResourceList title="Documents" description="Official documents with expiration tracking and configurable reminders." countLabel="documents" savedViewsModule="documents"
       searchPlaceholder="Search documents…"
       filters={[{ name: "status", label: "Status", options: ["valid", "expiring", "expired", "renewal_started", "replaced", "archived"].map((v) => ({ value: v, label: v.replace(/_/g, " ") })) }]}
       columns={columns} rows={rows} getRowKey={(d) => d.id}

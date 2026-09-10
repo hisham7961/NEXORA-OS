@@ -2774,9 +2774,12 @@ model Favorite {
   userId     String
   entityType String
   entityId   String
+  label      String? // display label captured at favorite time
+  href       String? // deep link to the entity
   createdAt  DateTime @default(now())
 
   @@unique([userId, entityType, entityId])
+  @@index([userId])
 }
 
 model RecentItem {
@@ -2784,6 +2787,8 @@ model RecentItem {
   userId     String
   entityType String
   entityId   String
+  label      String?
+  href       String?
   viewedAt   DateTime @default(now())
 
   @@unique([userId, entityType, entityId])

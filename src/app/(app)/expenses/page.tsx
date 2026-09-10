@@ -32,7 +32,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   ];
 
   return (
-    <ResourceList title="Expenses" description="Spend by brand, country, department and campaign — with approvals." countLabel="expenses"
+    <ResourceList title="Expenses" description="Spend by brand, country, department and campaign — with approvals." countLabel="expenses" savedViewsModule="expenses"
       searchPlaceholder="Search expenses…"
       filters={[{ name: "status", label: "Status", options: ["draft", "pending", "approved", "rejected", "paid"].map((v) => ({ value: v, label: v })) }]}
       columns={columns} rows={rows} getRowKey={(e) => e.id}

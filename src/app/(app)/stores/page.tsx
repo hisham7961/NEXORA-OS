@@ -28,7 +28,7 @@ export default async function StoresPage({ searchParams }: { searchParams: Promi
   ];
 
   return (
-    <ResourceList title="Stores" description="E-commerce stores across platforms and markets." countLabel="stores"
+    <ResourceList title="Stores" description="E-commerce stores across platforms and markets." countLabel="stores" savedViewsModule="stores"
       searchPlaceholder="Search stores…"
       filters={[{ name: "platform", label: "Platform", options: ["shopify", "woocommerce", "zid", "salla", "amazon", "custom"].map((v) => ({ value: v, label: v })) }]}
       columns={columns} rows={rows} getRowKey={(s) => s.id} getRowHref={(s) => `/stores/${s.id}`}

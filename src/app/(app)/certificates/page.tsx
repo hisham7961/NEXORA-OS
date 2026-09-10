@@ -29,7 +29,7 @@ export default async function CertificatesPage({ searchParams }: { searchParams:
   ];
 
   return (
-    <ResourceList title="Certificates" description="Free-sale, GMP, ISO and product certificates — soonest expiry first." countLabel="certificates"
+    <ResourceList title="Certificates" description="Free-sale, GMP, ISO and product certificates — soonest expiry first." countLabel="certificates" savedViewsModule="certificates"
       searchPlaceholder="Search certificates…"
       columns={columns} rows={rows} getRowKey={(d) => d.id}
       page={query.page} pageSize={query.pageSize} total={total} params={sp}

@@ -37,7 +37,7 @@ export default async function DesignPage({ searchParams }: { searchParams: Promi
   ];
 
   return (
-    <ResourceList title="Design Requests" description="Creative operations from brief to approved delivery (§12)." countLabel="requests"
+    <ResourceList title="Design Requests" description="Creative operations from brief to approved delivery (§12)." countLabel="requests" savedViewsModule="design"
       searchPlaceholder="Search design requests…"
       filters={[{ name: "status", label: "Status", options: ["requested", "assigned", "designing", "internal_review", "revision", "waiting_approval", "approved", "delivered"].map((v) => ({ value: v, label: v.replace(/_/g, " ") })) }]}
       actions={canCreate && options ? <DesignForm mode="create" options={{ brands: options.brands, countries: options.countries, companies: options.companies, users: options.users }} /> : undefined}

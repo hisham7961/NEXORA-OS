@@ -19,17 +19,18 @@ interface ResourceListProps<T> {
   total: number;
   params: Record<string, string | undefined>;
   countLabel?: string;
+  savedViewsModule?: string;
 }
 
 /** Standard scoped list screen: header + URL-driven toolbar + dense table + pagination. */
 export function ResourceList<T>({
   title, description, actions, searchPlaceholder, filters, columns, rows, getRowKey, getRowHref,
-  empty, page, pageSize, total, params, countLabel,
+  empty, page, pageSize, total, params, countLabel, savedViewsModule,
 }: ResourceListProps<T>) {
   return (
     <>
       <PageHeader title={title} description={description} actions={actions} meta={<Badge>{total} {countLabel ?? "records"}</Badge>} />
-      <ListToolbar placeholder={searchPlaceholder} filters={filters} />
+      <ListToolbar placeholder={searchPlaceholder} filters={filters} savedViewsModule={savedViewsModule} />
       <Panel>
         <DataTable columns={columns} rows={rows} getRowKey={getRowKey} getRowHref={getRowHref} empty={empty} />
         {total > pageSize && <Pagination page={page} pageSize={pageSize} total={total} params={params} />}

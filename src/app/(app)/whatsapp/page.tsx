@@ -37,7 +37,7 @@ export default async function WhatsappPage({ searchParams }: { searchParams: Pro
   ];
 
   return (
-    <ResourceList title="WhatsApp Campaigns" description="Third-party executed; internal workflow from brief to sent + results (§11)." countLabel="campaigns"
+    <ResourceList title="WhatsApp Campaigns" description="Third-party executed; internal workflow from brief to sent + results (§11)." countLabel="campaigns" savedViewsModule="whatsapp"
       searchPlaceholder="Search WhatsApp campaigns…" columns={columns} rows={rows} getRowKey={(w) => w.id} getRowHref={(w) => `/whatsapp/${w.id}`}
       actions={canCreate && options ? <WhatsappForm mode="create" options={{ brands: options.brands, countries: options.countries, users: options.users }} /> : undefined}
       page={query.page} pageSize={query.pageSize} total={total} params={sp}

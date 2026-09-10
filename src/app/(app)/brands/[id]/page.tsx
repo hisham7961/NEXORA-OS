@@ -9,6 +9,7 @@ import { getLookups, refName } from "@/domain/lookups";
 import { Panel, PanelHeader, DataTable, StatusBadge, Badge, TabBar, EmptyState, type Column, type TabItem } from "@/components/ui";
 import { BrandChip, CountryChip } from "@/components/entity-chips";
 import { BrandForm, ArchiveOrgButton } from "@/components/org/org-forms";
+import { FavoriteStar, RecordRecent } from "@/components/personal/bookmarks";
 import { formatDate, formatCurrency } from "@/lib/format";
 import { daysUntil } from "@/lib/utils";
 
@@ -36,6 +37,8 @@ export default async function BrandDetailPage({
 
   const { brand, companyLinks, markets, products, campaigns, registrations, documents, cases, openTasks } = data;
   const lookups = await getLookups();
+  const { favoritedIds } = await import("@/domain/personal");
+  const favorited = (await favoritedIds(principal, "brand")).has(brand.id);
 
   const tabs: TabItem[] = [
     { key: "overview", label: "Overview" },
@@ -67,12 +70,16 @@ export default async function BrandDetailPage({
             </div>
           </div>
         </div>
+        <div className="flex items-center gap-2">
+          <RecordRecent entityType="brand" entityId={brand.id} label={brand.name} href={`/brands/${brand.id}`} />
+          <FavoriteStar entityType="brand" entityId={brand.id} label={brand.name} href={`/brands/${brand.id}`} initial={favorited} />
         {canAnywhere(principal, "brands.edit") && (
           <div className="flex items-center gap-2">
             <BrandForm mode="edit" companies={[...lookups.companies.values()].sort((a, b) => a.name.localeCompare(b.name)).map((c) => ({ id: c.id, label: c.name }))} defaults={{ id: brand.id, name: brand.name, code: brand.code, slug: brand.slug, description: brand.description, primaryCompanyId: brand.primaryCompanyId, accentColor: brand.accentColor, status: brand.status }} />
             {canAnywhere(principal, "brands.delete") && <ArchiveOrgButton kind="brand" id={brand.id} redirect="/brands" />}
           </div>
         )}
+        </div>
       </div>
 
       <TabBar tabs={tabs} current={tab} className="mb-4" />

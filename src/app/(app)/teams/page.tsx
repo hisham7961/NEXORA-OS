@@ -50,6 +50,7 @@ export default async function TeamsPage({ searchParams }: { searchParams: Promis
           ? <UserChip name={refName(lookups.users, t.leadUserId)} color={lookups.users.get(t.leadUserId)?.meta} />
           : <span className="text-ink-3">Unassigned</span>,
     },
+    ...(canCreate ? [{ key: "edit", header: "", align: "end" as const, render: (t: TeamRow) => <TeamForm mode="edit" brands={brandOpts} departments={deptOpts} users={userOpts} defaults={{ id: t.id, name: t.name, brandId: t.brandId, departmentId: t.departmentId, leadUserId: t.leadUserId }} /> }] : []),
   ];
 
   return (
@@ -62,6 +63,7 @@ export default async function TeamsPage({ searchParams }: { searchParams: Promis
       />
       <ListToolbar
         placeholder="Search teams…"
+        savedViewsModule="teams"
         filters={brandOptions.length ? [{ name: "brandId", label: "Brand", options: brandOptions }] : []}
       />
       <Panel>

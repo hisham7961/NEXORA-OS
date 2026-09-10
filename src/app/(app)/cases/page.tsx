@@ -36,7 +36,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Promis
   ];
 
   return (
-    <ResourceList title="Customer Cases" description="Internal customer service operations." countLabel="cases"
+    <ResourceList title="Customer Cases" description="Internal customer service operations." countLabel="cases" savedViewsModule="cases"
       searchPlaceholder="Search cases…"
       actions={canCreate && options ? <NewCaseButton options={{ brands: options.brands, countries: options.countries, companies: options.companies, users: options.users }} /> : undefined}
       filters={[{ name: "status", label: "Status", options: ["new", "assigned", "waiting", "in_progress", "escalated", "resolved", "closed"].map((v) => ({ value: v, label: humanize(v) })) }]}

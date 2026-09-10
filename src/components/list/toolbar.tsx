@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, X, SlidersHorizontal } from "lucide-react";
 import { Select } from "@/components/ui";
 import { useI18n } from "@/components/providers";
+import { SavedViews } from "@/components/personal/bookmarks";
 
 export interface ToolbarFilter {
   name: string;
@@ -19,10 +20,12 @@ export interface ToolbarFilter {
 export function ListToolbar({
   placeholder,
   filters = [],
+  savedViewsModule,
   children,
 }: {
   placeholder?: string;
   filters?: ToolbarFilter[];
+  savedViewsModule?: string;
   children?: React.ReactNode;
 }) {
   const { t } = useI18n();
@@ -86,7 +89,7 @@ export function ListToolbar({
 
       {filters.length > 0 && <SlidersHorizontal className={`h-4 w-4 ${pending ? "animate-pulse text-accent" : "text-ink-3"}`} />}
 
-      <div className="ms-auto flex items-center gap-2">{children}</div>
+      <div className="ms-auto flex items-center gap-2">{savedViewsModule && <SavedViews module={savedViewsModule} />}{children}</div>
     </div>
   );
 }

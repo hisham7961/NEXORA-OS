@@ -23,6 +23,7 @@ export function CommandPalette({ allowed, createCommands = [] }: { allowed: stri
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<SearchHit[]>([]);
+  const [bookmarks, setBookmarks] = useState<SearchHit[]>([]);
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const allowedSet = useMemo(() => new Set(allowed), [allowed]);
@@ -58,7 +59,7 @@ export function CommandPalette({ allowed, createCommands = [] }: { allowed: stri
     return createHits.filter((c) => c.title.toLowerCase().includes(q)).slice(0, 6);
   }, [query, createHits]);
 
-  const results = useMemo(() => [...filteredCreate, ...filteredNav, ...hits], [filteredCreate, filteredNav, hits]);
+  const results = useMemo(() => (query.trim() ? [...filteredCreate, ...filteredNav, ...hits] : [...filteredCreate, ...bookmarks, ...filteredNav]), [filteredCreate, filteredNav, hits, bookmarks, query]);
 
   useEffect(() => {
     if (commandOpen) {
@@ -66,6 +67,14 @@ export function CommandPalette({ allowed, createCommands = [] }: { allowed: stri
       setHits([]);
       setActive(0);
       setTimeout(() => inputRef.current?.focus(), 20);
+      // Load personal favorites + recent items as default suggestions (§10/§11).
+      Promise.all([fetch("/api/v1/favorites").then((r) => r.json()).catch(() => null), fetch("/api/v1/recent").then((r) => r.json()).catch(() => null)]).then(([fav, rec]) => {
+        const favHits: SearchHit[] = (fav?.data ?? []).filter((f: { href?: string }) => f.href).slice(0, 6).map((f: { entityType: string; entityId: string; label?: string; href: string }) => ({ type: "favorite", id: f.entityId, title: f.label ?? f.entityType, subtitle: "Favorite", href: f.href }));
+        const recHits: SearchHit[] = (rec?.data ?? []).filter((f: { href?: string }) => f.href).slice(0, 6).map((f: { entityType: string; entityId: string; label?: string; href: string }) => ({ type: "recent", id: f.entityId, title: f.label ?? f.entityType, subtitle: "Recent", href: f.href }));
+        // Dedupe recents already in favorites.
+        const favKeys = new Set(favHits.map((h) => h.href));
+        setBookmarks([...favHits, ...recHits.filter((h) => !favKeys.has(h.href))]);
+      });
     }
   }, [commandOpen]);
 

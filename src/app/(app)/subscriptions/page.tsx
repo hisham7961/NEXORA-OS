@@ -39,7 +39,7 @@ export default async function SubscriptionsPage({ searchParams }: { searchParams
   ];
 
   return (
-    <ResourceList title="Subscriptions & Services" description="SaaS, domains, hosting and tools — with renewal alerts." countLabel="subscriptions"
+    <ResourceList title="Subscriptions & Services" description="SaaS, domains, hosting and tools — with renewal alerts." countLabel="subscriptions" savedViewsModule="subscriptions"
       searchPlaceholder="Search providers…"
       filters={[{ name: "status", label: "Status", options: ["active", "expiring", "expired", "cancelled"].map((v) => ({ value: v, label: v })) }]}
       actions={canCreate && options ? <SubscriptionForm mode="create" options={{ brands: options.brands, countries: options.countries, companies: options.companies, users: options.users }} /> : undefined}

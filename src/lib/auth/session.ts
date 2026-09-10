@@ -19,7 +19,10 @@ export interface SessionContext {
 /** Create a session row and set the httpOnly cookie. Returns the raw token. */
 export async function createSession(userId: string, ctx: SessionContext = {}): Promise<string> {
   const token = randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 86_400_000);
+  // Session lifetime is administrable (§Phase4-6); falls back to the constant.
+  let ttlDays = SESSION_TTL_DAYS;
+  try { const { getSettingValue } = await import("@/domain/settings"); ttlDays = Number(await getSettingValue<number>("security.sessionTtlDays")) || SESSION_TTL_DAYS; } catch { /* default */ }
+  const expiresAt = new Date(Date.now() + ttlDays * 86_400_000);
 
   await prisma.session.create({
     data: {

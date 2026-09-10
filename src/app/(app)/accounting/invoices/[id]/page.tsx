@@ -7,6 +7,7 @@ import { canAnywhere, ForbiddenError } from "@/lib/permissions/engine";
 import { getInvoice } from "@/domain/accounting/ar";
 import { PageHeader, Panel, PanelHeader, DataTable, Badge, type Column } from "@/components/ui";
 import { IssueButton, VoidInvoiceButton } from "@/components/accounting/ar-controls";
+import { RecordComments } from "@/components/comments/record-comments";
 import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Invoice" };
@@ -84,6 +85,11 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           )}
         </div>
       </div>
+
+      <Panel className="mt-4">
+        <PanelHeader title="Comments" />
+        <div className="px-4 py-3"><RecordComments entityType="invoice" entityId={inv.id} currentUserId={principal.userId} /></div>
+      </Panel>
     </>
   );
 }

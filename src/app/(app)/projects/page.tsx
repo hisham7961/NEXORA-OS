@@ -29,10 +29,11 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
     { key: "brand", header: "Brand", render: (p) => <BrandChip name={refName(lookups.brands, p.brandId)} color={p.brandId ? lookups.brands.get(p.brandId)?.meta : null} /> },
     { key: "due", header: "Due", align: "end", render: (p) => <span className="tabular text-ink-3">{formatDateShort(p.dueDate, locale)}</span> },
     { key: "status", header: "Status", render: (p) => <StatusBadge module="generic" status={p.status} /> },
+    ...(canCreate ? [{ key: "edit", header: "", align: "end" as const, render: (p: Project) => <ProjectForm mode="edit" brands={brandOpts} companies={companyOpts} users={userOpts} defaults={{ id: p.id, name: p.name, brandId: p.brandId, companyId: p.companyId, status: p.status, dueDate: p.dueDate ? new Date(p.dueDate).toISOString().slice(0, 10) : "" }} /> }] : []),
   ];
 
   return (
-    <ResourceList title="Projects" description="Group related work under a project." countLabel="projects"
+    <ResourceList title="Projects" description="Group related work under a project." countLabel="projects" savedViewsModule="projects"
       searchPlaceholder="Search projects…" columns={columns} rows={rows} getRowKey={(p) => p.id}
       actions={canCreate ? <ProjectForm mode="create" brands={brandOpts} companies={companyOpts} users={userOpts} /> : undefined}
       page={query.page} pageSize={query.pageSize} total={total} params={sp}
