@@ -6,6 +6,7 @@ import { assertCan, audit, type ActorContext } from "@/domain/mutation";
 import { ServiceError } from "@/lib/api/handler";
 import { optionalString } from "@/lib/validation";
 import { D, ZERO, add, sub, mul, roundMoney, gt, isZero } from "@/lib/money";
+import { fxResidual } from "@/lib/accounting-math";
 import { canFinance, requireSettings } from "./common";
 import { resolveExchangeRate } from "./setup";
 import { allocateNumber } from "./numbering";
@@ -128,18 +129,18 @@ export async function createTransfer(ctx: ActorContext, companyId: string, raw: 
   const toRate = to.currency === base ? 1 : await resolveExchangeRate(to.currency, base, input.date);
   const fromBase = roundMoney(mul(fromAmount, fromRate), base, settings.roundingPolicy as never);
   const toBase = roundMoney(mul(toAmount, toRate), base, settings.roundingPolicy as never);
-  const residual = sub(fromBase, toBase); // + = source cost exceeds destination value → FX loss
+  const residual = fxResidual(fromBase, toBase); // loss = source cost exceeds destination value
 
   // Build a base-currency journal: Dr destination(base) / Cr source(base) + FX plug.
   const lines: Record<string, unknown>[] = [
     { accountId: to.glAccountId, debit: Number(toBase), credit: 0, description: `Transfer in — ${to.name}` },
     { accountId: from.glAccountId, debit: 0, credit: Number(fromBase), description: `Transfer out — ${from.name}` },
   ];
-  if (!isZero(residual)) {
-    const fxAccountId = gt(residual, 0) ? settings.fxLossAccountId : settings.fxGainAccountId;
+  if (residual.kind !== "none") {
+    const fxAccountId = residual.kind === "loss" ? settings.fxLossAccountId : settings.fxGainAccountId;
     if (!fxAccountId) throw new ServiceError("no_fx_account", "Cross-currency transfer needs FX gain/loss accounts configured.", 422);
-    if (gt(residual, 0)) lines.push({ accountId: fxAccountId, debit: Number(residual), credit: 0, description: "FX loss on transfer" });
-    else lines.push({ accountId: fxAccountId, debit: 0, credit: Number(residual.abs()), description: "FX gain on transfer" });
+    if (residual.kind === "loss") lines.push({ accountId: fxAccountId, debit: Number(residual.amount), credit: 0, description: "FX loss on transfer" });
+    else lines.push({ accountId: fxAccountId, debit: 0, credit: Number(residual.amount), description: "FX gain on transfer" });
   }
 
   const journalRaw = { companyId, journalCode: "BJ", date: input.date, currency: base, reference: input.reference ?? undefined, memo: `Transfer ${from.name} → ${to.name}`, sourceType: "BankTransfer", sourceId: "pending", lines };

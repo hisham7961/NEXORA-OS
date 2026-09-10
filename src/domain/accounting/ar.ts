@@ -5,7 +5,8 @@ import { prisma } from "@/lib/db";
 import { assertCan, audit, type ActorContext } from "@/domain/mutation";
 import { ServiceError } from "@/lib/api/handler";
 import { optionalString } from "@/lib/validation";
-import { D, ZERO, add, sub, mul, roundMoney, gt, isNeg, isZero } from "@/lib/money";
+import { D, ZERO, add, sub, roundMoney, gt, isNeg, isZero } from "@/lib/money";
+import { lineAmounts } from "@/lib/accounting-math";
 import { canFinance, requireSettings } from "./common";
 import { resolveExchangeRate } from "./setup";
 import { allocateNumber } from "./numbering";
@@ -79,19 +80,10 @@ async function computeLines(companyId: string, currency: string, lines: z.infer<
   const computed: ComputedLine[] = [];
   let subtotal = ZERO, taxTotal = ZERO;
   for (const l of lines) {
-    const gross = mul(mul(l.quantity, l.unitPrice), sub(1, D(l.discountPct).div(100)));
     const tax = l.taxRateId ? taxById.get(l.taxRateId) : undefined;
     if (l.taxRateId && !tax) throw new ServiceError("bad_tax", "Tax rate not found.", 422);
     if (tax && tax.companyId && tax.companyId !== companyId) throw new ServiceError("bad_tax", "Tax rate belongs to another company.", 422);
-    let lineNet: Prisma.Decimal, taxAmount: Prisma.Decimal;
-    if (tax && tax.computation === "inclusive") {
-      const grossR = roundMoney(gross, currency, settings.roundingPolicy as never);
-      lineNet = roundMoney(D(grossR).div(add(1, D(tax.rate).div(100))), currency, settings.roundingPolicy as never);
-      taxAmount = sub(grossR, lineNet);
-    } else {
-      lineNet = roundMoney(gross, currency, settings.roundingPolicy as never);
-      taxAmount = tax ? roundMoney(mul(lineNet, D(tax.rate).div(100)), currency, settings.roundingPolicy as never) : ZERO;
-    }
+    const { lineNet, taxAmount } = lineAmounts({ quantity: l.quantity, unitPrice: l.unitPrice, discountPct: l.discountPct, taxRatePct: tax?.rate ?? null, taxComputation: tax?.computation as never, currency, rounding: settings.roundingPolicy as never });
     subtotal = add(subtotal, lineNet); taxTotal = add(taxTotal, taxAmount);
     computed.push({
       description: l.description, quantity: D(l.quantity), unitPrice: D(l.unitPrice), discountPct: D(l.discountPct),
