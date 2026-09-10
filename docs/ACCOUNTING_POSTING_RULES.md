@@ -70,14 +70,26 @@ or **Cr Payable** (when a supplier is linked). Journal `EJ`, `sourceType = Expen
 Posting requires the expense be approved and the actor hold `accounting.post`; an
 already-posted expense cannot be posted twice.
 
-## Bank Transfer (pending — Increment E)
-Same currency: **Dr destination bank · Cr source bank**. Cross-currency: convert at
-rate; any residual to **FX Gain/Loss**. One atomic transaction.
+## Bank Transfer (built — Increment E)
+Posted in base currency, journal `BJ`, `sourceType = BankTransfer`. Both accounts
+must map to a GL account. Same currency: **Dr destination · Cr source** (equal base
+amounts). Cross-currency: each leg is converted to base at its own rate; the base
+residual posts to **FX Loss** (`fxLossAccountId`, when the source base exceeds the
+destination) or **FX Gain** (`fxGainAccountId`), so the entry always balances. One
+atomic transaction.
 
-## FX Settlement Difference (pending — E)
+## Bank Reconciliation (built — E)
+A reconciliation session marks posted GL lines on a bank's account as *cleared*
+(metadata only — posted amounts stay immutable) up to a statement date, tracks the
+cleared balance, and completes only when it matches the statement (or is explicitly
+forced with the difference recorded).
+
+## FX Settlement Difference (pending — period-end revaluation)
 When a receipt/payment settles at a different rate than the invoice/bill posting
-rate, the residual posts to **FX Gain** (`fxGainAccountId`) or **FX Loss**
-(`fxLossAccountId`).
+rate, the residual belongs in **FX Gain** (`fxGainAccountId`) / **FX Loss**
+(`fxLossAccountId`). The realized-FX posting on cross-currency **transfers** is built
+(above); per-settlement revaluation of open AR/AP at period close is a documented
+period-end process for a later increment. Balances are never silently adjusted.
 
 ## Rounding
 Any document/base rounding residual beyond tolerance posts explicitly to the

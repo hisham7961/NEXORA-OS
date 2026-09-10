@@ -17,6 +17,7 @@ import { createCustomer } from "../src/domain/accounting/customers";
 import { createInvoice, issueInvoice, postReceipt, createCreditNote, issueCreditNote, applyCreditNote } from "../src/domain/accounting/ar";
 import { createSupplier } from "../src/domain/accounting/suppliers";
 import { createBill, postBill, postPayment } from "../src/domain/accounting/ap";
+import { createBankAccount, createTransfer } from "../src/domain/accounting/bank";
 
 const prisma = new PrismaClient();
 
@@ -36,6 +37,7 @@ async function clear() {
     "creditNoteLine", "creditNote", "salesInvoiceLine", "salesInvoice",
     "billPaymentAllocation", "supplierCreditApplication", "supplierPayment",
     "supplierCreditLine", "supplierCredit", "supplierBillLine", "supplierBill",
+    "bankTransfer", "bankReconciliation",
     "journalLine", "journalEntry", "journal", "numberSequence", "companyAccountingSettings",
     "account", "accountingPeriod", "fiscalYear", "bankAccount",
     "costCenter", "invoice", "payment", "customer", "supplier", "budget", "expense",
@@ -471,6 +473,13 @@ async function main() {
   const billB = await createBill(fctx, pcc.id, { supplierId: supFacilities.id, issueDate: new Date(yr, now.getMonth(), 3), dueDate: new Date(yr, now.getMonth(), 3),
     lines: [ { description: "Office rent — month", quantity: 1, unitPrice: 800, expenseAccountId: rentAcc, countryId: countries.KW } ] });
   await postBill(fctx, billB.id);
+
+  // ------------------------------------------------ Bank / cash accounts (§E)
+  console.log("• Bank & cash (accounts, transfer)");
+  const cashAcctGl = await acc("1000"), bankAcctGl = await acc("1010");
+  const cashBox = await createBankAccount(fctx, pcc.id, { name: "Main Cash Box", type: "cash", currency: "KWD", glAccountId: cashAcctGl });
+  const mainBank = await createBankAccount(fctx, pcc.id, { name: "NBK Current Account", type: "bank", currency: "KWD", glAccountId: bankAcctGl, bankName: "National Bank of Kuwait" });
+  await createTransfer(fctx, pcc.id, { fromBankAccountId: cashBox.id, toBankAccountId: mainBank.id, date: new Date(yr, now.getMonth(), 14), fromAmount: 2000, reference: "Cash deposit" });
 
   // ------------------------------------------------------------- Attendance
   console.log("• Attendance (today)");

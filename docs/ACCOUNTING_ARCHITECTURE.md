@@ -89,8 +89,16 @@ posted-journal + AR demo seed.
 supplier credits (post + application), supplier payments with transaction-safe
 allocation, plus the Expense→GL bridge (approved expenses post Dr Expense / Cr
 Cash|Payable); AP aging and supplier statements, verified by 22 live invariants.
-Pending increments: Bank/Cash/FX/reconciliation, Budgets + Cash Flow, and the
-Financial Intelligence dashboards / 360 integrations.
+**Bank / Cash / FX (Increment E)** — bank & cash accounts (each mapped to a GL
+asset account), transfers between them (same- or cross-currency with realized FX to
+gain/loss), bank reconciliation against a statement (cleared-line matching, metadata
+only), and the cash-position report; verified by 17 live invariants.
+Pending increments: Budgets + Cash Flow, and the Financial Intelligence dashboards
+/ 360 integrations.
+
+`bank.ts` holds bank accounts, transfers, reconciliation and cash position;
+transfers post in base currency through the engine, plugging any cross-currency
+base residual to FX gain/loss so the entry balances.
 
 The AP domain mirrors AR: `suppliers.ts` (party master, `ap.*`), `ap.ts` (bills,
 credits, payments, allocations, AP aging / supplier statement) and

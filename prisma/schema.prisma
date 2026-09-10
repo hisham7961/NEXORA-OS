@@ -1667,15 +1667,15 @@ model JournalEntry {
 }
 
 model JournalLine {
-  id                  String   @id @default(cuid())
+  id                  String    @id @default(cuid())
   entryId             String
   accountId           String
-  lineNo              Int      @default(0)
+  lineNo              Int       @default(0)
   description         String?
   // Amounts are stored in BASE (company) currency — debit/credit balance and drive
   // the trial balance directly. Transaction-currency detail is kept alongside.
-  debit               Decimal  @default(0)
-  credit              Decimal  @default(0)
+  debit               Decimal   @default(0)
+  credit              Decimal   @default(0)
   transactionCurrency String?
   transactionAmount   Decimal? // absolute amount in transaction currency
   exchangeRate        Decimal?
@@ -1690,12 +1690,17 @@ model JournalLine {
   costCenterId        String?
   customerId          String?
   supplierId          String?
+  // Bank reconciliation metadata (§E) — flags only, never amounts (posted lines
+  // remain immutable). A cleared line is matched to a bank statement.
+  reconciliationId    String?
+  reconciledAt        DateTime?
 
   entry   JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
   account Account      @relation(fields: [accountId], references: [id])
 
   @@index([entryId])
   @@index([accountId])
+  @@index([reconciliationId])
   @@index([brandId])
   @@index([countryId])
   @@index([productId])
@@ -2015,13 +2020,84 @@ model Payment {
 }
 
 model BankAccount {
-  id        String   @id @default(cuid())
-  companyId String
-  name      String
-  currency  String   @default("KWD")
-  number    String?
-  type      String   @default("bank") // bank | cash
-  createdAt DateTime @default(now())
+  id          String    @id @default(cuid())
+  companyId   String
+  name        String
+  currency    String    @default("KWD")
+  number      String?
+  type        String    @default("bank") // bank | cash
+  glAccountId String? // the GL asset account this bank/cash account maps to (§E)
+  bankName    String?
+  iban        String?
+  isActive    Boolean   @default(true)
+  notes       String?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+  archivedAt  DateTime?
+
+  transfersFrom   BankTransfer[]       @relation("transferFrom")
+  transfersTo     BankTransfer[]       @relation("transferTo")
+  reconciliations BankReconciliation[]
+
+  @@index([companyId, isActive])
+}
+
+/**
+ * A funds movement between two bank/cash accounts of one company (§E). Same
+ * currency: Dr destination / Cr source. Cross-currency: convert at rate, any base
+ * residual posts to FX gain/loss. One atomic posted journal (BJ).
+ */
+model BankTransfer {
+  id                String    @id @default(cuid())
+  companyId         String
+  transferNumber    String?
+  fromBankAccountId String
+  toBankAccountId   String
+  date              DateTime
+  fromCurrency      String
+  toCurrency        String
+  fromAmount        Decimal
+  toAmount          Decimal
+  exchangeRate      Decimal? // from→to
+  baseCurrency      String    @default("KWD")
+  reference         String?
+  notes             String?
+  journalEntryId    String?
+  createdById       String?
+  postedById        String?
+  postedAt          DateTime?
+  createdAt         DateTime  @default(now())
+
+  fromBankAccount BankAccount @relation("transferFrom", fields: [fromBankAccountId], references: [id])
+  toBankAccount   BankAccount @relation("transferTo", fields: [toBankAccountId], references: [id])
+
+  @@unique([companyId, transferNumber])
+  @@index([companyId])
+}
+
+/**
+ * A bank reconciliation session against a statement (§E). GL lines on the bank's
+ * account are marked cleared; the cleared balance is compared to the statement.
+ */
+model BankReconciliation {
+  id               String    @id @default(cuid())
+  companyId        String
+  bankAccountId    String
+  statementDate    DateTime
+  statementBalance Decimal
+  clearedBalance   Decimal   @default(0)
+  status           String    @default("open") // open | completed
+  note             String?
+  createdById      String?
+  completedById    String?
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  bankAccount BankAccount @relation(fields: [bankAccountId], references: [id])
+
+  @@index([companyId, bankAccountId])
 }
 
 model Budget {
