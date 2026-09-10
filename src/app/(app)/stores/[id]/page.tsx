@@ -13,11 +13,13 @@ import { ActivityTimeline, type TimelineEntry } from "@/components/activity-time
 import { EntityFiles } from "@/components/files/entity-files";
 import { BrandChip, CountryChip } from "@/components/entity-chips";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
+import { getServerI18n } from "@/lib/server-i18n";
 
 export const metadata: Metadata = { title: "Store" };
 
 export default async function StoreDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { principal, locale } = await pageGuard("stores.view");
+  const { t } = await getServerI18n();
   const { id } = await params;
   let store;
   try {
@@ -31,13 +33,13 @@ export default async function StoreDetailPage({ params }: { params: Promise<{ id
   const latest = store.performance[0];
   const canRecord = canAnywhere(principal, "sales.create");
   const timeline: TimelineEntry[] = activity.map((a) => ({
-    id: a.id, at: a.at, actorName: a.actorId ? refName(lookups.users, a.actorId) : "System",
+    id: a.id, at: a.at, actorName: a.actorId ? refName(lookups.users, a.actorId) : t("common.system"),
     actorColor: a.actorId ? lookups.users.get(a.actorId)?.meta : null, action: a.action, summary: a.summary,
   }));
 
   return (
     <>
-      <div className="mb-1 text-xs text-ink-3"><Link href="/stores" className="hover:text-ink-2">Stores</Link> / {store.name}</div>
+      <div className="mb-1 text-xs text-ink-3"><Link href="/stores" className="hover:text-ink-2">{t("dp.storesNav")}</Link> / {store.name}</div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-ink">{store.name}</h1>
@@ -55,42 +57,42 @@ export default async function StoreDetailPage({ params }: { params: Promise<{ id
 
       {latest && (
         <Panel className="mb-4">
-          <PanelHeader title="Latest performance" description={`Period from ${formatDate(latest.periodStart, locale)}`} />
+          <PanelHeader title={t("stf.latestPerf")} description={t("stf.periodFrom", { date: formatDate(latest.periodStart, locale) })} />
           <PanelBody className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
-            <Metric label="Gross sales" value={formatCurrency(latest.sales, store.currency, locale)} />
-            <Metric label="Net sales" value={formatCurrency(latest.netSales, store.currency, locale)} />
-            <Metric label="Orders" value={formatNumber(latest.orders, locale)} />
+            <Metric label={t("stf.grossSales")} value={formatCurrency(latest.sales, store.currency, locale)} />
+            <Metric label={t("stf.netSales")} value={formatCurrency(latest.netSales, store.currency, locale)} />
+            <Metric label={t("stf.orders")} value={formatNumber(latest.orders, locale)} />
             <Metric label="AOV" value={formatCurrency(latest.aov, store.currency, locale)} />
-            <Metric label="Returns" value={formatNumber(latest.returns, locale)} />
-            <Metric label="Gross profit" value={formatCurrency(latest.grossMargin, store.currency, locale)} category="success" />
-            <Metric label="Net contribution" value={formatCurrency(latest.netContribution, store.currency, locale)} category={Number(latest.netContribution ?? 0) < 0 ? "critical" : "success"} />
+            <Metric label={t("stf.returns")} value={formatNumber(latest.returns, locale)} />
+            <Metric label={t("stf.grossProfit")} value={formatCurrency(latest.grossMargin, store.currency, locale)} category="success" />
+            <Metric label={t("stf.netContribution")} value={formatCurrency(latest.netContribution, store.currency, locale)} category={Number(latest.netContribution ?? 0) < 0 ? "critical" : "success"} />
           </PanelBody>
         </Panel>
       )}
 
       <Panel>
-        <PanelHeader title="Performance history" />
+        <PanelHeader title={t("stf.perfHistory")} />
         <DataTable
           columns={[
-            { key: "period", header: "Period", render: (p) => `${formatDate(p.periodStart, locale)}` },
-            { key: "type", header: "Type", render: (p) => <span className="capitalize text-ink-3">{p.periodType}</span> },
-            { key: "sales", header: "Gross sales", align: "end", render: (p) => formatCurrency(p.sales, store.currency, locale) },
-            { key: "net_sales", header: "Net sales", align: "end", render: (p) => formatCurrency(p.netSales, store.currency, locale) },
-            { key: "orders", header: "Orders", align: "end", render: (p) => formatNumber(p.orders, locale) },
+            { key: "period", header: t("stf.period"), render: (p) => `${formatDate(p.periodStart, locale)}` },
+            { key: "type", header: t("common.type"), render: (p) => <span className="capitalize text-ink-3">{p.periodType}</span> },
+            { key: "sales", header: t("stf.grossSales"), align: "end", render: (p) => formatCurrency(p.sales, store.currency, locale) },
+            { key: "net_sales", header: t("stf.netSales"), align: "end", render: (p) => formatCurrency(p.netSales, store.currency, locale) },
+            { key: "orders", header: t("stf.orders"), align: "end", render: (p) => formatNumber(p.orders, locale) },
             { key: "aov", header: "AOV", align: "end", render: (p) => formatCurrency(p.aov, store.currency, locale) },
-            { key: "profit", header: "Gross profit", align: "end", render: (p) => formatCurrency(p.grossMargin, store.currency, locale) },
-            { key: "net", header: "Net contrib.", align: "end", render: (p) => formatCurrency(p.netContribution, store.currency, locale) },
+            { key: "profit", header: t("stf.grossProfit"), align: "end", render: (p) => formatCurrency(p.grossMargin, store.currency, locale) },
+            { key: "net", header: t("stf.netContribShort"), align: "end", render: (p) => formatCurrency(p.netContribution, store.currency, locale) },
           ]}
           rows={store.performance}
           getRowKey={(p) => p.id}
-          empty={<EmptyState title="No performance entered" description="Enter daily/weekly/monthly performance to track sales and margin." />}
+          empty={<EmptyState title={t("stf.noPerf")} description={t("stf.noPerfBody")} />}
         />
       </Panel>
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <EntityFiles principal={principal} entityType="Store" entityId={store.id} scope={{ companyId: store.companyId, brandId: store.brandId, countryId: store.countryId }} />
         <Panel>
-          <PanelHeader title="Activity" />
-          <PanelBody><ActivityTimeline entries={timeline} locale={locale} empty="No activity yet." /></PanelBody>
+          <PanelHeader title={t("dp.activity")} />
+          <PanelBody><ActivityTimeline entries={timeline} locale={locale} empty={t("dp.noActivity")} /></PanelBody>
         </Panel>
       </div>
     </>
