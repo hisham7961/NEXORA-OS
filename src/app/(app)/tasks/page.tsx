@@ -14,12 +14,14 @@ import { Pagination } from "@/components/list/pagination";
 import { BrandChip, UserChip } from "@/components/entity-chips";
 import { formatDateShort } from "@/lib/format";
 import { PRIORITY_CATEGORY } from "@/lib/status";
+import { getServerI18n } from "@/lib/server-i18n";
 
 export const metadata: Metadata = { title: "Tasks" };
 
 export default async function TasksPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { principal, locale, denied } = await pageGuard("tasks.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const sp = await searchParams;
   const query = taskQuerySchema.parse(sp);
   const canCreate = canAnywhere(principal, "tasks.create");
@@ -31,32 +33,32 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   const now = new Date();
 
   const columns: Column<Task>[] = [
-    { key: "title", header: "Task", render: (t) => t.title },
-    { key: "brand", header: "Brand", render: (t) => <BrandChip name={refName(lookups.brands, t.brandId)} color={t.brandId ? lookups.brands.get(t.brandId)?.meta : null} /> },
-    { key: "owner", header: "Owner", render: (t) => <UserChip name={refName(lookups.users, t.ownerId)} color={t.ownerId ? lookups.users.get(t.ownerId)?.meta : null} /> },
-    { key: "priority", header: "Priority", render: (t) => <Badge category={PRIORITY_CATEGORY[t.priority] ?? "neutral"}>{t.priority}</Badge> },
-    { key: "due", header: "Due", align: "end", render: (t) => <span className={t.dueDate && t.dueDate < now && !["completed", "cancelled"].includes(t.status) ? "text-critical tabular" : "text-ink-3 tabular"}>{formatDateShort(t.dueDate, locale)}</span> },
-    { key: "status", header: "Status", render: (t) => <StatusBadge module="task" status={t.status} /> },
+    { key: "title", header: t("tasks.col.task"), render: (r) => r.title },
+    { key: "brand", header: t("common.brand"), render: (r) => <BrandChip name={refName(lookups.brands, r.brandId)} color={r.brandId ? lookups.brands.get(r.brandId)?.meta : null} /> },
+    { key: "owner", header: t("common.owner"), render: (r) => <UserChip name={refName(lookups.users, r.ownerId)} color={r.ownerId ? lookups.users.get(r.ownerId)?.meta : null} /> },
+    { key: "priority", header: t("common.priority"), render: (r) => <Badge category={PRIORITY_CATEGORY[r.priority] ?? "neutral"}>{t(`priority.${r.priority}`)}</Badge> },
+    { key: "due", header: t("common.due"), align: "end", render: (r) => <span className={r.dueDate && r.dueDate < now && !["completed", "cancelled"].includes(r.status) ? "text-critical tabular" : "text-ink-3 tabular"}>{formatDateShort(r.dueDate, locale)}</span> },
+    { key: "status", header: t("common.status"), render: (r) => <StatusBadge module="task" status={r.status} /> },
   ];
 
   return (
     <>
       <PageHeader
-        title="Tasks"
-        description="One universal task engine across the whole platform."
-        meta={<Badge>{total} tasks</Badge>}
+        title={t("tasks.title")}
+        description={t("tasks.subtitle")}
+        meta={<Badge>{t("tasks.count", { n: total })}</Badge>}
         actions={canCreate && options ? <TaskDrawerForm mode="create" options={options} /> : undefined}
       />
       <ListToolbar
-        placeholder="Search tasks…"
+        placeholder={t("tasks.searchPlaceholder")}
         filters={[
-          { name: "status", label: "Status", options: ["todo", "in_progress", "blocked", "review", "completed"].map((v) => ({ value: v, label: v.replace(/_/g, " ") })) },
-          { name: "priority", label: "Priority", options: ["low", "normal", "high", "urgent"].map((v) => ({ value: v, label: v })) },
+          { name: "status", label: t("common.status"), options: ["todo", "in_progress", "blocked", "review", "completed"].map((v) => ({ value: v, label: t(`status.${v}`) })) },
+          { name: "priority", label: t("common.priority"), options: ["low", "normal", "high", "urgent"].map((v) => ({ value: v, label: t(`priority.${v}`) })) },
         ]}
       />
       <Panel>
-        <DataTable columns={columns} rows={rows} getRowKey={(t) => t.id} getRowHref={(t) => `/tasks/${t.id}`}
-          empty={<EmptyState icon={<ListTodo className="h-5 w-5" />} title="No tasks in your scope" description="Tasks assigned to you or created within your scope will appear here." />} />
+        <DataTable columns={columns} rows={rows} getRowKey={(r) => r.id} getRowHref={(r) => `/tasks/${r.id}`}
+          empty={<EmptyState icon={<ListTodo className="h-5 w-5" />} title={t("tasks.empty")} description={t("tasks.emptyBody")} />} />
         {total > query.pageSize && <Pagination page={query.page} pageSize={query.pageSize} total={total} params={sp} />}
       </Panel>
     </>
