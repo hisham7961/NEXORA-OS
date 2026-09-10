@@ -5,6 +5,7 @@ import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
 import { ForbiddenError, canAnywhere } from "@/lib/permissions/engine";
 import { getBrand } from "@/domain/brands";
+import { getServerI18n } from "@/lib/server-i18n";
 import { getLookups, refName } from "@/domain/lookups";
 import { Panel, PanelHeader, DataTable, StatusBadge, Badge, TabBar, EmptyState, type Column, type TabItem } from "@/components/ui";
 import { BrandChip, CountryChip } from "@/components/entity-chips";
@@ -23,6 +24,7 @@ export default async function BrandDetailPage({
   searchParams: Promise<Record<string, string>>;
 }) {
   const { principal, locale } = await pageGuard("brands.view");
+  const { t } = await getServerI18n();
   const { id } = await params;
   const tab = (await searchParams).tab ?? "overview";
 
@@ -41,20 +43,20 @@ export default async function BrandDetailPage({
   const favorited = (await favoritedIds(principal, "brand")).has(brand.id);
 
   const tabs: TabItem[] = [
-    { key: "overview", label: "Overview" },
-    { key: "products", label: "Products", count: products.length },
-    { key: "campaigns", label: "Campaigns", count: campaigns.length },
-    { key: "regulatory", label: "Regulatory", count: registrations.length },
-    { key: "documents", label: "Documents", count: documents.length },
-    { key: "customer-service", label: "Customer Service", count: cases.length },
-    ...(canAnywhere(principal, "accounting.view") ? [{ key: "financial", label: "Financial" }] : []),
+    { key: "overview", label: t("detail.tab.overview") },
+    { key: "products", label: t("detail.tab.products"), count: products.length },
+    { key: "campaigns", label: t("detail.tab.campaigns"), count: campaigns.length },
+    { key: "regulatory", label: t("detail.tab.regulatory"), count: registrations.length },
+    { key: "documents", label: t("detail.tab.documents"), count: documents.length },
+    { key: "customer-service", label: t("detail.tab.customerService"), count: cases.length },
+    ...(canAnywhere(principal, "accounting.view") ? [{ key: "financial", label: t("detail.tab.financial") }] : []),
   ];
 
   return (
     <>
       {/* 360 header (§44) */}
       <div className="mb-1 text-xs text-ink-3">
-        <Link href="/brands" className="hover:text-ink-2">Brands</Link> <span className="mx-1">/</span> {brand.name}
+        <Link href="/brands" className="hover:text-ink-2">{t("detail.tab.brands")}</Link> <span className="mx-1">/</span> {brand.name}
       </div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -87,24 +89,24 @@ export default async function BrandDetailPage({
       {tab === "overview" && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <Panel className="lg:col-span-2">
-            <PanelHeader title="Markets" description="Countries where this brand operates" />
+            <PanelHeader title={t("detail.markets")} description={t("detail.brandMarketsSub")} />
             <ul className="grid grid-cols-2 gap-px bg-line sm:grid-cols-3">
               {markets.map((m) => (
                 <li key={m.id} className="bg-surface px-4 py-3">
                   <CountryChip name={refName(lookups.countries, m.countryId)} iso2={lookups.countries.get(m.countryId)?.meta} />
-                  <div className="mt-1"><Badge category={m.status === "active" ? "success" : "neutral"}>{m.status}</Badge></div>
+                  <div className="mt-1"><Badge category={m.status === "active" ? "success" : "neutral"}>{t(`status.${m.status}`)}</Badge></div>
                 </li>
               ))}
-              {markets.length === 0 && <li className="bg-surface px-4 py-6 text-sm text-ink-3">No markets yet.</li>}
+              {markets.length === 0 && <li className="bg-surface px-4 py-6 text-sm text-ink-3">{t("detail.noMarketsYet")}</li>}
             </ul>
           </Panel>
           <Panel>
-            <PanelHeader title="Companies" description="Legal entities this brand belongs to" />
+            <PanelHeader title={t("detail.companies")} description={t("detail.brandCompaniesSub")} />
             <ul className="divide-y divide-line">
               {companyLinks.map((cl) => (
                 <li key={cl.id} className="flex items-center justify-between px-4 py-2.5">
                   <span className="text-[13px] text-ink">{refName(lookups.companies, cl.companyId)}</span>
-                  {cl.isPrimary && <Badge category="info">Primary</Badge>}
+                  {cl.isPrimary && <Badge category="info">{t("detail.primary")}</Badge>}
                 </li>
               ))}
             </ul>
@@ -116,16 +118,16 @@ export default async function BrandDetailPage({
         <Panel>
           <DataTable
             columns={[
-              { key: "name", header: "Product", render: (p) => p.name },
+              { key: "name", header: t("detail.product"), render: (p) => p.name },
               { key: "sku", header: "SKU", render: (p) => <span className="font-mono text-xs text-ink-3">{p.sku}</span> },
-              { key: "category", header: "Category", render: (p) => p.category ?? "—" },
-              { key: "status", header: "Status", render: (p) => <StatusBadge module="generic" status={p.status} /> },
-              { key: "launch", header: "Launched", align: "end", render: (p) => formatDate(p.launchDate, locale) },
+              { key: "category", header: t("common.category"), render: (p) => p.category ?? "—" },
+              { key: "status", header: t("common.status"), render: (p) => <StatusBadge module="generic" status={p.status} /> },
+              { key: "launch", header: t("detail.launched"), align: "end", render: (p) => formatDate(p.launchDate, locale) },
             ] as Column<(typeof products)[number]>[]}
             rows={products}
             getRowKey={(p) => p.id}
             getRowHref={(p) => `/products/${p.id}`}
-            empty={<EmptyState title="No products" description="Products for this brand will appear here." />}
+            empty={<EmptyState title={t("detail.noProducts")} description={t("detail.noProductsBody")} />}
           />
         </Panel>
       )}
@@ -134,16 +136,16 @@ export default async function BrandDetailPage({
         <Panel>
           <DataTable
             columns={[
-              { key: "name", header: "Campaign", render: (c) => c.name },
-              { key: "country", header: "Market", render: (c) => <CountryChip name={refName(lookups.countries, c.countryId)} iso2={lookups.countries.get(c.countryId ?? "")?.meta} /> },
-              { key: "type", header: "Type", render: (c) => <span className="capitalize">{c.type}</span> },
-              { key: "budget", header: "Budget", align: "end", render: (c) => formatCurrency(c.plannedBudget, c.currency, locale) },
-              { key: "status", header: "Status", render: (c) => <StatusBadge module="campaign" status={c.status} /> },
+              { key: "name", header: t("detail.campaign"), render: (c) => c.name },
+              { key: "country", header: t("common.market"), render: (c) => <CountryChip name={refName(lookups.countries, c.countryId)} iso2={lookups.countries.get(c.countryId ?? "")?.meta} /> },
+              { key: "type", header: t("common.type"), render: (c) => <span className="capitalize">{c.type}</span> },
+              { key: "budget", header: t("detail.budget"), align: "end", render: (c) => formatCurrency(c.plannedBudget, c.currency, locale) },
+              { key: "status", header: t("common.status"), render: (c) => <StatusBadge module="campaign" status={c.status} /> },
             ] as Column<(typeof campaigns)[number]>[]}
             rows={campaigns}
             getRowKey={(c) => c.id}
             getRowHref={(c) => `/campaigns/${c.id}`}
-            empty={<EmptyState title="No campaigns" description="Marketing campaigns for this brand will appear here." />}
+            empty={<EmptyState title={t("detail.noCampaigns")} description={t("detail.noCampaignsBody")} />}
           />
         </Panel>
       )}
@@ -152,16 +154,16 @@ export default async function BrandDetailPage({
         <Panel>
           <DataTable
             columns={[
-              { key: "product", header: "Product", render: (r) => refName(lookups.products, r.productId) },
-              { key: "country", header: "Market", render: (r) => <CountryChip name={refName(lookups.countries, r.countryId)} iso2={lookups.countries.get(r.countryId)?.meta} /> },
-              { key: "number", header: "Reg. number", render: (r) => <span className="font-mono text-xs">{r.registrationNumber ?? "—"}</span> },
-              { key: "status", header: "Status", render: (r) => <StatusBadge module="registration" status={r.status} /> },
-              { key: "expiry", header: "Expiry", align: "end", render: (r) => formatDate(r.expiryDate, locale) },
+              { key: "product", header: t("detail.product"), render: (r) => refName(lookups.products, r.productId) },
+              { key: "country", header: t("common.market"), render: (r) => <CountryChip name={refName(lookups.countries, r.countryId)} iso2={lookups.countries.get(r.countryId)?.meta} /> },
+              { key: "number", header: t("detail.regNumber"), render: (r) => <span className="font-mono text-xs">{r.registrationNumber ?? "—"}</span> },
+              { key: "status", header: t("common.status"), render: (r) => <StatusBadge module="registration" status={r.status} /> },
+              { key: "expiry", header: t("detail.expiry"), align: "end", render: (r) => formatDate(r.expiryDate, locale) },
             ] as Column<(typeof registrations)[number]>[]}
             rows={registrations}
             getRowKey={(r) => r.id}
             getRowHref={(r) => `/registrations/${r.id}`}
-            empty={<EmptyState title="No registration cases" description="Regulatory registrations for this brand will appear here." />}
+            empty={<EmptyState title={t("detail.noRegCases")} description={t("detail.noRegCasesBody")} />}
           />
         </Panel>
       )}
@@ -170,17 +172,17 @@ export default async function BrandDetailPage({
         <Panel>
           <DataTable
             columns={[
-              { key: "title", header: "Document", render: (d) => d.title },
-              { key: "country", header: "Market", render: (d) => refName(lookups.countries, d.countryId) },
+              { key: "title", header: t("detail.document"), render: (d) => d.title },
+              { key: "country", header: t("common.market"), render: (d) => refName(lookups.countries, d.countryId) },
               { key: "expiry", header: "Expiry", render: (d) => {
                 const days = daysUntil(d.expiryDate);
                 return <span className={days !== null && days < 30 ? "text-critical" : "text-ink"}>{formatDate(d.expiryDate, locale)}{days !== null && days >= 0 && days < 60 ? ` · ${days}d` : ""}</span>;
               } },
-              { key: "status", header: "Status", align: "end", render: (d) => <StatusBadge module="document" status={d.status} /> },
+              { key: "status", header: t("common.status"), align: "end", render: (d) => <StatusBadge module="document" status={d.status} /> },
             ] as Column<(typeof documents)[number]>[]}
             rows={documents}
             getRowKey={(d) => d.id}
-            empty={<EmptyState title="No documents" description="Certificates and documents for this brand will appear here." />}
+            empty={<EmptyState title={t("detail.noDocuments")} description={t("detail.noDocumentsBody")} />}
           />
         </Panel>
       )}
@@ -189,15 +191,15 @@ export default async function BrandDetailPage({
         <Panel>
           <DataTable
             columns={[
-              { key: "type", header: "Type", render: (c) => <span className="capitalize">{c.type.replace(/_/g, " ")}</span> },
-              { key: "desc", header: "Summary", render: (c) => <span className="text-ink-2">{c.description ?? "—"}</span> },
-              { key: "priority", header: "Priority", render: (c) => <span className="capitalize">{c.priority}</span> },
-              { key: "status", header: "Status", align: "end", render: (c) => <StatusBadge module="customer_case" status={c.status} /> },
+              { key: "type", header: t("common.type"), render: (c) => <span className="capitalize">{c.type.replace(/_/g, " ")}</span> },
+              { key: "desc", header: t("detail.summary"), render: (c) => <span className="text-ink-2">{c.description ?? "—"}</span> },
+              { key: "priority", header: t("common.priority"), render: (c) => <span className="capitalize">{c.priority}</span> },
+              { key: "status", header: t("common.status"), align: "end", render: (c) => <StatusBadge module="customer_case" status={c.status} /> },
             ] as Column<(typeof cases)[number]>[]}
             rows={cases}
             getRowKey={(c) => c.id}
             getRowHref={(c) => `/cases/${c.id}`}
-            empty={<EmptyState title="No customer cases" description="Customer service cases for this brand will appear here." />}
+            empty={<EmptyState title={t("detail.noCustomerCases")} description={t("detail.noCustomerCasesBody")} />}
           />
         </Panel>
       )}
@@ -208,14 +210,14 @@ export default async function BrandDetailPage({
         const num = (v: unknown) => Number(v).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 3 });
         return (
           <Panel>
-            <PanelHeader title="Financial (posted ledger, YTD)" description="Revenue and profit attributed to this brand, per legal company." action={<Link href={`/accounting/intelligence?dim=brand`} className="text-[12px] text-accent hover:underline">Full intelligence →</Link>} />
-            {!fin.hasActivity ? <EmptyState title="No ledger activity" description="No posted journal lines carry this brand yet." /> : (
+            <PanelHeader title={t("detail.finYtd")} description={t("detail.finSub")} action={<Link href={`/accounting/intelligence?dim=brand`} className="text-[12px] text-accent hover:underline">{t("detail.fullIntelligence")}</Link>} />
+            {!fin.hasActivity ? <EmptyState title={t("detail.noLedger")} description={t("detail.noLedgerBody")} /> : (
               <DataTable
                 columns={[
-                  { key: "company", header: "Company", render: (r) => <span className="text-ink">{r.companyName}</span> },
-                  { key: "revenue", header: "Revenue", align: "end", render: (r) => <span className="tabular text-ink-2">{num(r.revenue)} {r.baseCurrency}</span> },
-                  { key: "gross", header: "Gross profit", align: "end", render: (r) => <span className="tabular text-ink-2">{num(r.grossProfit)}</span> },
-                  { key: "net", header: "Net profit", align: "end", render: (r) => { const v = Number(r.netProfit); return <span className={`tabular font-medium ${v < 0 ? "text-critical" : "text-success"}`}>{num(r.netProfit)}</span>; } },
+                  { key: "company", header: t("detail.company"), render: (r) => <span className="text-ink">{r.companyName}</span> },
+                  { key: "revenue", header: t("detail.revenue"), align: "end", render: (r) => <span className="tabular text-ink-2">{num(r.revenue)} {r.baseCurrency}</span> },
+                  { key: "gross", header: t("detail.grossProfit"), align: "end", render: (r) => <span className="tabular text-ink-2">{num(r.grossProfit)}</span> },
+                  { key: "net", header: t("detail.netProfit"), align: "end", render: (r) => { const v = Number(r.netProfit); return <span className={`tabular font-medium ${v < 0 ? "text-critical" : "text-success"}`}>{num(r.netProfit)}</span>; } },
                 ] as Column<(typeof fin.rows)[number]>[]}
                 rows={fin.rows} getRowKey={(r) => r.companyId}
               />
