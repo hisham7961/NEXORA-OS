@@ -58,7 +58,7 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
       />
       <ListToolbar
         placeholder={t("companies.searchPlaceholder")}
-        filters={[{ name: "status", label: "Status", options: [{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }] }]}
+        filters={[{ name: "status", label: t("common.status"), options: [{ value: "active", label: t("status.active") }, { value: "inactive", label: t("status.inactive") }] }]}
       />
       <Panel>
         <DataTable
@@ -70,7 +70,7 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
             <div className="text-center">
               <Building2 className="mx-auto mb-2 h-6 w-6 text-ink-3" />
               <p className="text-[13px] font-medium text-ink">{t("companies.empty")}</p>
-              <p className="mt-1 text-xs text-ink-3">Legal entities you are assigned to will appear here once created in Organization settings.</p>
+              <p className="mt-1 text-xs text-ink-3">{t("co.emptyAssigned")}</p>
             </div>
           }
         />

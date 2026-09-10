@@ -37,20 +37,20 @@ export default async function TeamsPage({ searchParams }: { searchParams: Promis
     {
       key: "brand",
       header: t("common.brand"),
-      render: (t) =>
-        t.brandId
-          ? <BrandChip name={refName(lookups.brands, t.brandId)} color={lookups.brands.get(t.brandId)?.meta} />
-          : <span className="text-ink-3">Group-wide</span>,
+      render: (row) =>
+        row.brandId
+          ? <BrandChip name={refName(lookups.brands, row.brandId)} color={lookups.brands.get(row.brandId)?.meta} />
+          : <span className="text-ink-3">{t("teams.groupWide")}</span>,
     },
     { key: "department", header: t("common.department"), render: (t) => <span className="text-ink-2">{t.departmentName ?? "—"}</span> },
     { key: "members", header: t("common.members"), align: "center", render: (t) => <span className="tabular">{t.memberCount}</span> },
     {
       key: "lead",
       header: t("teams.col.lead"),
-      render: (t) =>
-        t.leadUserId
-          ? <UserChip name={refName(lookups.users, t.leadUserId)} color={lookups.users.get(t.leadUserId)?.meta} />
-          : <span className="text-ink-3">Unassigned</span>,
+      render: (row) =>
+        row.leadUserId
+          ? <UserChip name={refName(lookups.users, row.leadUserId)} color={lookups.users.get(row.leadUserId)?.meta} />
+          : <span className="text-ink-3">{t("common.unassigned")}</span>,
     },
     ...(canCreate ? [{ key: "edit", header: "", align: "end" as const, render: (t: TeamRow) => <TeamForm mode="edit" brands={brandOpts} departments={deptOpts} users={userOpts} defaults={{ id: t.id, name: t.name, brandId: t.brandId, departmentId: t.departmentId, leadUserId: t.leadUserId }} /> }] : []),
   ];
@@ -66,7 +66,7 @@ export default async function TeamsPage({ searchParams }: { searchParams: Promis
       <ListToolbar
         placeholder={t("teams.searchPlaceholder")}
         savedViewsModule="teams"
-        filters={brandOptions.length ? [{ name: "brandId", label: "Brand", options: brandOptions }] : []}
+        filters={brandOptions.length ? [{ name: "brandId", label: t("common.brand"), options: brandOptions }] : []}
       />
       <Panel>
         <DataTable

@@ -35,6 +35,6 @@ export default async function StoresPage({ searchParams }: { searchParams: Promi
       filters={[{ name: "platform", label: t("common.platform"), options: ["shopify", "woocommerce", "zid", "salla", "amazon", "custom"].map((v) => ({ value: v, label: v })) }]}
       columns={columns} rows={rows} getRowKey={(s) => s.id} getRowHref={(s) => `/stores/${s.id}`}
       page={query.page} pageSize={query.pageSize} total={total} params={sp}
-      empty={<EmptyState icon={<ShoppingBag className="h-5 w-5" />} title={t("stores.empty")} description="Connect stores and enter performance to analyze campaign → store → margin." />} />
+      empty={<EmptyState icon={<ShoppingBag className="h-5 w-5" />} title={t("stores.empty")} description={t("stores.connectBody")} />} />
   );
 }

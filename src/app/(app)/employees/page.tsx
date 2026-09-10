@@ -55,12 +55,12 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
         placeholder={t("employees.searchPlaceholder")}
         filters={[{
           name: "status",
-          label: "Status",
+          label: t("common.status"),
           options: [
-            { value: "active", label: "Active" },
-            { value: "on_leave", label: "On leave" },
-            { value: "suspended", label: "Suspended" },
-            { value: "terminated", label: "Terminated" },
+            { value: "active", label: t("status.active") },
+            { value: "on_leave", label: t("status.on_leave") },
+            { value: "suspended", label: t("status.suspended") },
+            { value: "terminated", label: t("status.terminated") },
           ],
         }]}
       />

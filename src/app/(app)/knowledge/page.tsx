@@ -54,13 +54,13 @@ export default async function KnowledgePage({ searchParams }: { searchParams: Pr
       <ListToolbar
         placeholder={t("knowledge.searchPlaceholder")}
         filters={[
-          { name: "category", label: "Category", options: CATEGORIES.map((c) => ({ value: c, label: c.replace(/_/g, " ") })) },
-          { name: "status", label: "Status", options: ["published", "in_review", "draft", "archived"].map((v) => ({ value: v, label: v.replace(/_/g, " ") })) },
+          { name: "category", label: t("common.category"), options: CATEGORIES.map((c) => ({ value: c, label: c.replace(/_/g, " ") })) },
+          { name: "status", label: t("common.status"), options: ["published", "in_review", "draft", "archived"].map((v) => ({ value: v, label: t(`status.${v}`) })) },
         ]}
       />
       <Panel>
         <DataTable columns={columns} rows={rows} getRowKey={(a) => a.id} getRowHref={(a) => `/knowledge/${a.id}`}
-          empty={<EmptyState icon={<BookOpen className="h-5 w-5" />} title={t("knowledge.empty")} description="Document SOPs, policies and product knowledge so the team has one source of truth." />} />
+          empty={<EmptyState icon={<BookOpen className="h-5 w-5" />} title={t("knowledge.empty")} description={t("kb.subtitle")} />} />
         {total > query.pageSize && <Pagination page={query.page} pageSize={query.pageSize} total={total} params={sp} />}
       </Panel>
     </>

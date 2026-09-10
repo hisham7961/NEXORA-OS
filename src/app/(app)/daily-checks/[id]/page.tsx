@@ -13,11 +13,13 @@ import { ActivityTimeline, type TimelineEntry } from "@/components/activity-time
 import { CheckExecution } from "@/components/daily-checks/check-execution";
 import { VerifyButton } from "@/components/daily-checks/manager-actions";
 import { formatDate } from "@/lib/format";
+import { getServerI18n } from "@/lib/server-i18n";
 
 export const metadata: Metadata = { title: "Daily Check" };
 
 export default async function DailyCheckInstancePage({ params }: { params: Promise<{ id: string }> }) {
   const { principal, locale } = await pageGuard("daily_checks.view");
+  const { t } = await getServerI18n();
   const { id } = await params;
   let data;
   try {
@@ -32,13 +34,13 @@ export default async function DailyCheckInstancePage({ params }: { params: Promi
 
   const editable = isOwner && instance.status !== "complete";
   const timeline: TimelineEntry[] = activity.map((a) => ({
-    id: a.id, at: a.at, actorName: a.actorId ? refName(lookups.users, a.actorId) : "System",
+    id: a.id, at: a.at, actorName: a.actorId ? refName(lookups.users, a.actorId) : t("common.system"),
     actorColor: a.actorId ? lookups.users.get(a.actorId)?.meta : null, action: a.action, summary: a.summary,
   }));
 
   return (
     <>
-      <div className="mb-1 text-xs text-ink-3"><Link href="/daily-checks" className="hover:text-ink-2">Daily Checks</Link> / {template.name}</div>
+      <div className="mb-1 text-xs text-ink-3"><Link href="/daily-checks" className="hover:text-ink-2">{t("checks.title")}</Link> / {template.name}</div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-ink">{template.name}</h1>
@@ -46,13 +48,13 @@ export default async function DailyCheckInstancePage({ params }: { params: Promi
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge module="task" status={instance.status === "complete" ? "completed" : instance.status} />
-          {instance.verifiedById ? <Badge category="success" dot>Verified</Badge> : isManager && (instance.status === "complete" || instance.status === "late") ? <VerifyButton instanceId={instance.id} /> : null}
+          {instance.verifiedById ? <Badge category="success" dot>{t("checks.verified")}</Badge> : isManager && (instance.status === "complete" || instance.status === "late") ? <VerifyButton instanceId={instance.id} /> : null}
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Panel className="lg:col-span-2">
-          <PanelHeader title="Checkpoints" description={editable ? "Complete each item; some require a note or evidence link." : "Read-only view."} />
+          <PanelHeader title={t("checks.checkpoints")} description={editable ? t("checks.checkpointsHint") : t("checks.readOnlyView")} />
           <PanelBody>
             {editable ? (
               <CheckExecution instanceId={instance.id} items={items} />
@@ -63,8 +65,8 @@ export default async function DailyCheckInstancePage({ params }: { params: Promi
                     <span className={`mt-0.5 flex h-4 w-4 items-center justify-center rounded border ${it.isDone ? "border-success bg-success text-white" : "border-line-strong"}`}>{it.isDone && <Check className="h-3 w-3" />}</span>
                     <div className="min-w-0">
                       <div className={it.isDone ? "text-ink-3 line-through" : "text-ink"}>{it.text}</div>
-                      {it.note && <div className="text-xs text-ink-3">Note: {it.note}</div>}
-                      {it.link && <a href={it.link} className="text-xs text-accent hover:underline" target="_blank" rel="noreferrer">Evidence</a>}
+                      {it.note && <div className="text-xs text-ink-3">{t("checks.noteLabel", { note: it.note })}</div>}
+                      {it.link && <a href={it.link} className="text-xs text-accent hover:underline" target="_blank" rel="noreferrer">{t("checks.evidence")}</a>}
                     </div>
                   </li>
                 ))}
@@ -74,8 +76,8 @@ export default async function DailyCheckInstancePage({ params }: { params: Promi
         </Panel>
 
         <Panel>
-          <PanelHeader title="Activity" />
-          <PanelBody><ActivityTimeline entries={timeline} locale={locale} empty="No activity yet." /></PanelBody>
+          <PanelHeader title={t("common.activity")} />
+          <PanelBody><ActivityTimeline entries={timeline} locale={locale} empty={t("common.noActivity")} /></PanelBody>
         </Panel>
       </div>
     </>

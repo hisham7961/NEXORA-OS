@@ -35,6 +35,6 @@ export default async function CertificatesPage({ searchParams }: { searchParams:
       searchPlaceholder={t("certs.searchPlaceholder")}
       columns={columns} rows={rows} getRowKey={(d) => d.id}
       page={query.page} pageSize={query.pageSize} total={total} params={sp}
-      empty={<EmptyState icon={<Award className="h-5 w-5" />} title="No certificates" description="Regulatory certificates and their expiry dates appear here." />} />
+      empty={<EmptyState icon={<Award className="h-5 w-5" />} title={t("cert.empty")} description={t("cert.emptyBody")} />} />
   );
 }

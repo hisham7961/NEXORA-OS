@@ -35,7 +35,7 @@ export default async function CalendarPage() {
       <PageHeader title={t("calendar.title")} description={t("calendar.subtitle")} />
       <Panel>
         {days.length === 0 ? (
-          <EmptyState icon={<CalendarClock className="h-5 w-5" />} title="Nothing scheduled" description="Tasks with due dates appear here as an agenda, grouped by day." />
+          <EmptyState icon={<CalendarClock className="h-5 w-5" />} title={t("cal.empty")} description={t("cal.emptyBody")} />
         ) : (
           <ul className="divide-y divide-line">
             {days.map(([day, tasks]) => (

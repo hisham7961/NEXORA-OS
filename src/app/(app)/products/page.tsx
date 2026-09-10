@@ -49,8 +49,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       <ListToolbar
         placeholder={t("products.searchPlaceholder")}
         filters={[
-          { name: "status", label: "Status", options: [{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }] },
-          { name: "brandId", label: "Brand", options: brandOptions },
+          { name: "status", label: t("common.status"), options: [{ value: "active", label: t("status.active") }, { value: "inactive", label: t("status.inactive") }] },
+          { name: "brandId", label: t("common.brand"), options: brandOptions },
         ]}
       />
       <Panel>

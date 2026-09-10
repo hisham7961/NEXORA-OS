@@ -60,7 +60,7 @@ export default async function AnswersPage({ searchParams }: { searchParams: Prom
       />
       {canApprove && requests.length > 0 && (
         <Panel className="mb-4">
-          <PanelHeader title="Pending answer requests" icon={<Inbox className="h-4 w-4" />} description="Agents have asked for official answers." />
+          <PanelHeader title={t("ans.pendingRequests")} icon={<Inbox className="h-4 w-4" />} description={t("ans.pendingRequestsBody")} />
           <ul className="divide-y divide-line">
             {requests.map((r) => (
               <li key={r.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
@@ -88,7 +88,7 @@ export default async function AnswersPage({ searchParams }: { searchParams: Prom
           rows={rows}
           getRowKey={(a) => a.id}
           getRowHref={(a) => `/answers/${a.id}`}
-          empty={<EmptyState icon={<MessagesSquare className="h-5 w-5" />} title="No approved answers yet" description="Create approved answers so agents give consistent, compliant responses." />}
+          empty={<EmptyState icon={<MessagesSquare className="h-5 w-5" />} title={t("ans.emptyApproved")} description={t("ans.emptyApprovedBody")} />}
         />
         {total > query.pageSize && <Pagination page={query.page} pageSize={query.pageSize} total={total} params={sp} />}
       </Panel>

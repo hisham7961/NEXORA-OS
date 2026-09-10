@@ -21,18 +21,18 @@ export default async function AnalyticsPage() {
         <Panel>
           <PanelHeader title={t("analytics.marketing")} />
           <PanelBody className="grid grid-cols-2 gap-4">
-            <Metric label="Live campaigns" value={a.marketing.liveCampaigns} category="success" />
+            <Metric label={t("an.liveCampaigns")} value={a.marketing.liveCampaigns} category="success" />
             <Metric label="ROAS" value={`${a.marketing.roas.toFixed(2)}×`} />
-            <Metric label="Revenue (attributed)" value={formatCurrency(a.marketing.revenue, "KWD", locale)} />
-            <Metric label="Spend" value={formatCurrency(a.marketing.spend, "KWD", locale)} />
+            <Metric label={t("an.revenueAttributed")} value={formatCurrency(a.marketing.revenue, "KWD", locale)} />
+            <Metric label={t("an.spend")} value={formatCurrency(a.marketing.spend, "KWD", locale)} />
           </PanelBody>
         </Panel>
         <Panel>
           <PanelHeader title={t("analytics.operations")} />
           <PanelBody className="grid grid-cols-2 gap-4">
-            <Metric label="Task completion" value={`${a.operations.completion}%`} sub={`${a.operations.tasksDone}/${a.operations.tasksTotal} tasks`} />
-            <Metric label="Active registrations" value={formatNumber(a.regulatory.activeRegs, locale)} />
-            <Metric label="Open customer cases" value={formatNumber(a.service.openCases, locale)} category={a.service.openCases > 0 ? "warning" : "neutral"} />
+            <Metric label={t("an.taskCompletion")} value={`${a.operations.completion}%`} sub={`${a.operations.tasksDone}/${a.operations.tasksTotal} tasks`} />
+            <Metric label={t("an.activeRegistrations")} value={formatNumber(a.regulatory.activeRegs, locale)} />
+            <Metric label={t("an.openCases")} value={formatNumber(a.service.openCases, locale)} category={a.service.openCases > 0 ? "warning" : "neutral"} />
           </PanelBody>
         </Panel>
       </div>

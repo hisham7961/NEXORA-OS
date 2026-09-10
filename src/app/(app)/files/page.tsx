@@ -44,7 +44,7 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
     { key: "category", header: t("common.category"), render: (f) => <Badge category="neutral">{FILE_CATEGORY_LABELS[f.category] ?? f.category}</Badge> },
     { key: "size", header: t("common.size"), align: "end", render: (f) => <span className="tabular text-ink-3">{formatBytes(f.sizeBytes)}</span> },
     { key: "updated", header: t("common.updated"), align: "end", render: (f) => <span className="tabular text-ink-3">{formatDate(f.updatedAt, locale)}</span> },
-    { key: "dl", header: "", align: "end", render: (f) => <a href={fileDownloadHref(f.id)} className="text-ink-3 hover:text-accent" aria-label="Download"><Download className="h-4 w-4" /></a> },
+    { key: "dl", header: "", align: "end", render: (f) => <a href={fileDownloadHref(f.id)} className="text-ink-3 hover:text-accent" aria-label={t("common.download")}><Download className="h-4 w-4" /></a> },
   ];
 
   return (
@@ -64,7 +64,7 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
         <Panel className="lg:col-span-1">
           <PanelHeader title={t("files.folders")} />
           {folders.length === 0 ? (
-            <EmptyState icon={<Folder className="h-5 w-5" />} title="No folders" description="Organize files by scope." />
+            <EmptyState icon={<Folder className="h-5 w-5" />} title={t("files.noFolders")} description={t("files.noFoldersBody")} />
           ) : (
             <ul className="divide-y divide-line">
               <li>
@@ -87,14 +87,14 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
         <div className="lg:col-span-3">
           <ListToolbar
             placeholder={t("files.searchPlaceholder")}
-            filters={[{ name: "category", label: "Category", options: CATEGORIES.map((c) => ({ value: c, label: FILE_CATEGORY_LABELS[c] })) }]}
+            filters={[{ name: "category", label: t("common.category"), options: CATEGORIES.map((c) => ({ value: c, label: FILE_CATEGORY_LABELS[c] })) }]}
           />
           <Panel>
             <DataTable
               columns={columns}
               rows={rows}
               getRowKey={(f) => f.id}
-              empty={<EmptyState icon={<FileText className="h-5 w-5" />} title="No files" description="Uploads appear here with versions and access history. Important files are never overwritten." />}
+              empty={<EmptyState icon={<FileText className="h-5 w-5" />} title={t("files.noFiles")} description={t("files.noFilesBody")} />}
             />
             {total > query.pageSize && <Pagination page={query.page} pageSize={query.pageSize} total={total} params={sp} />}
           </Panel>

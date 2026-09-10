@@ -165,7 +165,7 @@ export default async function ProductDetailPage({
             columns={[
               { key: "title", header: t("detail.document"), render: (d) => d.title },
               { key: "country", header: t("common.market"), render: (d) => <CountryChip name={refName(lookups.countries, d.countryId)} iso2={lookups.countries.get(d.countryId ?? "")?.meta} /> },
-              { key: "expiry", header: "Expiry", render: (d) => {
+              { key: "expiry", header: t("common.expiry"), render: (d) => {
                 const days = daysUntil(d.expiryDate);
                 return <span className={days !== null && days < 30 ? "text-critical" : "text-ink"}>{formatDate(d.expiryDate, locale)}{days !== null && days >= 0 && days < 60 ? ` · ${days}d` : ""}</span>;
               } },
@@ -183,7 +183,7 @@ export default async function ProductDetailPage({
           <DataTable
             columns={[
               { key: "name", header: t("detail.campaign"), render: (c) => c.name },
-              { key: "country", header: "Market", render: (c) => <CountryChip name={refName(lookups.countries, c.countryId)} iso2={lookups.countries.get(c.countryId ?? "")?.meta} /> },
+              { key: "country", header: t("common.market"), render: (c) => <CountryChip name={refName(lookups.countries, c.countryId)} iso2={lookups.countries.get(c.countryId ?? "")?.meta} /> },
               { key: "type", header: t("common.type"), render: (c) => <span className="capitalize">{c.type}</span> },
               { key: "budget", header: t("detail.budget"), align: "end", render: (c) => formatCurrency(c.plannedBudget, c.currency, locale) },
               { key: "status", header: t("common.status"), render: (c) => <StatusBadge module="campaign" status={c.status} /> },

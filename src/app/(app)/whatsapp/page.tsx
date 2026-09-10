@@ -32,7 +32,7 @@ export default async function WhatsappPage({ searchParams }: { searchParams: Pro
   const columns: Column<WhatsappCampaign>[] = [
     { key: "objective", header: t("whatsapp.col.objective"), render: (w) => w.objective ?? "—" },
     { key: "brand", header: t("common.brand"), render: (w) => <BrandChip name={refName(lookups.brands, w.brandId)} color={w.brandId ? lookups.brands.get(w.brandId)?.meta : null} /> },
-    { key: "audience", header: "Audience", render: (w) => <span className="text-ink-2">{w.audience ?? "—"}</span> },
+    { key: "audience", header: t("wa.audience"), render: (w) => <span className="text-ink-2">{w.audience ?? "—"}</span> },
     { key: "planned", header: t("whatsapp.col.planned"), render: (w) => formatDateShort(w.plannedDate, locale) },
     { key: "responsible", header: t("whatsapp.col.responsible"), render: (w) => <UserChip name={refName(lookups.users, w.responsibleUserId)} color={w.responsibleUserId ? lookups.users.get(w.responsibleUserId)?.meta : null} /> },
     { key: "status", header: t("common.status"), render: (w) => <StatusBadge module="generic" status={w.status} /> },
@@ -43,6 +43,6 @@ export default async function WhatsappPage({ searchParams }: { searchParams: Pro
       searchPlaceholder={t("whatsapp.searchPlaceholder")} columns={columns} rows={rows} getRowKey={(w) => w.id} getRowHref={(w) => `/whatsapp/${w.id}`}
       actions={canCreate && options ? <WhatsappForm mode="create" options={{ brands: options.brands, countries: options.countries, users: options.users }} /> : undefined}
       page={query.page} pageSize={query.pageSize} total={total} params={sp}
-      empty={<EmptyState icon={<MessageCircle className="h-5 w-5" />} title="No WhatsApp campaigns" description="Create a campaign, request its creative, get approval, then mark it sent and enter results." />} />
+      empty={<EmptyState icon={<MessageCircle className="h-5 w-5" />} title={t("wa.empty")} description={t("wa.emptyBody")} />} />
   );
 }

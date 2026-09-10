@@ -36,9 +36,9 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   return (
     <ResourceList title={t("expenses.title")} description={t("expenses.subtitle")} countLabel={t("expenses.count")} savedViewsModule="expenses"
       searchPlaceholder="Search expenses…"
-      filters={[{ name: "status", label: "Status", options: ["draft", "pending", "approved", "rejected", "paid"].map((v) => ({ value: v, label: v })) }]}
+      filters={[{ name: "status", label: t("common.status"), options: ["draft", "pending", "approved", "rejected", "paid"].map((v) => ({ value: v, label: t(`status.${v}`) })) }]}
       columns={columns} rows={rows} getRowKey={(e) => e.id}
       page={query.page} pageSize={query.pageSize} total={total} params={sp}
-      empty={<EmptyState icon={<Receipt className="h-5 w-5" />} title={t("expenses.empty")} description="Record expenses with analytical dimensions for profitability analysis." />} />
+      empty={<EmptyState icon={<Receipt className="h-5 w-5" />} title={t("expenses.empty")} description={t("exp.subtitle")} />} />
   );
 }

@@ -19,10 +19,10 @@ export default async function SalesPage() {
       <PageHeader title={t("sales.title")} description={t("sales.subtitle", { n: storeCount })} />
       <Panel className="mb-4">
         <PanelBody className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <Metric label="Sales" value={formatCurrency(totals.sales, "KWD", locale)} />
-          <Metric label="Orders" value={formatNumber(totals.orders, locale)} />
-          <Metric label="Returns" value={formatNumber(totals.returns, locale)} category={totals.returns > 0 ? "warning" : "neutral"} />
-          <Metric label="Gross margin" value={formatCurrency(totals.margin, "KWD", locale)} category="success" />
+          <Metric label={t("sal.title")} value={formatCurrency(totals.sales, "KWD", locale)} />
+          <Metric label={t("sal.orders")} value={formatNumber(totals.orders, locale)} />
+          <Metric label={t("sal.returns")} value={formatNumber(totals.returns, locale)} category={totals.returns > 0 ? "warning" : "neutral"} />
+          <Metric label={t("sal.grossMargin")} value={formatCurrency(totals.margin, "KWD", locale)} category="success" />
         </PanelBody>
       </Panel>
       <Panel>

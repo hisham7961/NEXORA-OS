@@ -174,7 +174,7 @@ export default async function BrandDetailPage({
             columns={[
               { key: "title", header: t("detail.document"), render: (d) => d.title },
               { key: "country", header: t("common.market"), render: (d) => refName(lookups.countries, d.countryId) },
-              { key: "expiry", header: "Expiry", render: (d) => {
+              { key: "expiry", header: t("common.expiry"), render: (d) => {
                 const days = daysUntil(d.expiryDate);
                 return <span className={days !== null && days < 30 ? "text-critical" : "text-ink"}>{formatDate(d.expiryDate, locale)}{days !== null && days >= 0 && days < 60 ? ` · ${days}d` : ""}</span>;
               } },

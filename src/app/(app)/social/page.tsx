@@ -34,15 +34,15 @@ export default async function SocialPage({ searchParams }: { searchParams: Promi
   ]);
 
   const columns: Column<PublishingItem>[] = [
-    { key: "type", header: "Content", render: (p) => <span className="capitalize">{p.contentType}</span> },
-    { key: "platform", header: "Platform", render: (p) => <span className="capitalize">{p.platform ?? "—"}</span> },
+    { key: "type", header: t("soc.content"), render: (p) => <span className="capitalize">{p.contentType}</span> },
+    { key: "platform", header: t("common.platform"), render: (p) => <span className="capitalize">{p.platform ?? "—"}</span> },
     { key: "brand", header: t("common.brand"), render: (p) => <BrandChip name={refName(lookups.brands, p.brandId)} color={p.brandId ? lookups.brands.get(p.brandId)?.meta : null} /> },
     { key: "date", header: t("social.col.publish"), render: (p) => formatDateShort(p.publishDate, locale) },
     { key: "owner", header: t("common.owner"), render: (p) => <UserChip name={refName(lookups.users, p.ownerId)} color={p.ownerId ? lookups.users.get(p.ownerId)?.meta : null} /> },
     { key: "checks", header: t("social.col.checkpoints"), render: (p) => (
       <span className="flex gap-1">
-        <Badge category={p.scheduledConfirmedAt ? "success" : "neutral"}>Sched</Badge>
-        <Badge category={p.publishedConfirmedAt ? "success" : "neutral"}>Pub</Badge>
+        <Badge category={p.scheduledConfirmedAt ? "success" : "neutral"}>{t("soc.sched")}</Badge>
+        <Badge category={p.publishedConfirmedAt ? "success" : "neutral"}>{t("soc.pub")}</Badge>
       </span>
     ) },
     { key: "status", header: t("common.status"), render: (p) => <StatusBadge module="publishing" status={p.status} /> },
@@ -74,7 +74,7 @@ export default async function SocialPage({ searchParams }: { searchParams: Promi
           rows={rows}
           getRowKey={(p) => p.id}
           getRowHref={(p) => `/social/${p.id}`}
-          empty={<EmptyState icon={<Share2 className="h-5 w-5" />} title="No publishing items" description="Plan posts, stories and reels; mark them Scheduled then Published as separate checkpoints." />}
+          empty={<EmptyState icon={<Share2 className="h-5 w-5" />} title={t("soc.empty")} description={t("soc.emptyBody")} />}
         />
         {total > query.pageSize && <Pagination page={query.page} pageSize={query.pageSize} total={total} params={sp} />}
       </Panel>
