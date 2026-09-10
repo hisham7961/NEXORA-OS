@@ -10,12 +10,14 @@ import { UserChip } from "@/components/entity-chips";
 import { ClockWidget } from "@/components/attendance/clock-widget";
 import { RequestCorrectionButton, CorrectionList, type CorrectionRow } from "@/components/attendance/corrections";
 import { formatDateTime } from "@/lib/format";
+import { getServerI18n } from "@/lib/server-i18n";
 
 export const metadata: Metadata = { title: "Attendance" };
 
 export default async function AttendancePage() {
   const { principal, locale, denied } = await pageGuard("attendance.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const canManage = canAnywhere(principal, "attendance.manage");
   const [my, { rows, summary }, myCorrections, pendingCorrections, lookups] = await Promise.all([
     getMyAttendanceToday(principal),
@@ -31,9 +33,9 @@ export default async function AttendancePage() {
 
   return (
     <>
-      <PageHeader title="Attendance" description="Today's attendance — an accountability system, not surveillance (§22)." actions={<RequestCorrectionButton />} />
+      <PageHeader title={t("att.title")} description={t("att.subtitle")} actions={<RequestCorrectionButton />} />
       <Panel className="mb-4">
-        <PanelHeader title="My clock" description="Check in, take breaks, and check out. Transitions are validated." />
+        <PanelHeader title={t("att.myClock")} description={t("att.myClockSub")} />
         <PanelBody>
           <ClockWidget
             state={my.state}
@@ -44,37 +46,37 @@ export default async function AttendancePage() {
       </Panel>
       <Panel className="mb-4">
         <div className="grid grid-cols-2 gap-4 p-4 sm:grid-cols-4">
-          <Metric label="Present" value={summary.present} category="success" />
-          <Metric label="Late" value={summary.late} category={summary.late > 0 ? "warning" : "neutral"} />
-          <Metric label="Absent" value={summary.absent} category={summary.absent > 0 ? "critical" : "neutral"} />
-          <Metric label="On leave" value={summary.leave} category="info" />
+          <Metric label={t("att.present")} value={summary.present} category="success" />
+          <Metric label={t("att.late")} value={summary.late} category={summary.late > 0 ? "warning" : "neutral"} />
+          <Metric label={t("att.absent")} value={summary.absent} category={summary.absent > 0 ? "critical" : "neutral"} />
+          <Metric label={t("att.onLeave")} value={summary.leave} category="info" />
         </div>
       </Panel>
       <Panel>
-        <PanelHeader title="Today" />
+        <PanelHeader title={t("att.today")} />
         <DataTable
           columns={[
-            { key: "user", header: "Employee", render: (r) => <UserChip name={r.user.name} color={r.user.avatarColor} /> },
-            { key: "expected", header: "Expected start", render: (r) => formatDateTime(r.expectedStart, locale) },
-            { key: "actual", header: "Actual start", render: (r) => formatDateTime(r.actualStart, locale) },
-            { key: "late", header: "Late (min)", align: "end", render: (r) => <span className={r.lateMinutes > 0 ? "text-warning tabular" : "text-ink-3 tabular"}>{r.lateMinutes}</span> },
-            { key: "status", header: "Status", align: "end", render: (r) => <StatusBadge module="attendance" status={r.status} /> },
+            { key: "user", header: t("att.employee"), render: (r) => <UserChip name={r.user.name} color={r.user.avatarColor} /> },
+            { key: "expected", header: t("att.expectedStart"), render: (r) => formatDateTime(r.expectedStart, locale) },
+            { key: "actual", header: t("att.actualStart"), render: (r) => formatDateTime(r.actualStart, locale) },
+            { key: "late", header: t("att.lateMin"), align: "end", render: (r) => <span className={r.lateMinutes > 0 ? "text-warning tabular" : "text-ink-3 tabular"}>{r.lateMinutes}</span> },
+            { key: "status", header: t("common.status"), align: "end", render: (r) => <StatusBadge module="attendance" status={r.status} /> },
           ]}
           rows={rows}
           getRowKey={(r) => r.id}
-          empty={<EmptyState icon={<Clock className="h-5 w-5" />} title="No attendance records today" description="Check-in / check-out events appear here with lateness and overtime." />}
+          empty={<EmptyState icon={<Clock className="h-5 w-5" />} title={t("att.noRecords")} description={t("att.noRecordsBody")} />}
         />
       </Panel>
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         {canManage && (
           <Panel>
-            <PanelHeader title="Corrections to review" description="Approve, request changes, or reject." />
+            <PanelHeader title={t("att.correctionsReview")} description={t("att.correctionsReviewSub")} />
             <CorrectionList rows={pendingCorrections.map(toRow)} canDecide />
           </Panel>
         )}
         <Panel>
-          <PanelHeader title="My correction requests" />
+          <PanelHeader title={t("att.myCorrections")} />
           <CorrectionList rows={myCorrections.map(toRow)} canDecide={false} />
         </Panel>
       </div>
