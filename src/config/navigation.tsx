@@ -4,7 +4,7 @@ import {
   Package, FileCheck, Award, FileText, LifeBuoy, MessagesSquare, Building2, Gem,
   Globe, Users, UserRound, Clock, BookOpen, Folder, MessageSquare, Wallet,
   Receipt, CreditCard, BarChart3, PieChart, UserCog, KeyRound, History, Terminal,
-  Activity, Settings, Workflow, BookOpenCheck, Scale, BarChart4, Landmark,
+  Activity, Settings, Workflow, BookOpenCheck, Scale, BarChart4, Landmark, Rocket,
   FileMinus, HandCoins, ReceiptText, Upload, ShieldAlert, Webhook, type LucideIcon,
 } from "lucide-react";
 import type { TranslationKey } from "@/i18n";
@@ -163,6 +163,7 @@ export const NAVIGATION: NavGroup[] = [
       { key: "acc-budgets", labelKey: "nav.budgets", href: "/accounting/budgets", icon: PieChart, permission: "budgets.view" },
       { key: "acc-reports", labelKey: "nav.financialReports", href: "/accounting/reports", icon: Scale, permission: "accounting.view" },
       { key: "acc-intelligence", labelKey: "nav.financialIntelligence", href: "/accounting/intelligence", icon: BarChart4, permission: "accounting.view" },
+      { key: "acc-opening", labelKey: "nav.openingBalances", href: "/accounting/opening-balances", icon: Landmark, permission: "accounting.post" },
     ],
   },
   {
@@ -181,6 +182,7 @@ export const NAVIGATION: NavGroup[] = [
       { key: "audit", labelKey: "nav.auditLog", href: "/admin/audit", icon: History, permission: "audit.view" },
       { key: "developer", labelKey: "nav.developer", href: "/admin/developer", icon: Terminal, permission: "developer.view" },
       { key: "webhooks", labelKey: "nav.webhooks", href: "/admin/webhooks", icon: Webhook, permission: "settings.view" },
+      { key: "go-live", labelKey: "nav.goLive", href: "/admin/go-live", icon: Rocket, permission: "settings.view" },
       { key: "system-health", labelKey: "nav.systemHealth", href: "/admin/system", icon: Activity, permission: "developer.view" },
       { key: "import", labelKey: "nav.importData", href: "/admin/import", icon: Upload, permission: "settings.view" },
       { key: "data-quality", labelKey: "nav.dataQuality", href: "/admin/data-quality", icon: ShieldAlert, permission: "settings.view" },
