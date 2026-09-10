@@ -9,6 +9,7 @@ import { getLookups } from "@/domain/lookups";
 import { listSelectableUsers } from "@/domain/permissions-admin";
 import { ChannelWorkspace, type WsMessage, type UserMap } from "@/components/discussions/channel-workspace";
 import { MarkRead } from "@/components/discussions/mark-read";
+import { ChannelLive } from "@/components/discussions/channel-live";
 
 export const metadata: Metadata = { title: "Channel" };
 
@@ -46,6 +47,7 @@ export default async function ChannelPage({ params }: { params: Promise<{ id: st
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <MarkRead channelId={id} />
+      <ChannelLive channelId={id} />
       <div className="flex items-center gap-2 border-b border-line px-4 py-2.5">
         {channel.isPrivate ? <Lock className="h-4 w-4 text-ink-3" /> : <Hash className="h-4 w-4 text-ink-3" />}
         <h1 className="text-[14px] font-semibold text-ink">{channel.name}</h1>
