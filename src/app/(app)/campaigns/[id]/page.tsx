@@ -7,6 +7,7 @@ import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
 import { canAnywhere, ForbiddenError } from "@/lib/permissions/engine";
 import { getCampaign } from "@/domain/campaigns";
+import { getServerI18n } from "@/lib/server-i18n";
 import { getActivity } from "@/domain/mutation";
 import { getScopedOptions } from "@/domain/options";
 import { getLookups, refName } from "@/domain/lookups";
@@ -32,6 +33,7 @@ export default async function CampaignDetailPage({
   searchParams: Promise<Record<string, string>>;
 }) {
   const { principal, locale } = await pageGuard("campaigns.view");
+  const { t } = await getServerI18n();
   const { id } = await params;
   const tab = (await searchParams).tab ?? "overview";
 
@@ -52,7 +54,7 @@ export default async function CampaignDetailPage({
     canEdit ? getScopedOptions(principal, "campaigns.edit") : Promise.resolve(null),
   ]);
   const timeline: TimelineEntry[] = activity.map((a) => ({
-    id: a.id, at: a.at, actorName: a.actorId ? refName(lookups.users, a.actorId) : "System",
+    id: a.id, at: a.at, actorName: a.actorId ? refName(lookups.users, a.actorId) : t("common.system"),
     actorColor: a.actorId ? lookups.users.get(a.actorId)?.meta : null, action: a.action, summary: a.summary,
   }));
 
@@ -62,19 +64,19 @@ export default async function CampaignDetailPage({
   const pctSpent = planned > 0 ? Math.round((spend / planned) * 100) : null;
 
   const tabs: TabItem[] = [
-    { key: "overview", label: "Overview" },
-    { key: "metrics", label: "Metrics", count: metrics.length },
-    { key: "products", label: "Products", count: campaignProducts.length },
-    { key: "reports", label: "Reports", count: reports.length },
-    { key: "tasks", label: "Tasks", count: tasks.length },
-    { key: "activity", label: "Activity" },
+    { key: "overview", label: t("detail.tab.overview") },
+    { key: "metrics", label: t("detail.tab.metrics"), count: metrics.length },
+    { key: "products", label: t("detail.tab.products"), count: campaignProducts.length },
+    { key: "reports", label: t("detail.tab.reports"), count: reports.length },
+    { key: "tasks", label: t("detail.tab.tasks"), count: tasks.length },
+    { key: "activity", label: t("detail.tab.activity") },
   ];
 
   return (
     <>
       {/* 360 header (§44) */}
       <div className="mb-1 text-xs text-ink-3">
-        <Link href="/campaigns" className="hover:text-ink-2">Campaigns</Link> <span className="mx-1">/</span> {campaign.name}
+        <Link href="/campaigns" className="hover:text-ink-2">{t("detail.tab.campaigns")}</Link> <span className="mx-1">/</span> {campaign.name}
       </div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -113,39 +115,39 @@ export default async function CampaignDetailPage({
       {tab === "overview" && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <Panel className="lg:col-span-2">
-            <PanelHeader title="Brief" description="Objective, targeting and schedule" />
+            <PanelHeader title={t("camp.brief")} description={t("camp.briefSub")} />
             <dl className="grid grid-cols-1 gap-px bg-line sm:grid-cols-2">
-              <Field label="Objective" value={campaign.objective ?? "—"} />
-              <Field label="Type" value={<span className="capitalize">{campaign.type}</span>} />
-              <Field label="Brand" value={<BrandChip name={refName(lookups.brands, campaign.brandId)} color={lookups.brands.get(campaign.brandId ?? "")?.meta} />} />
-              <Field label="Market" value={<CountryChip name={refName(lookups.countries, campaign.countryId)} iso2={lookups.countries.get(campaign.countryId ?? "")?.meta} />} />
-              <Field label="Owner" value={campaign.ownerId ? <UserChip name={refName(lookups.users, campaign.ownerId)} color={lookups.users.get(campaign.ownerId)?.meta} /> : "—"} />
-              <Field label="Currency" value={<span className="font-mono">{campaign.currency}</span>} />
-              <Field label="Start" value={formatDate(campaign.startDate, locale)} />
-              <Field label="End" value={formatDate(campaign.endDate, locale)} />
-              <Field label="Target audience" value={campaign.targetAudience ?? "—"} />
-              <Field label="Status" value={<StatusBadge module="campaign" status={campaign.status} />} />
+              <Field label={t("camp.objective")} value={campaign.objective ?? "—"} />
+              <Field label={t("common.type")} value={<span className="capitalize">{campaign.type}</span>} />
+              <Field label={t("common.brand")} value={<BrandChip name={refName(lookups.brands, campaign.brandId)} color={lookups.brands.get(campaign.brandId ?? "")?.meta} />} />
+              <Field label={t("common.market")} value={<CountryChip name={refName(lookups.countries, campaign.countryId)} iso2={lookups.countries.get(campaign.countryId ?? "")?.meta} />} />
+              <Field label={t("camp.owner")} value={campaign.ownerId ? <UserChip name={refName(lookups.users, campaign.ownerId)} color={lookups.users.get(campaign.ownerId)?.meta} /> : "—"} />
+              <Field label={t("common.currency")} value={<span className="font-mono">{campaign.currency}</span>} />
+              <Field label={t("camp.start")} value={formatDate(campaign.startDate, locale)} />
+              <Field label={t("camp.end")} value={formatDate(campaign.endDate, locale)} />
+              <Field label={t("camp.targetAudience")} value={campaign.targetAudience ?? "—"} />
+              <Field label={t("common.status")} value={<StatusBadge module="campaign" status={campaign.status} />} />
             </dl>
             {campaign.notes && (
               <PanelBody className="border-t border-line">
-                <p className="text-xs text-ink-3">Notes</p>
+                <p className="text-xs text-ink-3">{t("camp.notes")}</p>
                 <p className="mt-1 text-[13px] text-ink whitespace-pre-line">{campaign.notes}</p>
               </PanelBody>
             )}
           </Panel>
           <Panel>
-            <PanelHeader title="Budget vs spend" description="Planned budget against actual spend" />
+            <PanelHeader title={t("camp.budgetVsSpend")} description={t("camp.budgetVsSpendSub")} />
             <PanelBody>
               <div className="grid grid-cols-2 gap-4">
-                <Metric label="Planned budget" value={formatCurrency(campaign.plannedBudget, campaign.currency, locale)} />
-                <Metric label="Actual spend" value={formatCurrency(campaign.actualSpend, campaign.currency, locale)} />
+                <Metric label={t("camp.plannedBudget")} value={formatCurrency(campaign.plannedBudget, campaign.currency, locale)} />
+                <Metric label={t("camp.actualSpend")} value={formatCurrency(campaign.actualSpend, campaign.currency, locale)} />
                 <Metric
-                  label={remaining < 0 ? "Over budget" : "Remaining"}
+                  label={remaining < 0 ? t("camp.overBudget") : t("camp.remaining")}
                   value={formatCurrency(Math.abs(remaining), campaign.currency, locale)}
                   category={remaining < 0 ? "critical" : "success"}
                 />
                 <Metric
-                  label="Budget used"
+                  label={t("camp.budgetUsed")}
                   value={pctSpent === null ? "—" : `${pctSpent}%`}
                   category={pctSpent !== null && pctSpent > 100 ? "critical" : pctSpent !== null && pctSpent > 85 ? "warning" : "neutral"}
                 />
@@ -154,7 +156,7 @@ export default async function CampaignDetailPage({
           </Panel>
           {canEdit && (
             <Panel className="lg:col-span-3">
-              <PanelHeader title="Actions" description="Advance the campaign through its lifecycle. Every change is audited." />
+              <PanelHeader title={t("camp.actions")} description={t("camp.actionsSub")} />
               <PanelBody><CampaignStatusBar campaignId={campaign.id} status={campaign.status} /></PanelBody>
             </Panel>
           )}
@@ -167,22 +169,22 @@ export default async function CampaignDetailPage({
       {tab === "metrics" && (
         <Panel>
           <PanelHeader
-            title="Performance metrics"
-            description="Actual results and targets. Non-target spend metrics are the single source of Actual spend — the budget derives from them."
+            title={t("camp.performanceMetrics")}
+            description={t("camp.performanceMetricsSub")}
             action={canEdit ? <AddMetricButton campaignId={campaign.id} /> : undefined}
           />
           <DataTable
             columns={[
-              { key: "name", header: "Metric", render: (m) => <span className="capitalize">{m.name}</span> },
-              { key: "value", header: "Value", align: "end", render: (m) => <span className="font-medium">{formatNumber(m.value, locale)}</span> },
-              { key: "unit", header: "Unit", render: (m) => m.unit ?? "—" },
-              { key: "kind", header: "Kind", render: (m) => (m.isTarget ? <Badge category="info">Target</Badge> : <span className="text-ink-3">Actual</span>) },
-              { key: "date", header: "Date", align: "end", render: (m) => formatDate(m.date, locale) },
+              { key: "name", header: t("camp.metric"), render: (m) => <span className="capitalize">{m.name}</span> },
+              { key: "value", header: t("camp.value"), align: "end", render: (m) => <span className="font-medium">{formatNumber(m.value, locale)}</span> },
+              { key: "unit", header: t("camp.unit"), render: (m) => m.unit ?? "—" },
+              { key: "kind", header: t("camp.kind"), render: (m) => (m.isTarget ? <Badge category="info">{t("camp.target")}</Badge> : <span className="text-ink-3">{t("camp.actual")}</span>) },
+              { key: "date", header: t("common.date"), align: "end", render: (m) => formatDate(m.date, locale) },
               ...(canEdit ? [{ key: "del", header: "", align: "end" as const, render: (m: (typeof metrics)[number]) => <DeleteMetricButton campaignId={campaign.id} metricId={m.id} /> }] : []),
             ] as Column<(typeof metrics)[number]>[]}
             rows={metrics}
             getRowKey={(m) => m.id}
-            empty={<EmptyState title="No metrics recorded" description="Performance metrics for this campaign — spend, impressions, reach, clicks, conversions and targets — will appear here once they are logged." />}
+            empty={<EmptyState title={t("camp.noMetrics")} description={t("camp.noMetricsBody")} />}
           />
         </Panel>
       )}
@@ -191,13 +193,13 @@ export default async function CampaignDetailPage({
         <Panel>
           <DataTable
             columns={[
-              { key: "name", header: "Product", render: (cp) => refName(lookups.products, cp.productId) },
+              { key: "name", header: t("detail.product"), render: (cp) => refName(lookups.products, cp.productId) },
               { key: "sku", header: "SKU", align: "end", render: (cp) => <span className="font-mono text-xs text-ink-3">{lookups.products.get(cp.productId)?.meta ?? "—"}</span> },
             ] as Column<(typeof campaignProducts)[number]>[]}
             rows={campaignProducts}
             getRowKey={(cp) => cp.id}
             getRowHref={(cp) => `/products/${cp.productId}`}
-            empty={<EmptyState title="No products linked" description="Products promoted by this campaign will appear here. Linking products keeps spend and performance tied to the catalog." />}
+            empty={<EmptyState title={t("camp.noProductsLinked")} description={t("camp.noProductsLinkedBody")} />}
           />
         </Panel>
       )}
@@ -206,13 +208,13 @@ export default async function CampaignDetailPage({
         <Panel>
           <DataTable
             columns={[
-              { key: "date", header: "Date", render: (r) => formatDate(r.date, locale) },
-              { key: "summary", header: "Summary", render: (r) => <span className="text-ink-2">{r.summary ?? "—"}</span> },
-              { key: "author", header: "Author", align: "end", render: (r) => (r.authorId ? <UserChip name={refName(lookups.users, r.authorId)} color={lookups.users.get(r.authorId)?.meta} /> : "—") },
+              { key: "date", header: t("common.date"), render: (r) => formatDate(r.date, locale) },
+              { key: "summary", header: t("detail.summary"), render: (r) => <span className="text-ink-2">{r.summary ?? "—"}</span> },
+              { key: "author", header: t("camp.author"), align: "end", render: (r) => (r.authorId ? <UserChip name={refName(lookups.users, r.authorId)} color={lookups.users.get(r.authorId)?.meta} /> : "—") },
             ] as Column<(typeof reports)[number]>[]}
             rows={reports}
             getRowKey={(r) => r.id}
-            empty={<EmptyState title="No reports yet" description="Performance reviews and post-mortems for this campaign will appear here. Reports capture what happened and what to do next." />}
+            empty={<EmptyState title={t("camp.noReports")} description={t("camp.noReportsBody")} />}
           />
         </Panel>
       )}
@@ -221,23 +223,23 @@ export default async function CampaignDetailPage({
         <Panel>
           <DataTable
             columns={[
-              { key: "title", header: "Task", render: (t) => t.title },
-              { key: "priority", header: "Priority", render: (t) => <span className="capitalize">{t.priority}</span> },
-              { key: "owner", header: "Owner", render: (t) => (t.ownerId ? <UserChip name={refName(lookups.users, t.ownerId)} color={lookups.users.get(t.ownerId)?.meta} /> : "—") },
-              { key: "due", header: "Due", render: (t) => formatDate(t.dueDate, locale) },
-              { key: "status", header: "Status", align: "end", render: (t) => <StatusBadge module="task" status={t.status} /> },
+              { key: "title", header: t("detail.task"), render: (t) => t.title },
+              { key: "priority", header: t("common.priority"), render: (t) => <span className="capitalize">{t.priority}</span> },
+              { key: "owner", header: t("camp.owner"), render: (t) => (t.ownerId ? <UserChip name={refName(lookups.users, t.ownerId)} color={lookups.users.get(t.ownerId)?.meta} /> : "—") },
+              { key: "due", header: t("common.due"), render: (t) => formatDate(t.dueDate, locale) },
+              { key: "status", header: t("common.status"), align: "end", render: (t) => <StatusBadge module="task" status={t.status} /> },
             ] as Column<(typeof tasks)[number]>[]}
             rows={tasks}
             getRowKey={(t) => t.id}
-            empty={<EmptyState title="No related tasks" description="Work items linked to this campaign will appear here, so the team can see everything this campaign depends on in one place." />}
+            empty={<EmptyState title={t("camp.noRelatedTasks")} description={t("camp.noRelatedTasksBody")} />}
           />
         </Panel>
       )}
 
       {tab === "activity" && (
         <Panel>
-          <PanelHeader title="Activity" description="Every change to this campaign, from the audit trail." />
-          <PanelBody><ActivityTimeline entries={timeline} locale={locale} empty="No activity yet." /></PanelBody>
+          <PanelHeader title={t("detail.tab.activity")} description={t("camp.activitySub")} />
+          <PanelBody><ActivityTimeline entries={timeline} locale={locale} empty={t("camp.noActivity")} /></PanelBody>
         </Panel>
       )}
     </>
