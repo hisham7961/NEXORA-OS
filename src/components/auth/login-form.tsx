@@ -35,9 +35,19 @@ export function LoginForm({ demoAccounts }: { demoAccounts: { label: string; ema
           <Input id="password" name="password" type="password" autoComplete="current-password" required placeholder="••••••••" defaultValue={demoAccounts.length ? "password" : undefined} />
         </Field>
 
-        {state.error && (
+        {state.mfaRequired && (
+          <Field label={t("auth.mfaCode")} htmlFor="code">
+            <Input id="code" name="code" inputMode="numeric" autoComplete="one-time-code" autoFocus placeholder="123 456" />
+          </Field>
+        )}
+
+        {state.mfaRequired && !state.error?.startsWith("mfa_invalid") ? (
+          <div className="rounded-md border border-line bg-surface-2/50 px-3 py-2 text-[13px] text-ink-2">
+            {t("auth.mfaPrompt")}
+          </div>
+        ) : state.error && (
           <div className="rounded-md border border-critical/30 bg-critical-soft px-3 py-2 text-[13px] text-critical">
-            {state.error === "rate_limited" ? t("auth.tooMany") : t("auth.invalid")}
+            {state.error === "rate_limited" ? t("auth.tooMany") : state.error.startsWith("mfa") ? t("auth.mfaInvalid") : t("auth.invalid")}
           </div>
         )}
 

@@ -62,6 +62,11 @@ model User {
   title        String?
   phone        String?
   lastLoginAt  DateTime?
+  // MFA / TOTP (§26-27). Secret is sealed (AES-GCM) at rest; recovery codes are
+  // stored only as hashes. mfaEnabledAt null = not yet confirmed (or disabled).
+  mfaSecret       String?
+  mfaEnabledAt    DateTime?
+  mfaRecoveryJson String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   archivedAt   DateTime?

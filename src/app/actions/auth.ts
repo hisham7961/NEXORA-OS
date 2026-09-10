@@ -17,6 +17,8 @@ const credentialsSchema = z.object({
 
 export interface AuthState {
   error?: string;
+  /** Set when the password was correct but a second factor (TOTP) is still needed. */
+  mfaRequired?: boolean;
 }
 
 export async function signInAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
@@ -43,6 +45,18 @@ export async function signInAction(_prev: AuthState, formData: FormData): Promis
 
   if (!user || !valid) {
     return { error: "invalid" };
+  }
+
+  // Second factor (§26). If the account has MFA enabled, the password alone is not
+  // enough: require a valid TOTP or recovery code in the same submission.
+  const { isMfaEnabled, verifyMfaForLogin } = await import("@/domain/mfa");
+  if (await isMfaEnabled(user.id)) {
+    const code = String(formData.get("code") ?? "").trim();
+    if (!code) return { error: "mfa_required", mfaRequired: true };
+    if (!(await verifyMfaForLogin(user.id, code))) {
+      await writeAudit({ actorId: user.id, action: "auth.mfa_failed", entityType: "User", entityId: user.id }).catch(() => {});
+      return { error: "mfa_invalid", mfaRequired: true };
+    }
   }
 
   const hdrs = await headers();

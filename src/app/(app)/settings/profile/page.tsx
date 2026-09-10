@@ -3,7 +3,9 @@ import { requireUser, requirePrincipal } from "@/lib/auth/current-user";
 import { describeUserAccess } from "@/domain/permissions-admin";
 import { listMySessions } from "@/domain/sessions";
 import { getCurrentSessionId } from "@/lib/auth/session";
+import { mfaStatus, mfaRequiredFor } from "@/domain/mfa";
 import { SessionManager, type SessionRow } from "@/components/settings/session-manager";
+import { MfaCard } from "@/components/settings/mfa-card";
 import { PageHeader, Panel, PanelHeader, PanelBody, Avatar, Badge } from "@/components/ui";
 
 export const metadata: Metadata = { title: "My Profile" };
@@ -18,6 +20,7 @@ export default async function ProfilePage() {
     id: s.id, userAgent: s.userAgent, ip: s.ip, current: s.current,
     createdAt: s.createdAt.toISOString(), lastActiveAt: s.lastActiveAt ? s.lastActiveAt.toISOString() : null,
   }));
+  const [mfa, mfaRequired] = await Promise.all([mfaStatus(user.id), mfaRequiredFor(principal)]);
 
   return (
     <>
@@ -71,6 +74,13 @@ export default async function ProfilePage() {
                 </table>
               </div>
             )}
+          </PanelBody>
+        </Panel>
+
+        <Panel className="lg:col-span-3">
+          <PanelHeader title="Two-factor authentication" description="Protect your account with a second step at sign-in." />
+          <PanelBody>
+            <MfaCard status={{ enabled: mfa.enabled, enrolledAt: mfa.enrolledAt ? mfa.enrolledAt.toISOString() : null, recoveryRemaining: mfa.recoveryRemaining }} required={mfaRequired} />
           </PanelBody>
         </Panel>
 

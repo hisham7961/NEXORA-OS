@@ -122,6 +122,9 @@ export const dictionaries = {
     "auth.invalid": "Invalid email or password",
     "auth.tooMany": "Too many attempts. Please wait a moment and try again.",
     "auth.demoHint": "Demo accounts",
+    "auth.mfaCode": "Authentication code",
+    "auth.mfaPrompt": "Enter the 6-digit code from your authenticator app (or a recovery code).",
+    "auth.mfaInvalid": "That code is incorrect or expired. Try again.",
 
     "cc.title": "Command Center",
     "cc.needsAttention": "Needs Attention",
@@ -258,6 +261,9 @@ export const dictionaries = {
     "auth.invalid": "البريد الإلكتروني أو كلمة المرور غير صحيحة",
     "auth.tooMany": "محاولات كثيرة. انتظر لحظة ثم أعد المحاولة.",
     "auth.demoHint": "حسابات تجريبية",
+    "auth.mfaCode": "رمز التحقق",
+    "auth.mfaPrompt": "أدخل الرمز المكوَّن من 6 أرقام من تطبيق المصادقة (أو رمز استرداد).",
+    "auth.mfaInvalid": "الرمز غير صحيح أو منتهي الصلاحية. حاول مرة أخرى.",
 
     "cc.title": "مركز القيادة",
     "cc.needsAttention": "يتطلب انتباهك",
