@@ -151,7 +151,7 @@ function MessageItem({ m, users, currentUserId, canManage, channelId, onReply, o
           <div className="flex items-center gap-2">
             <span className="text-[13px] font-semibold text-ink">{author?.name ?? t("chat.unknown")}</span>
             <span className="text-[11px] text-ink-3">{timeAgo(m.createdAt)}{m.editedAt ? ` · ${t("chat.edited")}` : ""}</span>
-            {kind && <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-2">{kind.label}</span>}
+            {kind && <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-2">{t(kind.labelKey)}</span>}
             {m.isPinned && <Pin className="h-3 w-3 text-accent" />}
           </div>
           {editing ? (

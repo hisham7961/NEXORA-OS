@@ -54,17 +54,17 @@ export function WebhookManager({ webhooks, knownEvents }: { webhooks: WebhookRow
             <Button size="sm" variant="secondary" onClick={copy}>{copied ? <><Check className="h-3.5 w-3.5" /> {t("sec.copied")}</> : <><Copy className="h-3.5 w-3.5" /> {t("sec.copy")}</>}</Button>
             <Button size="sm" variant="ghost" onClick={() => setFresh(null)}>{t("sec.done")}</Button>
           </div>
-          <p className="mt-1 text-[11px] text-ink-3">Verify deliveries: <code>HMAC-SHA256(secret, body)</code> equals the <code>X-Nexora-Signature</code> header (sha256=…).</p>
+          <p className="mt-1 text-[11px] text-ink-3">Verify deliveries: <code>HMAC-SHA256(secret, body)</code> equals the <code>X-Nexora-Signature</code> header (sha256=…).{/* i18n-ignore technical signature note */}</p>
         </div>
       )}
 
       <div className="rounded-lg border border-line p-3">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <div><Label htmlFor="wh-name">{t("common.name")}</Label><Input id="wh-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Ops Slack relay" /></div>
+          <div><Label htmlFor="wh-name">{t("common.name")}</Label><Input id="wh-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("at.webhookNamePh")} /></div>
           <div><Label htmlFor="wh-url">{t("sec.payloadUrl")}</Label><Input id="wh-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com/hooks/nexora" /></div>
           <div className="sm:col-span-2">
             <Label htmlFor="wh-events">{t("sec.eventsLabel")}</Label>
-            <Input id="wh-events" value={events} onChange={(e) => setEvents(e.target.value)} placeholder="*  or  invoice.posted, campaign.updated" list="wh-known-events" />
+            <Input id="wh-events" value={events} onChange={(e) => setEvents(e.target.value)} placeholder="*  or  invoice.posted, campaign.updated" list="wh-known-events" /* i18n-ignore event-pattern example */ />
             <datalist id="wh-known-events">{knownEvents.map((e) => <option key={e} value={e} />)}</datalist>
           </div>
         </div>

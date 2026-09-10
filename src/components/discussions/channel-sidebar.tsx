@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Hash, Lock, Megaphone } from "lucide-react";
+import { useI18n } from "@/components/providers";
 
 export interface ChannelListItem {
   id: string;
@@ -14,17 +15,18 @@ export interface ChannelListItem {
 
 export function ChannelSidebar({ channels, action }: { channels: ChannelListItem[]; action?: React.ReactNode }) {
   const pathname = usePathname();
+  const { t } = useI18n();
   const activeId = pathname.startsWith("/discussions/") ? pathname.split("/")[2] : null;
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between px-3 py-2.5">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">Channels</span>
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t("cs.channels")}</span>
         {action}
       </div>
       <nav className="flex-1 overflow-y-auto px-1.5 pb-3">
         {channels.length === 0 ? (
-          <p className="px-2 py-4 text-[12px] text-ink-3">No channels yet.</p>
+          <p className="px-2 py-4 text-[12px] text-ink-3">{t("cs.noChannels")}</p>
         ) : (
           <ul className="space-y-0.5">
             {channels.map((c) => {
@@ -50,8 +52,8 @@ export function ChannelSidebar({ channels, action }: { channels: ChannelListItem
   );
 }
 
-export const KIND_META: Record<string, { label: string; icon: typeof Megaphone; className: string }> = {
-  announcement: { label: "Announcement", icon: Megaphone, className: "border-info/40 bg-info/5" },
-  decision: { label: "Decision", icon: Megaphone, className: "border-accent/40 bg-accent-soft/40" },
-  action_required: { label: "Action required", icon: Megaphone, className: "border-warning/40 bg-warning/5" },
+export const KIND_META: Record<string, { labelKey: string; icon: typeof Megaphone; className: string }> = {
+  announcement: { labelKey: "chat.announcement", icon: Megaphone, className: "border-info/40 bg-info/5" },
+  decision: { labelKey: "chat.decision", icon: Megaphone, className: "border-accent/40 bg-accent-soft/40" },
+  action_required: { labelKey: "chat.actionRequired", icon: Megaphone, className: "border-warning/40 bg-warning/5" },
 };

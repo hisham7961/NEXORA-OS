@@ -61,9 +61,9 @@ export function BrandForm({ mode, companies, defaults = {} }: { mode: "create" |
       <FormField label={t("common.name")} name="name" required><Input name="name" defaultValue={defaults.name ?? ""} required /></FormField>
       <FormSection>
         <FormField label={t("common.code")} name="code" required><Input name="code" defaultValue={defaults.code ?? ""} required placeholder="DERMA" /></FormField>
-        <FormField label={t("orgf.slug")} name="slug" required hint={t("orgf.slugHint")}><Input name="slug" defaultValue={defaults.slug ?? ""} required placeholder="derma-plus" /></FormField>
+        <FormField label={t("orgf.slug")} name="slug" required hint={t("orgf.slugHint")}><Input name="slug" defaultValue={defaults.slug ?? ""} required placeholder="derma-plus" /* i18n-ignore slug example */ /></FormField>
         <FormField label={t("orgf.primaryCompany")} name="primaryCompanyId"><Select name="primaryCompanyId" defaultValue={defaults.primaryCompanyId ?? ""}><option value="">—</option>{companies.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</Select></FormField>
-        <FormField label={t("orgf.accentColor")} name="accentColor"><Input name="accentColor" defaultValue={defaults.accentColor ?? ""} placeholder="#8b5cf6" /></FormField>
+        <FormField label={t("orgf.accentColor")} name="accentColor"><Input name="accentColor" defaultValue={defaults.accentColor ?? ""} placeholder="#8b5cf6" /* i18n-ignore color example */ /></FormField>
       </FormSection>
       <FormField label={t("common.description")} name="description"><Textarea name="description" defaultValue={defaults.description ?? ""} className="min-h-14" /></FormField>
     </OrgDrawer>
@@ -127,7 +127,7 @@ export function EmployeeForm({ mode, users, companies, departments, teams, defau
     <OrgDrawer mode={mode} title={t("orgf.newEmployee")} createAction={A.createEmployeeAction} editAction={A.updateEmployeeAction} listPath="/employees" id={defaults.id ?? undefined}>
       {!isEdit && <FormField label={t("orgf.user")} name="userId" required hint={t("orgf.userHint")}><Select name="userId" defaultValue=""><option value="">{t("orgf.selectUser")}</option>{users.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}</Select></FormField>}
       <FormSection>
-        <FormField label={t("orgf.position")} name="position"><Input name="position" defaultValue={defaults.position ?? ""} placeholder="Marketing Manager" /></FormField>
+        <FormField label={t("orgf.position")} name="position"><Input name="position" defaultValue={defaults.position ?? ""} placeholder="Marketing Manager" /* i18n-ignore position example */ /></FormField>
         <FormField label={t("common.company")} name="companyId"><Select name="companyId" defaultValue={defaults.companyId ?? ""}><option value="">—</option>{companies.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</Select></FormField>
         <FormField label={t("orgf.department")} name="departmentId"><Select name="departmentId" defaultValue={defaults.departmentId ?? ""}><option value="">—</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}</Select></FormField>
         <FormField label={t("orgf.team")} name="teamId"><Select name="teamId" defaultValue={defaults.teamId ?? ""}><option value="">—</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}</Select></FormField>

@@ -65,7 +65,7 @@ export function ListToolbar({
           className="h-9 w-full rounded-md border border-line-strong bg-surface ps-8 pe-8 text-[13px] text-ink placeholder:text-ink-3 focus-visible:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
         />
         {term && (
-          <button onClick={() => setTerm("")} className="absolute end-2 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink" aria-label="Clear">
+          <button onClick={() => setTerm("")} className="absolute end-2 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink" aria-label={t("common.clear")}>
             <X className="h-3.5 w-3.5" />
           </button>
         )}

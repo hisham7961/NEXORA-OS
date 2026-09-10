@@ -74,7 +74,7 @@ export function DesignForm({
               </>
             )}
             <FormField label={t("dsf.dimensions")} name="dimensions">
-              <Input name="dimensions" defaultValue={defaults.dimensions ?? ""} placeholder="e.g. 1080×1080" />
+              <Input name="dimensions" defaultValue={defaults.dimensions ?? ""} placeholder="e.g. 1080×1080" /* i18n-ignore dimension example */ />
             </FormField>
             <FormField label={t("dp.platform")} name="platform">
               <Input name="platform" defaultValue={defaults.platform ?? ""} placeholder={t("dsf.phPlatform")} />

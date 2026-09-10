@@ -13,7 +13,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
     <html lang="en">
       <body style={{ margin: 0, fontFamily: "system-ui, -apple-system, sans-serif", background: "#faf9f7", color: "#1c1a17" }}>
         <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "24px" }}>
-          <h1 style={{ fontSize: "18px", fontWeight: 600, margin: 0 }}>Something went wrong</h1>
+          <h1 style={{ fontSize: "18px", fontWeight: 600, margin: 0 }}>Something went wrong{/* i18n-ignore pre-provider crash boundary */}</h1>
           <p style={{ marginTop: 8, maxWidth: 380, fontSize: 13, color: "#5c574f" }}>
             An unexpected error interrupted the app. Please retry; if it persists, contact an administrator.
           </p>

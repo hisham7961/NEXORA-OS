@@ -76,7 +76,7 @@ export function ApiTokenManager({ tokens }: { tokens: TokenRow[] }) {
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
           <div>
             <Label htmlFor="tok-name">{t("sec.tokenName")}</Label>
-            <Input id="tok-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Mobile app, Zapier" />
+            <Input id="tok-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("at.apiTokenPh")} />
           </div>
           <div>
             <Label htmlFor="tok-exp">{t("sec.expiresDays")}</Label>

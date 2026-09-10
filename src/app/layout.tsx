@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     default: "NEXORA OS",
     template: "%s · NEXORA OS",
   },
-  description: "The central operating system for a multi-company, multi-brand cosmetics group.",
+  description: "The central operating system for a multi-company, multi-brand cosmetics group.", // i18n-ignore: SEO metadata, not in-app UI
 };
 
 export const viewport: Viewport = {

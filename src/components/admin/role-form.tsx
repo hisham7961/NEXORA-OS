@@ -38,7 +38,7 @@ export function RoleForm({ mode, defaults = {} }: { mode: "create" | "edit"; def
             </FormField>
             {!isEdit && (
               <FormField label={t("wf.key")} name="key" required hint={t("sec.keyHint")}>
-                <Input name="key" placeholder="e.g. brand_manager" required />
+                <Input name="key" placeholder="e.g. brand_manager" required /* i18n-ignore identifier example */ />
               </FormField>
             )}
           </div>

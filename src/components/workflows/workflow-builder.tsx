@@ -201,7 +201,7 @@ function StageDrawer({ spec, draft, roles, onClose, onSave }: { spec: WorkflowSp
     <Drawer open onClose={onClose} title={isNew ? tx("wf.addStage") : tx("wf.editStage")} description={tx("wf.stageDrawerSub")} width="560px">
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
-          <label className="block"><span className="mb-1 block text-[12px] text-ink-2">{tx("wf.key")}</span><Input value={s.key} onChange={(e) => set({ key: e.target.value })} placeholder="in_review" />{keyClash && <span className="text-[11px] text-critical">{tx("wf.keyUsed")}</span>}</label>
+          <label className="block"><span className="mb-1 block text-[12px] text-ink-2">{tx("wf.key")}</span><Input value={s.key} onChange={(e) => set({ key: e.target.value })} placeholder="in_review" /* i18n-ignore stage-key example */ />{keyClash && <span className="text-[11px] text-critical">{tx("wf.keyUsed")}</span>}</label>
           <label className="block"><span className="mb-1 block text-[12px] text-ink-2">{tx("common.name")}</span><Input value={s.name} onChange={(e) => set({ name: e.target.value })} placeholder={tx("wf.phInReview")} /></label>
         </div>
         <label className="block"><span className="mb-1 block text-[12px] text-ink-2">{tx("wf.categoryColor")}</span>
@@ -212,7 +212,7 @@ function StageDrawer({ spec, draft, roles, onClose, onSave }: { spec: WorkflowSp
           <label className="flex items-center gap-2 text-[13px] text-ink-2"><input type="checkbox" className="accent-[var(--accent)]" checked={!!s.isTerminal} onChange={(e) => set({ isTerminal: e.target.checked })} /> {tx("wf.terminalEnd")}</label>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <label className="block"><span className="mb-1 block text-[12px] text-ink-2">{tx("wf.slaHours")}</span><Input type="number" min="0" value={s.slaHours ?? ""} onChange={(e) => set({ slaHours: e.target.value ? Number(e.target.value) : undefined })} placeholder="e.g. 48" /></label>
+          <label className="block"><span className="mb-1 block text-[12px] text-ink-2">{tx("wf.slaHours")}</span><Input type="number" min="0" value={s.slaHours ?? ""} onChange={(e) => set({ slaHours: e.target.value ? Number(e.target.value) : undefined })} placeholder="e.g. 48" /* i18n-ignore numeric example */ /></label>
           <label className="block"><span className="mb-1 block text-[12px] text-ink-2">{tx("wf.requiredApprovals")}</span><Input type="number" min="0" value={s.requiredApprovals ?? ""} onChange={(e) => set({ requiredApprovals: e.target.value ? Number(e.target.value) : undefined })} placeholder="0" /></label>
         </div>
         <label className="block"><span className="mb-1 block text-[12px] text-ink-2">{tx("wf.responsibleRoles")}</span>
@@ -221,8 +221,8 @@ function StageDrawer({ spec, draft, roles, onClose, onSave }: { spec: WorkflowSp
           </Select>
           <div className="mt-1.5 flex flex-wrap gap-1.5">{(s.responsibleRoles ?? []).map((r) => <button key={r} onClick={() => set({ responsibleRoles: (s.responsibleRoles ?? []).filter((x) => x !== r) })} className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-[11.5px] text-ink-2 hover:text-critical">{roles.find((x) => x.key === r)?.name ?? r} ✕</button>)}</div>
         </label>
-        <label className="block"><span className="mb-1 block text-[12px] text-ink-2">{tx("wf.requiredFields")}</span><Input value={csvStr(s.requiredFields)} onChange={(e) => set({ requiredFields: csv(e.target.value) })} placeholder="justification, budget_code" /></label>
-        <label className="block"><span className="mb-1 block text-[12px] text-ink-2">{tx("wf.requiredDocs")}</span><Input value={csvStr(s.requiredDocuments)} onChange={(e) => set({ requiredDocuments: csv(e.target.value) })} placeholder="dossier, lab_report" /></label>
+        <label className="block"><span className="mb-1 block text-[12px] text-ink-2">{tx("wf.requiredFields")}</span><Input value={csvStr(s.requiredFields)} onChange={(e) => set({ requiredFields: csv(e.target.value) })} placeholder="justification, budget_code" /* i18n-ignore field-key example */ /></label>
+        <label className="block"><span className="mb-1 block text-[12px] text-ink-2">{tx("wf.requiredDocs")}</span><Input value={csvStr(s.requiredDocuments)} onChange={(e) => set({ requiredDocuments: csv(e.target.value) })} placeholder="dossier, lab_report" /* i18n-ignore doc-key example */ /></label>
         <fieldset className="rounded-md border border-line p-3">
           <legend className="px-1 text-[12px] text-ink-2">{tx("wf.escalation")}</legend>
           <div className="grid grid-cols-2 gap-3">
@@ -260,8 +260,8 @@ function TransitionDrawer({ spec, draft, permissions, onClose, onSave }: { spec:
     <Drawer open onClose={onClose} title={isNew ? tx("wf.addTransition") : tx("wf.editTransition")} description={tx("wf.transitionDrawerSub")} width="560px">
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
-          <label className="block"><span className="mb-1 block text-[12px] text-ink-2">{tx("wf.key")}</span><Input value={t.key} onChange={(e) => set({ key: e.target.value })} placeholder="approve" />{keyClash && <span className="text-[11px] text-critical">{tx("wf.keyUsed")}</span>}</label>
-          <label className="block"><span className="mb-1 block text-[12px] text-ink-2">{tx("wf.actionLabel")}</span><Input value={t.name} onChange={(e) => set({ name: e.target.value })} placeholder="Approve" /></label>
+          <label className="block"><span className="mb-1 block text-[12px] text-ink-2">{tx("wf.key")}</span><Input value={t.key} onChange={(e) => set({ key: e.target.value })} placeholder="approve" /* i18n-ignore transition-key example */ />{keyClash && <span className="text-[11px] text-critical">{tx("wf.keyUsed")}</span>}</label>
+          <label className="block"><span className="mb-1 block text-[12px] text-ink-2">{tx("wf.actionLabel")}</span><Input value={t.name} onChange={(e) => set({ name: e.target.value })} placeholder="Approve" /* i18n-ignore transition-label example */ /></label>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <label className="block"><span className="mb-1 block text-[12px] text-ink-2">{tx("wf.from")}</span>

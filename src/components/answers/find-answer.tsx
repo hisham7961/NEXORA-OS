@@ -7,6 +7,7 @@ import { Button, Input } from "@/components/ui";
 import { RequestAnswerButton } from "@/components/answers/answer-controls";
 import { recordAnswerUsageAction } from "@/app/actions/answers";
 import type { Option } from "@/domain/options";
+import { useI18n } from "@/components/providers";
 
 interface FoundAnswer {
   id: string;
@@ -23,6 +24,7 @@ interface FoundAnswer {
  * request a new answer if none fits.
  */
 export function FindAnswer({ caseId, brandId, countryId, options }: { caseId: string; brandId: string | null; countryId: string | null; options: { brands: Option[]; countries: Option[] } }) {
+  const { t } = useI18n();
   const [q, setQ] = useState("");
   const [results, setResults] = useState<FoundAnswer[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,14 +56,14 @@ export function FindAnswer({ caseId, brandId, countryId, options }: { caseId: st
       <form onSubmit={(e) => { e.preventDefault(); search(q); }} className="flex gap-2">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute start-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-3" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search approved answers…" className="ps-8" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("fa.searchPlaceholder")} className="ps-8" />
         </div>
-        <Button type="submit" variant="secondary" size="sm" disabled={loading}>Search</Button>
+        <Button type="submit" variant="secondary" size="sm" disabled={loading}>{t("fa.search")}</Button>
       </form>
 
       {results.length === 0 ? (
         <div className="rounded-md border border-dashed border-line p-4 text-center">
-          <p className="text-[13px] text-ink-3">{loading ? "Searching…" : "No approved answer found."}</p>
+          <p className="text-[13px] text-ink-3">{loading ? t("fa.searching") : t("fa.noAnswerFound")}</p>
           <div className="mt-2 flex justify-center">
             <RequestAnswerButton options={options} variant="secondary" />
           </div>
@@ -76,8 +78,8 @@ export function FindAnswer({ caseId, brandId, countryId, options }: { caseId: st
               </div>
               <p className="mb-2 whitespace-pre-wrap text-[12.5px] text-ink-2 line-clamp-4">{a.answer}</p>
               <div className="flex items-center gap-2">
-                <Button size="sm" variant="secondary" onClick={() => copy(a)}>{copiedId === a.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} {copiedId === a.id ? "Copied" : "Copy"}</Button>
-                <Link href={`/answers/${a.id}`} className="inline-flex items-center gap-1 text-[12px] text-accent hover:underline"><ExternalLink className="h-3 w-3" /> Open</Link>
+                <Button size="sm" variant="secondary" onClick={() => copy(a)}>{copiedId === a.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} {copiedId === a.id ? t("fa.copied") : t("fa.copy")}</Button>
+                <Link href={`/answers/${a.id}`} className="inline-flex items-center gap-1 text-[12px] text-accent hover:underline"><ExternalLink className="h-3 w-3" /> {t("fa.open")}</Link>
               </div>
             </li>
           ))}

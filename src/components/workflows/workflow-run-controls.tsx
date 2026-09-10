@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Play, ArrowRight } from "lucide-react";
 import { Button, Input } from "@/components/ui";
-import { useToast } from "@/components/providers";
+import { useToast, useI18n } from "@/components/providers";
 import { performTransitionAction, startWorkflowInstanceAction } from "@/app/actions/workflows";
 
 export interface TransitionOption { key: string; name: string; to: string; requiredFields: string[] }
@@ -13,6 +13,7 @@ export interface TransitionOption { key: string; name: string; to: string; requi
 export function TransitionControls({ instanceId, transitions }: { instanceId: string; transitions: TransitionOption[] }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [pending, start] = useTransition();
   const [active, setActive] = useState<TransitionOption | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -20,11 +21,11 @@ export function TransitionControls({ instanceId, transitions }: { instanceId: st
 
   const run = (tr: TransitionOption) => start(async () => {
     const res = await performTransitionAction(instanceId, tr.key, note || undefined, Object.keys(fields).length ? fields : undefined);
-    if (res.ok) { toast({ kind: "success", title: `Moved: ${tr.name}` }); setActive(null); setFields({}); setNote(""); router.refresh(); }
+    if (res.ok) { toast({ kind: "success", title: t("wrc.moved", { name: tr.name }) }); setActive(null); setFields({}); setNote(""); router.refresh(); }
     else toast({ kind: "error", title: res.error });
   });
 
-  if (transitions.length === 0) return <p className="text-[12px] text-ink-3">No actions available to you from this stage.</p>;
+  if (transitions.length === 0) return <p className="text-[12px] text-ink-3">{t("wrc.noActions")}</p>;
 
   return (
     <div className="space-y-2">
@@ -38,13 +39,13 @@ export function TransitionControls({ instanceId, transitions }: { instanceId: st
       </div>
       {active && (
         <div className="space-y-2 rounded-md border border-line bg-surface-2 p-3">
-          <p className="text-[12px] text-ink-2">&ldquo;{active.name}&rdquo; requires:</p>
+          <p className="text-[12px] text-ink-2">{t("wrc.requires", { name: active.name })}</p>
           {active.requiredFields.map((f) => (
             <label key={f} className="block"><span className="mb-1 block font-mono text-[11px] text-ink-3">{f}</span>
               <Input value={fields[f] ?? ""} onChange={(e) => setFields((p) => ({ ...p, [f]: e.target.value }))} /></label>
           ))}
-          <label className="block"><span className="mb-1 block text-[12px] text-ink-2">Note (optional)</span><Input value={note} onChange={(e) => setNote(e.target.value)} /></label>
-          <div className="flex justify-end gap-2"><Button size="sm" variant="ghost" onClick={() => setActive(null)}>Cancel</Button><Button size="sm" variant="primary" disabled={pending || active.requiredFields.some((f) => !(fields[f] ?? "").trim())} onClick={() => run(active)}>Confirm</Button></div>
+          <label className="block"><span className="mb-1 block text-[12px] text-ink-2">{t("wrc.noteOptional")}</span><Input value={note} onChange={(e) => setNote(e.target.value)} /></label>
+          <div className="flex justify-end gap-2"><Button size="sm" variant="ghost" onClick={() => setActive(null)}>{t("wrc.cancel")}</Button><Button size="sm" variant="primary" disabled={pending || active.requiredFields.some((f) => !(fields[f] ?? "").trim())} onClick={() => run(active)}>{t("wrc.confirm")}</Button></div>
         </div>
       )}
     </div>
@@ -55,12 +56,13 @@ export function TransitionControls({ instanceId, transitions }: { instanceId: st
 export function StartWorkflowControls({ definitionId, entityType, entityId, scope, label }: { definitionId: string; entityType: string; entityId: string; scope: { companyId: string | null; brandId: string | null; countryId: string | null }; label: string }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [pending, start] = useTransition();
   return (
     <Button size="sm" variant="primary" disabled={pending} onClick={() => start(async () => {
       const res = await startWorkflowInstanceAction({ definitionId, entityType, entityId, scope });
-      if (res.ok) { toast({ kind: "success", title: `Started: ${label}` }); router.refresh(); }
+      if (res.ok) { toast({ kind: "success", title: t("wrc.started", { label }) }); router.refresh(); }
       else toast({ kind: "error", title: res.error });
-    })}><Play className="h-3.5 w-3.5" /> Start {label}</Button>
+    })}><Play className="h-3.5 w-3.5" /> {t("wrc.start", { label })}</Button>
   );
 }

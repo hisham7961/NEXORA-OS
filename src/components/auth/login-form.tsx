@@ -29,7 +29,7 @@ export function LoginForm({ demoAccounts }: { demoAccounts: { label: string; ema
     <div className="w-full">
       <form action={formAction} className="space-y-4">
         <Field label={t("auth.email")} htmlFor="email">
-          <Input id="email" name="email" type="email" autoComplete="email" required defaultValue={demoAccounts[0]?.email} placeholder="you@company.com" />
+          <Input id="email" name="email" type="email" autoComplete="email" required defaultValue={demoAccounts[0]?.email} placeholder="you@company.com" /* i18n-ignore email example */ />
         </Field>
         <Field label={t("auth.password")} htmlFor="password">
           <Input id="password" name="password" type="password" autoComplete="current-password" required placeholder="••••••••" defaultValue={demoAccounts.length ? "password" : undefined} />
@@ -64,7 +64,7 @@ export function LoginForm({ demoAccounts }: { demoAccounts: { label: string; ema
                 <code className="rounded bg-surface px-1.5 py-0.5 text-[11px] text-ink-3">{a.email}</code>
               </div>
             ))}
-            <div className="pt-1 text-[11px] text-ink-3">Password for all demo accounts: <code className="text-ink-2">password</code></div>
+            <div className="pt-1 text-[11px] text-ink-3">{t("auth.demoPassword")} <code className="text-ink-2">password</code></div>
           </div>
         </div>
       )}

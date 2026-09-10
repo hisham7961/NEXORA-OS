@@ -28,7 +28,7 @@ export function CreateWorkflowButton({ options }: { options: { brands: Option[];
         <ActionForm action={createWorkflowAction} submitLabel={t("common.create")} onCancel={() => setOpen(false)} onSuccess={(d) => { setOpen(false); const id = (d as { id?: string })?.id; if (id) router.push(`/workflows/${id}`); }}>
           <FormField label={t("common.name")} name="name" required><Input name="name" required placeholder={t("wf.phWorkflowName")} /></FormField>
           <FormSection>
-            <FormField label={t("wf.key")} name="key" required hint={t("wf.stableKeyHint")}><Input name="key" required placeholder="registration_approval" /></FormField>
+            <FormField label={t("wf.key")} name="key" required hint={t("wf.stableKeyHint")}><Input name="key" required placeholder="registration_approval" /* i18n-ignore identifier example */ /></FormField>
             <FormField label={t("wf.governsModule")} name="module" required><Select name="module" defaultValue="registrations">{GOVERNABLE_MODULES.map((m) => <option key={m} value={m}>{m}</option>)}</Select></FormField>
             <FormField label={t("common.company")} name="companyId" hint={t("wf.scopeHint")}><Select name="companyId" defaultValue=""><option value="">{t("wf.allCompanies")}</option>{options.companies.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</Select></FormField>
             <FormField label={t("common.brand")} name="brandId"><Select name="brandId" defaultValue=""><option value="">{t("wf.allBrands")}</option>{options.brands.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}</Select></FormField>

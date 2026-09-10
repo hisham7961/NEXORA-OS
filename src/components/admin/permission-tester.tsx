@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Select } from "@/components/ui";
+import { useI18n } from "@/components/providers";
 
 /** User picker for the Permission Tester — updates ?user= so the server recomputes. */
 export function TesterUserPicker({
@@ -11,6 +12,7 @@ export function TesterUserPicker({
   users: { id: string; name: string; email: string }[];
   current?: string;
 }) {
+  const { t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -23,8 +25,8 @@ export function TesterUserPicker({
   }
 
   return (
-    <Select value={current ?? ""} onChange={(e) => select(e.target.value)} className="w-72" aria-label="Select a user to preview">
-      <option value="">Select a user…</option>
+    <Select value={current ?? ""} onChange={(e) => select(e.target.value)} className="w-72" aria-label={t("pt.selectUserAria")}>
+      <option value="">{t("pt.selectUser")}</option>
       {users.map((u) => (
         <option key={u.id} value={u.id}>
           {u.name} — {u.email}
