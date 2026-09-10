@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { runAction, type ActionResult } from "@/lib/action";
 import { createBankAccount, updateBankAccount, setBankAccountActive, createTransfer, createReconciliation, setLineReconciled, completeReconciliation } from "@/domain/accounting/bank";
+import { importStatement, confirmMatch } from "@/domain/accounting/statement-import";
 
 export async function createBankAccountAction(companyId: string, data: Record<string, unknown>): Promise<ActionResult<{ id: string }>> {
   const res = await runAction(async (ctx) => ({ id: (await createBankAccount(ctx, companyId, data)).id }));
@@ -37,5 +38,15 @@ export async function setLineReconciledAction(reconciliationId: string, journalL
 export async function completeReconciliationAction(id: string, force?: boolean): Promise<ActionResult> {
   const res = await runAction((ctx) => completeReconciliation(ctx, id, { force }));
   if (res.ok) { revalidatePath("/accounting/bank"); revalidatePath(`/accounting/bank/reconcile/${id}`); }
+  return res;
+}
+export async function importStatementAction(companyId: string, data: Record<string, unknown>): Promise<ActionResult<{ id: string; lineCount: number }>> {
+  const res = await runAction(async (ctx) => { const s = await importStatement(ctx, companyId, data); return { id: s.id, lineCount: s.lineCount }; });
+  if (res.ok) revalidatePath("/accounting/bank");
+  return res;
+}
+export async function confirmMatchAction(reconciliationId: string, statementLineId: string, journalLineId: string): Promise<ActionResult> {
+  const res = await runAction((ctx) => confirmMatch(ctx, reconciliationId, statementLineId, journalLineId));
+  if (res.ok) revalidatePath(`/accounting/bank/reconcile/${reconciliationId}`);
   return res;
 }

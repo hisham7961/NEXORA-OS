@@ -10,6 +10,7 @@ import { prisma } from "@/lib/db";
 import { PageHeader, Panel, PanelHeader, DataTable, Badge, EmptyState, Metric, type Column } from "@/components/ui";
 import { CompanyPicker } from "@/components/accounting/company-picker";
 import { NewBankAccountButton, EditBankAccountButton, TransferButton, NewReconciliationButton } from "@/components/accounting/bank-controls";
+import { ImportStatementButton } from "@/components/accounting/statement-controls";
 import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Bank & Cash" };
@@ -48,6 +49,7 @@ export default async function BankPage({ searchParams }: { searchParams: Promise
       <PageHeader title="Bank & Cash" description={`Accounts, transfers and reconciliation for ${current.name} (${cur}).`}
         actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} />
           {canManage && bankOptions.length >= 2 && <TransferButton companyId={current.id} banks={bankOptions} />}
+          {canManage && bankOptions.length >= 1 && <ImportStatementButton companyId={current.id} banks={bankOptions} />}
           {canManage && bankOptions.length >= 1 && <NewReconciliationButton companyId={current.id} banks={bankOptions} />}
           {canManage && <NewBankAccountButton companyId={current.id} accounts={accountOptions} />}</div>} />
 

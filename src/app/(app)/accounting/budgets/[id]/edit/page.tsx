@@ -32,7 +32,7 @@ export default async function EditBudgetPage({ params }: { params: Promise<{ id:
       <Panel>
         <PanelBody>
           <BudgetComposer companyId={companyId} accounts={accounts.map((a) => ({ id: a.id, label: `${a.code} ${a.name}` }))} fiscalYears={fys.map((f) => ({ id: f.id, name: f.name }))}
-            budget={{ id: budget.id, name: budget.name, fiscalYearId: budget.fiscalYearId, currency: budget.currency, lines: budget.lines.map((l) => ({ accountId: l.accountId, amount: l.amount.toString() })) }} />
+            budget={{ id: budget.id, name: budget.name, fiscalYearId: budget.fiscalYearId, currency: budget.currency, periodicity: budget.periodicity, lines: budget.lines.map((l) => ({ accountId: l.accountId, amount: l.amount.toString(), periodMonth: l.periodMonth })) }} />
         </PanelBody>
       </Panel>
     </>

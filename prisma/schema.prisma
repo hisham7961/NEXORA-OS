@@ -2039,6 +2039,7 @@ model BankAccount {
   transfersFrom   BankTransfer[]       @relation("transferFrom")
   transfersTo     BankTransfer[]       @relation("transferTo")
   reconciliations BankReconciliation[]
+  statements      BankStatement[]
 
   @@index([companyId, isActive])
 }
@@ -2100,6 +2101,55 @@ model BankReconciliation {
   @@index([companyId, bankAccountId])
 }
 
+/**
+ * An imported bank statement (§Phase4-4). Statement lines are NEVER posted to the
+ * GL directly — they are matched to existing ledger lines during reconciliation.
+ */
+model BankStatement {
+  id             String    @id @default(cuid())
+  companyId      String
+  bankAccountId  String
+  label          String
+  fileName       String?
+  statementFrom  DateTime?
+  statementTo    DateTime?
+  openingBalance Decimal?
+  closingBalance Decimal?
+  lineCount      Int       @default(0)
+  createdById    String?
+  createdAt      DateTime  @default(now())
+
+  bankAccount BankAccount         @relation(fields: [bankAccountId], references: [id])
+  lines       BankStatementLine[]
+
+  @@index([companyId, bankAccountId])
+}
+
+model BankStatementLine {
+  id                   String    @id @default(cuid())
+  statementId          String
+  companyId            String
+  bankAccountId        String
+  txnDate              DateTime
+  valueDate            DateTime?
+  description          String
+  reference            String?
+  amount               Decimal // signed: + = inflow (money into the account), − = outflow
+  currency             String?
+  runningBalance       Decimal?
+  dedupeKey            String // date|amount|reference|description hash for duplicate detection
+  matchedJournalLineId String? // the reconciled GL line, once matched
+  reconciliationId     String?
+  status               String    @default("unmatched") // unmatched | matched
+  createdAt            DateTime  @default(now())
+
+  statement BankStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+
+  @@index([bankAccountId, status])
+  @@index([statementId])
+  @@index([dedupeKey])
+}
+
 model Budget {
   id           String    @id @default(cuid())
   companyId    String?
@@ -2111,6 +2161,7 @@ model Budget {
   campaignId   String?
   amount       Decimal   @default(0) // denormalised total of lines
   currency     String    @default("KWD")
+  periodicity  String    @default("annual") // annual | quarterly | monthly (§Phase4-3)
   status       String    @default("draft") // draft | active | archived
   periodStart  DateTime?
   periodEnd    DateTime?
@@ -2210,39 +2261,39 @@ model ExchangeRate {
  * as stable account IDs, never resolved by English name (§6).
  */
 model CompanyAccountingSettings {
-  id                        String    @id @default(cuid())
-  companyId                 String    @unique
-  baseCurrency              String    @default("KWD")
-  fiscalYearStartMonth      Int       @default(1)
-  timezone                  String    @default("Asia/Kuwait")
-  roundingPolicy            String    @default("half_up") // half_up | half_even | down | up
-  balancingToleranceJson    String? // per-currency minor-unit tolerance overrides
+  id                          String    @id @default(cuid())
+  companyId                   String    @unique
+  baseCurrency                String    @default("KWD")
+  fiscalYearStartMonth        Int       @default(1)
+  timezone                    String    @default("Asia/Kuwait")
+  roundingPolicy              String    @default("half_up") // half_up | half_even | down | up
+  balancingToleranceJson      String? // per-currency minor-unit tolerance overrides
   // System-account mappings (account IDs).
-  receivableAccountId       String?
-  payableAccountId          String?
-  revenueAccountId          String?
-  cogsAccountId             String?
-  inventoryAccountId        String?
-  bankClearingAccountId     String?
-  cashAccountId             String?
-  inputTaxAccountId         String?
-  outputTaxAccountId        String?
-  retainedEarningsAccountId String?
-  fxGainAccountId           String?
-  fxLossAccountId           String?
-  suspenseAccountId         String?
-  roundingAccountId         String?
+  receivableAccountId         String?
+  payableAccountId            String?
+  revenueAccountId            String?
+  cogsAccountId               String?
+  inventoryAccountId          String?
+  bankClearingAccountId       String?
+  cashAccountId               String?
+  inputTaxAccountId           String?
+  outputTaxAccountId          String?
+  retainedEarningsAccountId   String?
+  fxGainAccountId             String?
+  fxLossAccountId             String?
+  suspenseAccountId           String?
+  roundingAccountId           String?
   roundingAdjustmentAccountId String? // base-currency rounding plug for multi-line FX (§Phase4-2)
   // Numbering + terms.
-  journalPrefix             String    @default("GJ")
-  invoicePrefix             String    @default("INV")
-  billPrefix                String    @default("BILL")
-  paymentPrefix             String    @default("PAY")
-  defaultPaymentTerms       Int       @default(30) // days
-  lockDate                  DateTime? // hard lock — no posting on/before
-  softCloseDate             DateTime? // authorized users only on/before
-  createdAt                 DateTime  @default(now())
-  updatedAt                 DateTime  @updatedAt
+  journalPrefix               String    @default("GJ")
+  invoicePrefix               String    @default("INV")
+  billPrefix                  String    @default("BILL")
+  paymentPrefix               String    @default("PAY")
+  defaultPaymentTerms         Int       @default(30) // days
+  lockDate                    DateTime? // hard lock — no posting on/before
+  softCloseDate               DateTime? // authorized users only on/before
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
 
   @@index([companyId])
 }

@@ -7,6 +7,7 @@ import { canAnywhere, ForbiddenError } from "@/lib/permissions/engine";
 import { getReconciliation } from "@/domain/accounting/bank";
 import { PageHeader, Panel, PanelHeader, Badge, Metric, EmptyState } from "@/components/ui";
 import { ReconcileLineToggle, CompleteReconciliationButton } from "@/components/accounting/bank-controls";
+import { SuggestedMatches } from "@/components/accounting/statement-controls";
 import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Reconcile" };
@@ -40,6 +41,13 @@ export default async function ReconcilePage({ params }: { params: Promise<{ id: 
         <Metric label="Cleared balance" value={num(cleared)} category={balanced ? "success" : "warning"} />
         <Metric label="Difference" value={num(diff)} category={balanced ? "success" : "critical"} />
       </div>
+
+      {!completed && canManage && (
+        <Panel className="mb-4">
+          <PanelHeader title="Suggested matches" description="Imported statement lines matched to unreconciled ledger lines by amount, date and reference." />
+          <div className="px-4 py-3"><SuggestedMatches reconciliationId={rec.id} completed={completed} /></div>
+        </Panel>
+      )}
 
       <Panel>
         <PanelHeader title="Ledger lines" action={<span className="text-[12px] text-ink-3">{lines.filter((l) => l.reconciliationId).length} / {lines.length} cleared</span>} />

@@ -27,6 +27,7 @@ export const budgetSchema = z.object({
   countryId: optionalString,
   departmentId: optionalString,
   campaignId: optionalString,
+  periodicity: z.enum(["annual", "quarterly", "monthly"]).optional(),
   periodStart: z.preprocess((v) => (v ? new Date(v as string) : undefined), z.date().optional()),
   periodEnd: z.preprocess((v) => (v ? new Date(v as string) : undefined), z.date().optional()),
   notes: optionalString,
@@ -60,6 +61,7 @@ export async function createBudget(ctx: ActorContext, companyId: string, raw: un
   const b = await prisma.budget.create({
     data: {
       companyId, name: input.name, fiscalYearId: input.fiscalYearId ?? null, currency: (input.currency ?? "KWD").toUpperCase(),
+      periodicity: input.periodicity ?? "annual",
       brandId: input.brandId ?? null, countryId: input.countryId ?? null, departmentId: input.departmentId ?? null, campaignId: input.campaignId ?? null,
       periodStart: input.periodStart ?? null, periodEnd: input.periodEnd ?? null, notes: input.notes ?? null, amount: total, createdById: ctx.principal.userId,
       lines: { create: input.lines.map((l) => ({ accountId: l.accountId, periodMonth: l.periodMonth ?? null, amount: l.amount })) },
@@ -83,6 +85,7 @@ export async function updateBudget(ctx: ActorContext, id: string, raw: unknown) 
       where: { id },
       data: {
         name: input.name, fiscalYearId: input.fiscalYearId ?? null, currency: (input.currency ?? b.currency).toUpperCase(),
+        periodicity: input.periodicity ?? b.periodicity,
         brandId: input.brandId ?? null, countryId: input.countryId ?? null, departmentId: input.departmentId ?? null, campaignId: input.campaignId ?? null,
         periodStart: input.periodStart ?? null, periodEnd: input.periodEnd ?? null, notes: input.notes ?? null, amount: total,
         lines: { create: input.lines.map((l) => ({ accountId: l.accountId, periodMonth: l.periodMonth ?? null, amount: l.amount })) },
@@ -155,4 +158,71 @@ export async function budgetVsActual(principal: Principal, budgetId: string) {
   const totalBudget = rows.reduce((s, r) => add(s, r.budget), ZERO);
   const totalActual = rows.reduce((s, r) => add(s, r.actual), ZERO);
   return { budget, from, to, rows, totalBudget: totalBudget.toString(), totalActual: totalActual.toString(), totalVariance: sub(totalBudget, totalActual).toString() };
+}
+
+/**
+ * Periodized Budget vs Actual (§Phase4-3): per account × 12 fiscal months, with a
+ * YTD roll-up. Monthly budget comes from lines' `periodMonth`; an un-periodized
+ * (annual) line is spread evenly across the year. Actuals come ONLY from posted GL,
+ * bucketed by the month index within the budget's fiscal year — never duplicated
+ * into budget tables.
+ */
+export async function budgetVsActualMonthly(principal: Principal, budgetId: string) {
+  const budget = await prisma.budget.findUnique({ where: { id: budgetId }, include: { lines: true } });
+  if (!budget) throw new ServiceError("not_found", "Budget not found", 404);
+  assertCan(principal, "budgets.view", { companyId: budget.companyId ?? "" });
+
+  const fy = budget.fiscalYearId ? await prisma.fiscalYear.findUnique({ where: { id: budget.fiscalYearId } }) : null;
+  const from = budget.periodStart ?? fy?.startDate ?? new Date(new Date().getFullYear(), 0, 1);
+  const to = budget.periodEnd ?? fy?.endDate ?? new Date(new Date().getFullYear(), 11, 31);
+  const fyStartMonth = from.getMonth(); // 0-based calendar month the fiscal year opens on
+  // Map a posting date to a 1..12 fiscal-month index.
+  const fiscalMonth = (d: Date) => (((d.getFullYear() - from.getFullYear()) * 12 + d.getMonth() - fyStartMonth) % 12 + 12) % 12 + 1;
+
+  const accountIds = [...new Set(budget.lines.map((l) => l.accountId))];
+  const accounts = await prisma.account.findMany({ where: { id: { in: accountIds } }, select: { id: true, code: true, name: true, type: true, normalBalance: true } });
+  const byId = new Map(accounts.map((a) => [a.id, a]));
+
+  // Budget per account per fiscal month (1..12); month 0 marker = annual line spread evenly.
+  const budgetMatrix = new Map<string, Prisma.Decimal[]>(); // 12-slot arrays
+  for (const id of accountIds) budgetMatrix.set(id, Array(12).fill(ZERO));
+  for (const l of budget.lines) {
+    const arr = budgetMatrix.get(l.accountId)!;
+    if (l.periodMonth && l.periodMonth >= 1 && l.periodMonth <= 12) arr[l.periodMonth - 1] = add(arr[l.periodMonth - 1], l.amount);
+    else { const per = D(l.amount).div(12); for (let m = 0; m < 12; m++) arr[m] = add(arr[m], per); }
+  }
+
+  // Actuals: posted lines on these accounts within the FY, bucketed by fiscal month.
+  const lines = accountIds.length ? await prisma.journalLine.findMany({
+    where: {
+      companyId: budget.companyId ?? undefined, accountId: { in: accountIds },
+      entry: { status: "posted", postingDate: { gte: from, lte: to } },
+      ...(budget.brandId ? { brandId: budget.brandId } : {}), ...(budget.countryId ? { countryId: budget.countryId } : {}),
+      ...(budget.departmentId ? { departmentId: budget.departmentId } : {}), ...(budget.campaignId ? { campaignId: budget.campaignId } : {}),
+    },
+    select: { accountId: true, debit: true, credit: true, entry: { select: { postingDate: true } } },
+  }) : [];
+  const actualMatrix = new Map<string, Prisma.Decimal[]>();
+  for (const id of accountIds) actualMatrix.set(id, Array(12).fill(ZERO));
+  for (const l of lines) {
+    const a = byId.get(l.accountId); if (!a) continue;
+    const signed = a.normalBalance === "credit" ? sub(D(l.credit), D(l.debit)) : sub(D(l.debit), D(l.credit));
+    const m = fiscalMonth(l.entry.postingDate ?? from) - 1;
+    const arr = actualMatrix.get(l.accountId)!;
+    arr[m] = add(arr[m], signed);
+  }
+
+  const nowMonth = fiscalMonth(new Date()); // for YTD cut-off within this FY
+  const rows = accountIds.map((id) => {
+    const a = byId.get(id);
+    const bud = budgetMatrix.get(id)!, act = actualMatrix.get(id)!;
+    const months = bud.map((bv, m) => ({ month: m + 1, budget: bv.toString(), actual: act[m].toString(), variance: sub(bv, act[m]).toString() }));
+    const ytdBudget = bud.slice(0, nowMonth).reduce((s, v) => add(s, v), ZERO);
+    const ytdActual = act.slice(0, nowMonth).reduce((s, v) => add(s, v), ZERO);
+    const fullBudget = bud.reduce((s, v) => add(s, v), ZERO);
+    const fullActual = act.reduce((s, v) => add(s, v), ZERO);
+    return { accountId: id, code: a?.code ?? "", name: a?.name ?? "", months, fullBudget: fullBudget.toString(), fullActual: fullActual.toString(), ytdBudget: ytdBudget.toString(), ytdActual: ytdActual.toString(), ytdVariance: sub(ytdBudget, ytdActual).toString(), pctUsed: fullBudget.isZero() ? null : Number(fullActual.div(fullBudget).mul(100).toDecimalPlaces(1)) };
+  }).sort((x, y) => x.code.localeCompare(y.code));
+
+  return { budget, from, to, currentMonth: nowMonth, rows };
 }

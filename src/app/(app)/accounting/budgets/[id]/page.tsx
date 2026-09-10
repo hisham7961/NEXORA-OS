@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
 import { canAnywhere, ForbiddenError } from "@/lib/permissions/engine";
-import { getBudget, budgetVsActual } from "@/domain/accounting/budgets";
+import { getBudget, budgetVsActual, budgetVsActualMonthly } from "@/domain/accounting/budgets";
 import { PageHeader, Panel, PanelHeader, DataTable, Badge, type Column } from "@/components/ui";
 import { BudgetStatusButton } from "@/components/accounting/budget-controls";
 
@@ -17,8 +17,11 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ i
   let budget;
   try { budget = await getBudget(principal, id); } catch (e) { if (e instanceof ForbiddenError) return <AccessDenied locale={locale} />; throw e; }
   if (!budget) notFound();
+  const periodized = budget.periodicity !== "annual";
   const report = await budgetVsActual(principal, id);
+  const monthly = periodized ? await budgetVsActualMonthly(principal, id) : null;
   const num = (v: unknown) => Number(v).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const canManage = canAnywhere(principal, "budgets.manage");
 
   type Row = (typeof report.rows)[number];
@@ -45,6 +48,39 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ i
           <span>Variance <span className={`ms-1 tabular ${Number(report.totalVariance) < 0 ? "text-critical" : "text-success"}`}>{num(report.totalVariance)} {budget.currency}</span></span>
         </div>
       </Panel>
+
+      {monthly && (
+        <Panel className="mt-4">
+          <PanelHeader title="Monthly Budget vs Actual" description={`Budget (B) vs posted actual (A) per month · ${budget.periodicity}`} />
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] text-[12px]">
+              <thead>
+                <tr className="border-b border-line text-ink-3">
+                  <th className="px-2 py-2 text-start font-medium">Account</th>
+                  {MONTHS.map((m) => <th key={m} className="px-2 py-2 text-end font-medium">{m}</th>)}
+                  <th className="px-2 py-2 text-end font-medium">YTD var.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthly.rows.map((r) => (
+                  <tr key={r.accountId} className="border-b border-line last:border-0 align-top">
+                    <td className="px-2 py-1.5 text-ink"><span className="font-mono text-ink-3">{r.code}</span> {r.name}</td>
+                    {r.months.map((m) => {
+                      const v = Number(m.variance);
+                      return <td key={m.month} className={`px-2 py-1.5 text-end tabular ${m.month === monthly.currentMonth ? "bg-surface-2" : ""}`}>
+                        <div className="text-ink-2">{Number(m.actual) ? num(m.actual) : "·"}</div>
+                        <div className={`text-[10px] ${v < 0 ? "text-critical" : "text-ink-3"}`}>B {Number(m.budget) ? num(m.budget) : "·"}</div>
+                      </td>;
+                    })}
+                    <td className={`px-2 py-1.5 text-end tabular font-medium ${Number(r.ytdVariance) < 0 ? "text-critical" : "text-success"}`}>{num(r.ytdVariance)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="px-4 py-2 text-[11px] text-ink-3">Top figure = posted actual; “B” = budget. Highlighted column is the current fiscal month. Actuals derive only from posted ledger data.</p>
+        </Panel>
+      )}
     </>
   );
 }
