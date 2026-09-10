@@ -2782,6 +2782,26 @@ model Favorite {
   @@index([userId])
 }
 
+/** Import history (§Phase4-18/84). One row per committed import; the source file
+ *  name and row counts are retained for audit. */
+model ImportBatch {
+  id          String   @id @default(cuid())
+  resource    String
+  companyId   String?
+  fileName    String?
+  status      String   @default("completed") // completed | failed
+  total       Int      @default(0)
+  created     Int      @default(0)
+  updated     Int      @default(0)
+  skipped     Int      @default(0)
+  errorCount  Int      @default(0)
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([resource])
+  @@index([createdById])
+}
+
 model RecentItem {
   id         String   @id @default(cuid())
   userId     String
