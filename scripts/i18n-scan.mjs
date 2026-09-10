@@ -53,6 +53,10 @@ function scanFile(path) {
     findings.push({ path, line: lineIdx + 1, kind, text: text.trim().slice(0, 80) });
   };
   lines.forEach((line, i) => {
+    // Next.js static `metadata` sets the browser-tab <title> only (never rendered
+    // in-app); it can't call the async translator. Localizing it needs generateMetadata
+    // per page — tracked as a documented cosmetic limitation, not an in-app UI string.
+    if (/export const metadata\b/.test(line)) return;
     let m;
     USERFACING_PROPS.lastIndex = 0;
     while ((m = USERFACING_PROPS.exec(line))) push(i, "prop", m[3]);

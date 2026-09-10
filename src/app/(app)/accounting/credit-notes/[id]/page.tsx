@@ -42,13 +42,13 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
 
   return (
     <>
-      <div className="mb-1 text-xs text-ink-3"><Link href={`/accounting/credit-notes?company=${cn.companyId}`} className="hover:text-ink-2">Credit Notes</Link> / {cn.creditNoteNumber ?? "draft"}</div>
-      <PageHeader title={cn.creditNoteNumber ?? "Draft credit note"} description={cn.customer.name}
-        meta={<div className="flex items-center gap-2"><Badge category={STATUS_CAT[cn.status] ?? "neutral"}>{cn.status}</Badge><span className="text-xs text-ink-3">{formatDate(cn.issueDate, locale)}</span></div>}
+      <div className="mb-1 text-xs text-ink-3"><Link href={`/accounting/credit-notes?company=${cn.companyId}`} className="hover:text-ink-2">{t("acct.creditNotes")}</Link> / {cn.creditNoteNumber ?? t("fin.draft")}</div>
+      <PageHeader title={cn.creditNoteNumber ?? t("acct.draftCreditNote")} description={cn.customer.name}
+        meta={<div className="flex items-center gap-2"><Badge category={STATUS_CAT[cn.status] ?? "neutral"}>{t(`status.${cn.status}`)}</Badge><span className="text-xs text-ink-3">{formatDate(cn.issueDate, locale)}</span></div>}
         actions={<div className="flex items-center gap-2">
           {cn.status === "draft" && canCreate && <IssueButton id={cn.id} kind="credit_note" />}
           {(cn.status === "issued") && canCreate && remaining > 0 && <ApplyCreditNoteButton creditNoteId={cn.id} remaining={remaining} currency={cn.currency} openInvoices={openInvoices} />}
-          {cn.journalEntryId && <Link href={`/accounting/journal/${cn.journalEntryId}`} className="text-[12px] text-accent hover:underline">View GL entry →</Link>}
+          {cn.journalEntryId && <Link href={`/accounting/journal/${cn.journalEntryId}`} className="text-[12px] text-accent hover:underline">{t("fin.viewGlEntry")}</Link>}
         </div>} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]">
@@ -56,20 +56,20 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
           <PanelHeader title={t("acct.lines")} />
           <DataTable columns={columns} rows={cn.lines} getRowKey={(l) => l.id} />
           <div className="space-y-1 border-t border-line px-4 py-3 text-[13px]">
-            <div className="flex justify-end gap-8"><span className="text-ink-3">Subtotal</span><span className="tabular text-ink-2">{num(cn.subtotal)} {cn.currency}</span></div>
-            <div className="flex justify-end gap-8"><span className="text-ink-3">Tax</span><span className="tabular text-ink-2">{num(cn.taxTotal)}</span></div>
-            <div className="flex justify-end gap-8 font-semibold"><span>Total</span><span className="tabular text-ink">{num(cn.total)}</span></div>
-            <div className="flex justify-end gap-8"><span className="text-ink-3">Applied</span><span className="tabular text-ink-2">{num(cn.amountApplied)}</span></div>
-            <div className="flex justify-end gap-8 font-semibold"><span>Unapplied</span><span className="tabular text-ink">{num(cn.amountRemaining)}</span></div>
+            <div className="flex justify-end gap-8"><span className="text-ink-3">{t("fin.subtotal")}</span><span className="tabular text-ink-2">{num(cn.subtotal)} {cn.currency}</span></div>
+            <div className="flex justify-end gap-8"><span className="text-ink-3">{t("fin.tax")}</span><span className="tabular text-ink-2">{num(cn.taxTotal)}</span></div>
+            <div className="flex justify-end gap-8 font-semibold"><span>{t("common.total")}</span><span className="tabular text-ink">{num(cn.total)}</span></div>
+            <div className="flex justify-end gap-8"><span className="text-ink-3">{t("acct.applied")}</span><span className="tabular text-ink-2">{num(cn.amountApplied)}</span></div>
+            <div className="flex justify-end gap-8 font-semibold"><span>{t("acct.unapplied")}</span><span className="tabular text-ink">{num(cn.amountRemaining)}</span></div>
           </div>
         </Panel>
         <div className="space-y-4">
           <Panel>
             <PanelHeader title={t("acct.details")} />
             <dl className="space-y-2 px-4 py-3 text-[13px]">
-              <div className="flex justify-between"><dt className="text-ink-3">Customer</dt><dd className="text-ink">{cn.customer.name}</dd></div>
-              {cn.reason && <div className="flex justify-between"><dt className="text-ink-3">Reason</dt><dd className="text-ink">{cn.reason}</dd></div>}
-              <div className="flex justify-between"><dt className="text-ink-3">Currency</dt><dd className="text-ink">{cn.currency}</dd></div>
+              <div className="flex justify-between"><dt className="text-ink-3">{t("fin.customer")}</dt><dd className="text-ink">{cn.customer.name}</dd></div>
+              {cn.reason && <div className="flex justify-between"><dt className="text-ink-3">{t("fin.reason")}</dt><dd className="text-ink">{cn.reason}</dd></div>}
+              <div className="flex justify-between"><dt className="text-ink-3">{t("common.currency")}</dt><dd className="text-ink">{cn.currency}</dd></div>
             </dl>
           </Panel>
           {cn.applications.length > 0 && (

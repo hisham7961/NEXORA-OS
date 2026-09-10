@@ -38,30 +38,30 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
   const columns: Column<Row>[] = [
     { key: "num", header: t("acct.col.number"), render: (e) => <Link href={`/accounting/journal/${e.id}?company=${current.id}`} className="font-mono text-accent hover:underline">{e.journalNumber}</Link> },
     { key: "date", header: t("common.date"), render: (e) => <span className="tabular text-ink-3">{formatDate(e.postingDate ?? e.date, locale)}</span> },
-    { key: "memo", header: "Memo", render: (e) => <span className="text-ink">{e.memo ?? e.reference ?? "—"}</span> },
+    { key: "memo", header: t("acct.memo"), render: (e) => <span className="text-ink">{e.memo ?? e.reference ?? "—"}</span> },
     { key: "amount", header: t("common.amount"), align: "end", render: (e) => <span className="tabular text-ink">{Number(e.totalDebitBase).toLocaleString(locale, { minimumFractionDigits: 2 })} {e.baseCurrency}</span> },
-    { key: "status", header: t("common.status"), render: (e) => <Badge category={STATUS_CAT[e.status] ?? "neutral"}>{e.status}</Badge> },
+    { key: "status", header: t("common.status"), render: (e) => <Badge category={STATUS_CAT[e.status] ?? "neutral"}>{t(`status.${e.status}`)}</Badge> },
     { key: "act", header: "", align: "end", render: (e) => (canReverse && e.status === "posted" ? <ReverseEntryButton entryId={e.id} /> : null) },
   ];
 
   return (
     <>
-      <PageHeader title={t("acct.journal")} description={`Post double-entry journals to ${current.name}'s ledger — balanced and immutable.`}
+      <PageHeader title={t("acct.journal")} description={t("acct.journalSub", { name: current.name })}
         actions={<CompanyPicker companies={companies} current={current.id} />} />
 
       {!settings ? (
-        <Panel><EmptyState title="Accounting not set up" description="Initialize accounting for this company from the Accounting overview first." /></Panel>
+        <Panel><EmptyState title={t("acct.notSetUp")} description={t("acct.notSetUpBody")} /></Panel>
       ) : (
         <div className="space-y-4">
           {canPost && (
             <Panel>
-              <PanelHeader title="New journal entry" icon={<BookOpen className="h-4 w-4" />} />
+              <PanelHeader title={t("acct.newJournalEntry")} icon={<BookOpen className="h-4 w-4" />} />
               <PanelBody><JournalWorkspace companyId={current.id} baseCurrency={settings.baseCurrency} accounts={accounts} journals={journals} /></PanelBody>
             </Panel>
           )}
           <Panel>
-            <PanelHeader title="Recent entries" />
-            <DataTable columns={columns} rows={entries} getRowKey={(e) => e.id} empty={<EmptyState title="No entries yet" description="Posted journals will appear here." />} />
+            <PanelHeader title={t("acct.recentEntries")} />
+            <DataTable columns={columns} rows={entries} getRowKey={(e) => e.id} empty={<EmptyState title={t("acct.noEntries")} description={t("acct.noEntriesBody")} />} />
           </Panel>
         </div>
       )}

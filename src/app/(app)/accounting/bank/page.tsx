@@ -39,16 +39,16 @@ export default async function BankPage({ searchParams }: { searchParams: Promise
 
   const acctCols: Column<(typeof accounts)[number]>[] = [
     { key: "name", header: t("acct.col.account"), render: (a) => <span className="text-ink">{a.name}</span> },
-    { key: "type", header: t("common.type"), align: "center", render: (a) => <Badge category={a.type === "cash" ? "neutral" : "info"}>{a.type}</Badge> },
+    { key: "type", header: t("common.type"), align: "center", render: (a) => <Badge category={a.type === "cash" ? "neutral" : "info"}>{t(`fin.method.${a.type}`)}</Badge> },
     { key: "currency", header: t("common.currency"), align: "center", render: (a) => <span className="text-ink-3">{a.currency}</span> },
-    { key: "balance", header: `Book balance (${cur})`, align: "end", render: (a) => { const r = position.rows.find((p) => p.id === a.id); return <span className="tabular text-ink">{r ? num(r.balance) : "—"}</span>; } },
-    { key: "status", header: t("common.status"), align: "center", render: (a) => <Badge category={a.isActive ? "success" : "neutral"}>{a.isActive ? "active" : "inactive"}</Badge> },
+    { key: "balance", header: t("acct.bookBalance", { cur }), align: "end", render: (a) => { const r = position.rows.find((p) => p.id === a.id); return <span className="tabular text-ink">{r ? num(r.balance) : "—"}</span>; } },
+    { key: "status", header: t("common.status"), align: "center", render: (a) => <Badge category={a.isActive ? "success" : "neutral"}>{a.isActive ? t("status.active") : t("status.inactive")}</Badge> },
     ...(canManage ? [{ key: "act", header: "", align: "end" as const, render: (a: (typeof accounts)[number]) => <EditBankAccountButton account={a} accounts={accountOptions} /> }] : []),
   ];
 
   return (
     <>
-      <PageHeader title={t("acct.bankCash")} description={`Accounts, transfers and reconciliation for ${current.name} (${cur}).`}
+      <PageHeader title={t("acct.bankCash")} description={t("acct.bankSub", { name: current.name, cur })}
         actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} />
           {canManage && bankOptions.length >= 2 && <TransferButton companyId={current.id} banks={bankOptions} />}
           {canManage && bankOptions.length >= 1 && <ImportStatementButton companyId={current.id} banks={bankOptions} />}
@@ -56,38 +56,38 @@ export default async function BankPage({ searchParams }: { searchParams: Promise
           {canManage && <NewBankAccountButton companyId={current.id} accounts={accountOptions} />}</div>} />
 
       <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Metric label="Cash & bank (book)" value={`${num(position.baseTotal)} ${cur}`} category="info" />
-        <Metric label="Accounts" value={String(accounts.length)} />
-        <Metric label="Open reconciliations" value={String(recs.filter((r) => r.status === "open").length)} />
+        <Metric label={t("acct.cashBankBook")} value={`${num(position.baseTotal)} ${cur}`} category="info" />
+        <Metric label={t("acct.accounts")} value={String(accounts.length)} />
+        <Metric label={t("acct.openReconciliations")} value={String(recs.filter((r) => r.status === "open").length)} />
       </div>
 
       <Panel className="mb-4">
-        <PanelHeader title="Accounts" icon={<Landmark className="h-4 w-4" />} />
-        <DataTable columns={acctCols} rows={accounts} getRowKey={(a) => a.id} empty={<EmptyState title="No accounts" description="Add a bank or cash account mapped to a GL account." />} />
+        <PanelHeader title={t("acct.accounts")} icon={<Landmark className="h-4 w-4" />} />
+        <DataTable columns={acctCols} rows={accounts} getRowKey={(a) => a.id} empty={<EmptyState title={t("acct.noAccounts")} description={t("acct.addBankAccountBody")} />} />
       </Panel>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel>
-          <PanelHeader title="Recent transfers" />
+          <PanelHeader title={t("acct.recentTransfers")} />
           <DataTable
             columns={[
               { key: "num", header: t("acct.col.number"), render: (t: (typeof transfers)[number]) => <span className="font-mono text-ink-2">{t.transferNumber}</span> },
-              { key: "route", header: "From → To", render: (t: (typeof transfers)[number]) => <span className="text-ink-2">{t.fromBankAccount.name} → {t.toBankAccount.name}</span> },
+              { key: "route", header: t("acct.fromTo"), render: (t: (typeof transfers)[number]) => <span className="text-ink-2">{t.fromBankAccount.name} → {t.toBankAccount.name}</span> },
               { key: "amt", header: t("common.amount"), align: "end", render: (t: (typeof transfers)[number]) => <span className="tabular text-ink">{num(t.fromAmount)} {t.fromCurrency}</span> },
               { key: "date", header: t("common.date"), align: "end", render: (t: (typeof transfers)[number]) => <span className="text-ink-3">{formatDate(t.date, locale)}</span> },
             ]}
-            rows={transfers.slice(0, 10)} getRowKey={(t) => t.id} empty={<EmptyState title="No transfers" />} />
+            rows={transfers.slice(0, 10)} getRowKey={(t) => t.id} empty={<EmptyState title={t("acct.noTransfers")} />} />
         </Panel>
         <Panel>
-          <PanelHeader title="Reconciliations" />
+          <PanelHeader title={t("acct.reconciliations")} />
           <DataTable
             columns={[
               { key: "bank", header: t("acct.col.account"), render: (r: (typeof recs)[number]) => <Link href={`/accounting/bank/reconcile/${r.id}`} className="text-ink hover:text-accent">{r.bankAccount.name}</Link> },
-              { key: "date", header: "Statement", render: (r: (typeof recs)[number]) => <span className="text-ink-3">{formatDate(r.statementDate, locale)}</span> },
-              { key: "bal", header: "Statement bal.", align: "end", render: (r: (typeof recs)[number]) => <span className="tabular text-ink-2">{num(r.statementBalance)}</span> },
-              { key: "status", header: t("common.status"), align: "center", render: (r: (typeof recs)[number]) => <Badge category={r.status === "completed" ? "success" : "warning"}>{r.status}</Badge> },
+              { key: "date", header: t("acct.statementCol"), render: (r: (typeof recs)[number]) => <span className="text-ink-3">{formatDate(r.statementDate, locale)}</span> },
+              { key: "bal", header: t("acct.statementBalShort"), align: "end", render: (r: (typeof recs)[number]) => <span className="tabular text-ink-2">{num(r.statementBalance)}</span> },
+              { key: "status", header: t("common.status"), align: "center", render: (r: (typeof recs)[number]) => <Badge category={r.status === "completed" ? "success" : "warning"}>{t(`status.${r.status}`)}</Badge> },
             ]}
-            rows={recs.slice(0, 10)} getRowKey={(r) => r.id} empty={<EmptyState title="No reconciliations" />} />
+            rows={recs.slice(0, 10)} getRowKey={(r) => r.id} empty={<EmptyState title={t("acct.noReconciliations")} />} />
         </Panel>
       </div>
     </>

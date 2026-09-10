@@ -30,23 +30,23 @@ export default async function BillsPage({ searchParams }: { searchParams: Promis
   type Row = (typeof rows)[number];
 
   const columns: Column<Row>[] = [
-    { key: "number", header: t("acct.col.number"), render: (b) => <Link href={`/accounting/bills/${b.id}`} className="font-mono text-ink hover:text-accent">{b.billNumber ?? "draft"}</Link> },
+    { key: "number", header: t("acct.col.number"), render: (b) => <Link href={`/accounting/bills/${b.id}`} className="font-mono text-ink hover:text-accent">{b.billNumber ?? t("fin.draft")}</Link> },
     { key: "supplier", header: t("acct.col.supplier"), render: (b) => <span className="text-ink-2">{b.supplier.name}</span> },
-    { key: "ref", header: "Supplier ref", render: (b) => <span className="text-ink-3">{b.supplierRef ?? "—"}</span> },
+    { key: "ref", header: t("fin.supplierRef"), render: (b) => <span className="text-ink-3">{b.supplierRef ?? "—"}</span> },
     { key: "issue", header: t("common.date"), render: (b) => <span className="text-ink-3">{formatDate(b.issueDate, locale)}</span> },
     { key: "due", header: t("common.due"), render: (b) => <span className="text-ink-3">{b.dueDate ? formatDate(b.dueDate, locale) : "—"}</span> },
     { key: "total", header: t("common.total"), align: "end", render: (b) => <span className="tabular text-ink-2">{num(b.total)} {b.currency}</span> },
     { key: "balance", header: t("acct.col.balanceDue"), align: "end", render: (b) => <span className="tabular text-ink">{num(b.amountDue)}</span> },
-    { key: "status", header: t("common.status"), align: "center", render: (b) => <Badge category={STATUS_CAT[b.status] ?? "neutral"}>{b.status.replace("_", " ")}</Badge> },
+    { key: "status", header: t("common.status"), align: "center", render: (b) => <Badge category={STATUS_CAT[b.status] ?? "neutral"}>{t(`status.${b.status}`)}</Badge> },
   ];
 
   return (
     <>
-      <PageHeader title={t("acct.bills")} description={`Accounts payable for ${current.name} (${current.baseCurrency}).`}
-        actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} /><ExportButton resource="bills" />{canCreate && <Link href={`/accounting/bills/new?company=${current.id}`}><Button variant="primary" size="sm"><Plus className="h-4 w-4" /> New bill</Button></Link>}</div>} />
+      <PageHeader title={t("acct.bills")} description={t("acct.billsSub", { name: current.name, cur: current.baseCurrency })}
+        actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} /><ExportButton resource="bills" />{canCreate && <Link href={`/accounting/bills/new?company=${current.id}`}><Button variant="primary" size="sm"><Plus className="h-4 w-4" /> {t("fin.newBillBtn")}</Button></Link>}</div>} />
       <Panel>
         <DataTable columns={columns} rows={rows} getRowKey={(b) => b.id}
-          empty={<EmptyState icon={<ReceiptText className="h-5 w-5" />} title="No bills" description="Record a supplier bill to post an expense and payable." />} />
+          empty={<EmptyState icon={<ReceiptText className="h-5 w-5" />} title={t("acct.noBills")} description={t("acct.noBillsBody")} />} />
       </Panel>
     </>
   );

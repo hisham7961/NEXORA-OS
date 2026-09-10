@@ -29,18 +29,18 @@ export default async function BudgetsPage({ searchParams }: { searchParams: Prom
 
   const columns: Column<Row>[] = [
     { key: "name", header: t("acct.col.budget"), render: (b) => <Link href={`/accounting/budgets/${b.id}`} className="text-ink hover:text-accent">{b.name}</Link> },
-    { key: "lines", header: "Accounts", align: "center", render: (b) => <span className="text-ink-3">{b._count.lines}</span> },
+    { key: "lines", header: t("acct.accounts"), align: "center", render: (b) => <span className="text-ink-3">{b._count.lines}</span> },
     { key: "amount", header: t("common.total"), align: "end", render: (b) => <span className="tabular text-ink-2">{num(b.amount)} {b.currency}</span> },
-    { key: "status", header: t("common.status"), align: "center", render: (b) => <Badge category={STATUS_CAT[b.status] ?? "neutral"}>{b.status}</Badge> },
+    { key: "status", header: t("common.status"), align: "center", render: (b) => <Badge category={STATUS_CAT[b.status] ?? "neutral"}>{t(`status.${b.status}`)}</Badge> },
   ];
 
   return (
     <>
-      <PageHeader title={t("acct.budgets")} description={`Budget vs actual for ${current.name} (${current.baseCurrency}).`}
-        actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} />{canManage && <Link href={`/accounting/budgets/new?company=${current.id}`}><Button variant="primary" size="sm"><Plus className="h-4 w-4" /> New budget</Button></Link>}</div>} />
+      <PageHeader title={t("acct.budgets")} description={t("acct.budgetsSub", { name: current.name, cur: current.baseCurrency })}
+        actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} />{canManage && <Link href={`/accounting/budgets/new?company=${current.id}`}><Button variant="primary" size="sm"><Plus className="h-4 w-4" /> {t("fin.newBudgetBtn")}</Button></Link>}</div>} />
       <Panel>
         <DataTable columns={columns} rows={budgets} getRowKey={(b) => b.id}
-          empty={<EmptyState icon={<PieChart className="h-5 w-5" />} title="No budgets" description="Create a budget to track spend against plan." />} />
+          empty={<EmptyState icon={<PieChart className="h-5 w-5" />} title={t("acct.noBudgets")} description={t("acct.noBudgetsBody")} />} />
       </Panel>
     </>
   );

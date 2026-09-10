@@ -29,21 +29,21 @@ export default async function CreditNotesPage({ searchParams }: { searchParams: 
   type Row = (typeof rows)[number];
 
   const columns: Column<Row>[] = [
-    { key: "number", header: t("acct.col.number"), render: (c) => <Link href={`/accounting/credit-notes/${c.id}`} className="font-mono text-ink hover:text-accent">{c.creditNoteNumber ?? "draft"}</Link> },
+    { key: "number", header: t("acct.col.number"), render: (c) => <Link href={`/accounting/credit-notes/${c.id}`} className="font-mono text-ink hover:text-accent">{c.creditNoteNumber ?? t("fin.draft")}</Link> },
     { key: "customer", header: t("acct.col.customer"), render: (c) => <span className="text-ink-2">{c.customer.name}</span> },
     { key: "date", header: t("common.date"), render: (c) => <span className="text-ink-3">{formatDate(c.issueDate, locale)}</span> },
     { key: "total", header: t("common.total"), align: "end", render: (c) => <span className="tabular text-ink-2">{num(c.total)} {c.currency}</span> },
     { key: "remaining", header: t("acct.col.unapplied"), align: "end", render: (c) => <span className="tabular text-ink">{num(c.amountRemaining)}</span> },
-    { key: "status", header: t("common.status"), align: "center", render: (c) => <Badge category={STATUS_CAT[c.status] ?? "neutral"}>{c.status}</Badge> },
+    { key: "status", header: t("common.status"), align: "center", render: (c) => <Badge category={STATUS_CAT[c.status] ?? "neutral"}>{t(`status.${c.status}`)}</Badge> },
   ];
 
   return (
     <>
-      <PageHeader title={t("acct.creditNotes")} description={`Customer credit notes for ${current.name} (${current.baseCurrency}).`}
-        actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} />{canCreate && <Link href={`/accounting/credit-notes/new?company=${current.id}`}><Button variant="primary" size="sm"><Plus className="h-4 w-4" /> New credit note</Button></Link>}</div>} />
+      <PageHeader title={t("acct.creditNotes")} description={t("acct.creditNotesSub", { name: current.name, cur: current.baseCurrency })}
+        actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} />{canCreate && <Link href={`/accounting/credit-notes/new?company=${current.id}`}><Button variant="primary" size="sm"><Plus className="h-4 w-4" /> {t("fin.newCreditNoteBtn")}</Button></Link>}</div>} />
       <Panel>
         <DataTable columns={columns} rows={rows} getRowKey={(c) => c.id}
-          empty={<EmptyState icon={<FileMinus className="h-5 w-5" />} title="No credit notes" description="Issue a credit note to reduce a customer's receivable." />} />
+          empty={<EmptyState icon={<FileMinus className="h-5 w-5" />} title={t("acct.noCreditNotes")} description={t("acct.noCreditNotesBody")} />} />
       </Panel>
     </>
   );

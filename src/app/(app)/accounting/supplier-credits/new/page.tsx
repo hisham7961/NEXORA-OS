@@ -18,7 +18,7 @@ export default async function NewSupplierCreditPage({ searchParams }: { searchPa
   const { t } = await getServerI18n();
   const sp = await searchParams;
   const { current } = await resolveAccountingCompany(principal, sp.company);
-  if (!current) return <><PageHeader title="New Supplier Credit" /><Panel><EmptyState title={t("acct.noCompany")} /></Panel></>;
+  if (!current) return <><PageHeader title={t("acct.newSupplierCredit")} /><Panel><EmptyState title={t("acct.noCompany")} /></Panel></>;
 
   const [{ rows: suppliers }, taxRates, accounts] = await Promise.all([
     listSuppliers(principal, current.id, { active: "active", pageSize: 500 }),
@@ -28,8 +28,8 @@ export default async function NewSupplierCreditPage({ searchParams }: { searchPa
 
   return (
     <>
-      <div className="mb-1 text-xs text-ink-3"><Link href={`/accounting/supplier-credits?company=${current.id}`} className="hover:text-ink-2">Supplier Credits</Link> / New</div>
-      <PageHeader title="New Supplier Credit" description={`Legal company ${current.name} · ${current.baseCurrency}`} />
+      <div className="mb-1 text-xs text-ink-3"><Link href={`/accounting/supplier-credits?company=${current.id}`} className="hover:text-ink-2">{t("acct.supplierCredits")}</Link> / {t("acct.newCrumb")}</div>
+      <PageHeader title={t("acct.newSupplierCredit")} description={`Legal company ${current.name} · ${current.baseCurrency}`} />
       <Panel>
         <PanelBody>
           <BillComposer companyId={current.id} kind="credit" baseCurrency={current.baseCurrency}

@@ -21,7 +21,7 @@ export default async function ReceiptsPage({ searchParams }: { searchParams: Pro
   const { t } = await getServerI18n();
   const sp = await searchParams;
   const { companies, current } = await resolveAccountingCompany(principal, sp.company);
-  if (!current) return <><PageHeader title="Receipts" /><Panel><EmptyState title={t("acct.noCompany")} /></Panel></>;
+  if (!current) return <><PageHeader title={t("acct.receipts")} /><Panel><EmptyState title={t("acct.noCompany")} /></Panel></>;
 
   const canCreate = canAnywhere(principal, "payments.create");
   const [{ rows }, customersRes, openInvoicesRes] = await Promise.all([
@@ -40,16 +40,16 @@ export default async function ReceiptsPage({ searchParams }: { searchParams: Pro
     { key: "method", header: t("acct.col.method"), align: "center", render: (r) => <span className="text-ink-3 capitalize">{r.method ?? "—"}</span> },
     { key: "amount", header: t("common.amount"), align: "end", render: (r) => <span className="tabular text-ink-2">{num(r.amount)} {r.currency}</span> },
     { key: "unapplied", header: t("acct.col.unapplied"), align: "end", render: (r) => <span className="tabular text-ink">{Number(r.unappliedAmount) ? num(r.unappliedAmount) : "—"}</span> },
-    { key: "gl", header: "", align: "end", render: (r) => r.journalEntryId ? <Link href={`/accounting/journal/${r.journalEntryId}`} className="text-[12px] text-accent hover:underline">GL →</Link> : null },
+    { key: "gl", header: "", align: "end", render: (r) => r.journalEntryId ? <Link href={`/accounting/journal/${r.journalEntryId}`} className="text-[12px] text-accent hover:underline">{t("acct.glArrow")}</Link> : null },
   ];
 
   return (
     <>
-      <PageHeader title="Receipts" description={`Customer payments received for ${current.name} (${current.baseCurrency}).`}
+      <PageHeader title={t("acct.receipts")} description={t("acct.receiptsSub", { name: current.name, cur: current.baseCurrency })}
         actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} />{canCreate && <RecordReceiptButton companyId={current.id} baseCurrency={current.baseCurrency} customers={customersRes.rows.map((c) => ({ id: c.id, name: c.name }))} openInvoices={openInvoices} />}</div>} />
       <Panel>
         <DataTable columns={columns} rows={rows} getRowKey={(r) => r.id}
-          empty={<EmptyState icon={<HandCoins className="h-5 w-5" />} title="No receipts" description="Record a customer payment to settle open invoices." />} />
+          empty={<EmptyState icon={<HandCoins className="h-5 w-5" />} title={t("acct.noReceiptsAcct")} description={t("acct.noReceiptsBody")} />} />
       </Panel>
     </>
   );

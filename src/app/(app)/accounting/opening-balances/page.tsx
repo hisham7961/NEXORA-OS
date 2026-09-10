@@ -27,7 +27,7 @@ export default async function OpeningBalancesPage({ searchParams }: { searchPara
     <>
       <PageHeader
         title={t("nav.openingBalances")}
-        description={`Carry ${current.name}'s existing account balances into the ledger at go-live. Entered once, posted as a single balanced opening journal in ${current.baseCurrency}.`}
+        description={t("acct.openingBalancesSub", { name: current.name, cur: current.baseCurrency })}
         actions={<CompanyPicker companies={companies} current={current.id} />}
       />
       <Panel>

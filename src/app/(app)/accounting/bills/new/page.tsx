@@ -28,7 +28,7 @@ export default async function NewBillPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <div className="mb-1 text-xs text-ink-3"><Link href={`/accounting/bills?company=${current.id}`} className="hover:text-ink-2">Supplier Bills</Link> / New</div>
+      <div className="mb-1 text-xs text-ink-3"><Link href={`/accounting/bills?company=${current.id}`} className="hover:text-ink-2">{t("acct.bills")}</Link> / {t("acct.newCrumb")}</div>
       <PageHeader title={t("acct.newBill")} description={`Legal company ${current.name} · ${current.baseCurrency}`} />
       <Panel>
         <PanelBody>

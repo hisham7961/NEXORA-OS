@@ -32,17 +32,17 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
     { key: "contact", header: t("acct.col.contact"), render: (c) => <span className="text-ink-2">{c.email ?? c.phone ?? "—"}</span> },
     { key: "currency", header: t("common.currency"), align: "center", render: (c) => <span className="text-ink-3">{c.currency ?? current.baseCurrency}</span> },
     { key: "terms", header: t("acct.col.terms"), align: "center", render: (c) => <span className="text-ink-3">{c.paymentTermsDays != null ? `${c.paymentTermsDays}d` : "—"}</span> },
-    { key: "status", header: t("common.status"), align: "center", render: (c) => <Badge category={c.isActive ? "success" : "neutral"}>{c.isActive ? "active" : "inactive"}</Badge> },
+    { key: "status", header: t("common.status"), align: "center", render: (c) => <Badge category={c.isActive ? "success" : "neutral"}>{c.isActive ? t("status.active") : t("status.inactive")}</Badge> },
     ...(canManage ? [{ key: "actions", header: "", align: "end" as const, render: (c: Row) => <EditCustomerButton customer={c} /> }] : []),
   ];
 
   return (
     <>
-      <PageHeader title={t("acct.customers")} description={`Accounts receivable parties for ${current.name}.`}
+      <PageHeader title={t("acct.customers")} description={t("acct.customersSub", { name: current.name })}
         actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} /><ExportButton resource="customers" />{canManage && <NewCustomerButton companyId={current.id} />}</div>} />
       <Panel>
         <DataTable columns={columns} rows={rows} getRowKey={(c) => c.id}
-          empty={<EmptyState icon={<Users className="h-5 w-5" />} title="No customers" description="Add a customer to start invoicing." />} />
+          empty={<EmptyState icon={<Users className="h-5 w-5" />} title={t("acct.noCustomers")} description={t("acct.noCustomersBody")} />} />
       </Panel>
     </>
   );

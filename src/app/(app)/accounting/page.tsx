@@ -22,7 +22,7 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
   const sp = await searchParams;
   const { companies, current } = await resolveAccountingCompany(principal, sp.company);
 
-  if (!current) return <><PageHeader title={t("acct.title")} /><Panel><EmptyState icon={<Landmark className="h-5 w-5" />} title={t("acct.noCompany")} description="You don't have accounting access to any legal company." /></Panel></>;
+  if (!current) return <><PageHeader title={t("acct.title")} /><Panel><EmptyState icon={<Landmark className="h-5 w-5" />} title={t("acct.noCompany")} description={t("acct.noCompanyAccess")} /></Panel></>;
 
   const [settings, fiscalYears, accountCount, postedCount] = await Promise.all([
     prisma.companyAccountingSettings.findUnique({ where: { companyId: current.id } }),
@@ -33,15 +33,15 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
 
   return (
     <>
-      <PageHeader title={t("acct.title")} description="The financial system of record for each legal company — double-entry, immutable postings (Phase 3)."
+      <PageHeader title={t("acct.title")} description={t("acct.titleSub")}
         actions={<CompanyPicker companies={companies} current={current.id} />} />
 
       {!settings ? (
         <Panel>
           <PanelBody className="flex flex-col items-center gap-3 py-10 text-center">
             <Landmark className="h-8 w-8 text-ink-3" />
-            <div><div className="text-[15px] font-medium text-ink">{current.name} is not set up for accounting yet</div>
-              <p className="mx-auto mt-1 max-w-md text-[13px] text-ink-3">Initialize a standard chart of accounts, journals and system-account mappings in the company base currency ({current.baseCurrency}). You can customize everything afterwards.</p></div>
+            <div><div className="text-[15px] font-medium text-ink">{t("acct.notSetUpCompany", { name: current.name })}</div>
+              <p className="mx-auto mt-1 max-w-md text-[13px] text-ink-3">{t("acct.setupChartBody", { cur: current.baseCurrency })}</p></div>
             <SetupAccountingButton companyId={current.id} baseCurrency={current.baseCurrency} />
           </PanelBody>
         </Panel>
@@ -49,23 +49,23 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
         <>
           <Panel className="mb-4">
             <div className="grid grid-cols-2 gap-4 p-4 sm:grid-cols-4">
-              <Metric label="Base currency" value={settings.baseCurrency} />
-              <Metric label="Accounts" value={accountCount} />
-              <Metric label="Posted entries" value={postedCount} category="info" />
-              <Metric label="Payment terms" value={`${settings.defaultPaymentTerms}d`} />
+              <Metric label={t("acct.baseCurrency")} value={settings.baseCurrency} />
+              <Metric label={t("acct.accounts")} value={accountCount} />
+              <Metric label={t("acct.postedEntries")} value={postedCount} category="info" />
+              <Metric label={t("acct.paymentTerms")} value={`${settings.defaultPaymentTerms}d`} />
             </div>
           </Panel>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Panel className="lg:col-span-2">
-              <PanelHeader title="Fiscal years & periods" icon={<Landmark className="h-4 w-4" />} action={<NewFiscalYearButton companyId={current.id} />} />
+              <PanelHeader title={t("acct.fiscalYearsPeriods")} icon={<Landmark className="h-4 w-4" />} action={<NewFiscalYearButton companyId={current.id} />} />
               {fiscalYears.length === 0 ? (
-                <EmptyState title="No fiscal year" description="Create a fiscal year to generate accounting periods." />
+                <EmptyState title={t("acct.noFiscalYear")} description={t("acct.noFiscalYearBody")} />
               ) : (
                 <div className="divide-y divide-line">
                   {fiscalYears.map((fy) => (
                     <div key={fy.id} className="px-4 py-3">
-                      <div className="mb-2 flex items-center justify-between"><span className="text-[13px] font-medium text-ink">{fy.name}</span><Badge category={fy.status === "open" ? "success" : "neutral"}>{fy.status}</Badge></div>
+                      <div className="mb-2 flex items-center justify-between"><span className="text-[13px] font-medium text-ink">{fy.name}</span><Badge category={fy.status === "open" ? "success" : "neutral"}>{t(`status.${fy.status}`)}</Badge></div>
                       <div className="flex flex-wrap gap-1.5">
                         {fy.periods.map((p) => (
                           <span key={p.id} className="inline-flex items-center gap-1.5 rounded-md border border-line px-2 py-1 text-[11px]">
@@ -81,15 +81,15 @@ export default async function AccountingPage({ searchParams }: { searchParams: P
             </Panel>
 
             <Panel>
-              <PanelHeader title="Quick links" />
+              <PanelHeader title={t("acct.quickLinks")} />
               <ul className="divide-y divide-line text-[13px]">
-                <li><Link href={`/accounting/accounts?company=${current.id}`} className="block px-4 py-2.5 text-ink hover:bg-surface-2">Chart of Accounts →</Link></li>
-                <li><Link href={`/accounting/journal?company=${current.id}`} className="block px-4 py-2.5 text-ink hover:bg-surface-2">Post a Journal Entry →</Link></li>
-                <li><Link href={`/accounting/reports?company=${current.id}`} className="block px-4 py-2.5 text-ink hover:bg-surface-2">Financial Reports →</Link></li>
+                <li><Link href={`/accounting/accounts?company=${current.id}`} className="block px-4 py-2.5 text-ink hover:bg-surface-2">{t("acct.chartOfAccounts")}</Link></li>
+                <li><Link href={`/accounting/journal?company=${current.id}`} className="block px-4 py-2.5 text-ink hover:bg-surface-2">{t("acct.postJournalLink")}</Link></li>
+                <li><Link href={`/accounting/reports?company=${current.id}`} className="block px-4 py-2.5 text-ink hover:bg-surface-2">{t("acct.financialReportsLink")}</Link></li>
               </ul>
-              <PanelHeader title="System accounts" />
+              <PanelHeader title={t("acct.systemAccounts")} />
               <PanelBody>
-                <p className="text-[12px] text-ink-3">Receivable, payable, revenue, COGS, tax and FX accounts are mapped in settings and drive automatic postings. They are protected from deletion.</p>
+                <p className="text-[12px] text-ink-3">{t("acct.systemAccountsBody")}</p>
               </PanelBody>
             </Panel>
           </div>

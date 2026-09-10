@@ -26,7 +26,7 @@ export default async function NewInvoicePage({ searchParams }: { searchParams: P
 
   return (
     <>
-      <div className="mb-1 text-xs text-ink-3"><Link href={`/accounting/invoices?company=${current.id}`} className="hover:text-ink-2">Sales Invoices</Link> / New</div>
+      <div className="mb-1 text-xs text-ink-3"><Link href={`/accounting/invoices?company=${current.id}`} className="hover:text-ink-2">{t("acct.invoices")}</Link> / {t("acct.newCrumb")}</div>
       <PageHeader title={t("acct.newInvoice")} description={`Legal company ${current.name} · ${current.baseCurrency}`} />
       <Panel>
         <PanelBody>

@@ -33,27 +33,27 @@ export default async function ReconcilePage({ params }: { params: Promise<{ id: 
 
   return (
     <>
-      <div className="mb-1 text-xs text-ink-3"><Link href={`/accounting/bank?company=${rec.companyId}`} className="hover:text-ink-2">Bank &amp; Cash</Link> / Reconcile</div>
-      <PageHeader title={`Reconcile — ${rec.bankAccount.name}`} description={`Statement ${formatDate(rec.statementDate, locale)}`}
-        meta={<Badge category={completed ? "success" : "warning"}>{rec.status}</Badge>}
+      <div className="mb-1 text-xs text-ink-3"><Link href={`/accounting/bank?company=${rec.companyId}`} className="hover:text-ink-2">{t("acct.bankCash")}</Link> / {t("acct.reconcileCrumb")}</div>
+      <PageHeader title={t("acct.reconcileTitle", { name: rec.bankAccount.name })} description={t("acct.statementDated", { date: formatDate(rec.statementDate, locale) })}
+        meta={<Badge category={completed ? "success" : "warning"}>{t(`status.${rec.status}`)}</Badge>}
         actions={!completed && canManage ? <CompleteReconciliationButton id={rec.id} balanced={balanced} /> : undefined} />
 
       <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Metric label="Statement balance" value={num(statement)} />
-        <Metric label="Cleared balance" value={num(cleared)} category={balanced ? "success" : "warning"} />
-        <Metric label="Difference" value={num(diff)} category={balanced ? "success" : "critical"} />
+        <Metric label={t("acct.statementBalance")} value={num(statement)} />
+        <Metric label={t("acct.clearedBalance")} value={num(cleared)} category={balanced ? "success" : "warning"} />
+        <Metric label={t("acct.difference")} value={num(diff)} category={balanced ? "success" : "critical"} />
       </div>
 
       {!completed && canManage && (
         <Panel className="mb-4">
-          <PanelHeader title={t("acct.suggestedMatches")} description="Imported statement lines matched to unreconciled ledger lines by amount, date and reference." />
+          <PanelHeader title={t("acct.suggestedMatches")} description={t("acct.matchedByBody")} />
           <div className="px-4 py-3"><SuggestedMatches reconciliationId={rec.id} completed={completed} /></div>
         </Panel>
       )}
 
       <Panel>
-        <PanelHeader title={t("acct.ledgerLines")} action={<span className="text-[12px] text-ink-3">{lines.filter((l) => l.reconciliationId).length} / {lines.length} cleared</span>} />
-        {lines.length === 0 ? <EmptyState title="No unreconciled lines" description="No posted ledger movements on this account up to the statement date." /> : (
+        <PanelHeader title={t("acct.ledgerLines")} action={<span className="text-[12px] text-ink-3">{t("acct.clearedCount", { cleared: lines.filter((l) => l.reconciliationId).length, total: lines.length })}</span>} />
+        {lines.length === 0 ? <EmptyState title={t("acct.noUnreconciled")} description={t("acct.noUnreconciledBody")} /> : (
           <div className="divide-y divide-line">
             {lines.map((l) => {
               const isCleared = !!l.reconciliationId;

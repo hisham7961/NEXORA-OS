@@ -26,7 +26,7 @@ export default async function NewBudgetPage({ searchParams }: { searchParams: Pr
 
   return (
     <>
-      <div className="mb-1 text-xs text-ink-3"><Link href={`/accounting/budgets?company=${current.id}`} className="hover:text-ink-2">Budgets</Link> / New</div>
+      <div className="mb-1 text-xs text-ink-3"><Link href={`/accounting/budgets?company=${current.id}`} className="hover:text-ink-2">{t("acct.budgets")}</Link> / {t("acct.newCrumb")}</div>
       <PageHeader title={t("acct.newBudget")} description={`Legal company ${current.name} · ${current.baseCurrency}`} />
       <Panel>
         <PanelBody>
