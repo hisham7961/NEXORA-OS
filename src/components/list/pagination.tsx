@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getServerI18n } from "@/lib/server-i18n";
 
-/** Server-rendered pagination bar; preserves existing query params. */
-export function Pagination({
+/** Server-rendered pagination bar; preserves existing query params. Localized. */
+export async function Pagination({
   page,
   pageSize,
   total,
@@ -14,6 +15,7 @@ export function Pagination({
   total: number;
   params?: Record<string, string | undefined>;
 }) {
+  const { t } = await getServerI18n();
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
@@ -31,14 +33,14 @@ export function Pagination({
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-t border-line">
       <p className="text-xs text-ink-3 tabular">
-        {from}–{to} of {total}
+        {from}–{to} {t("common.of")} {total}
       </p>
       <div className="flex items-center gap-1.5">
-        <span className="me-1 text-xs text-ink-3 tabular">Page {page} / {totalPages}</span>
-        <Link href={href(Math.max(1, page - 1))} className={cn(linkCls, page <= 1 && disabledCls)} aria-label="Previous page">
+        <span className="me-1 text-xs text-ink-3 tabular">{t("common.page")} {page} / {totalPages}</span>
+        <Link href={href(Math.max(1, page - 1))} className={cn(linkCls, page <= 1 && disabledCls)} aria-label={t("common.previous")}>
           <ChevronLeft className="h-4 w-4 flip-x" />
         </Link>
-        <Link href={href(Math.min(totalPages, page + 1))} className={cn(linkCls, page >= totalPages && disabledCls)} aria-label="Next page">
+        <Link href={href(Math.min(totalPages, page + 1))} className={cn(linkCls, page >= totalPages && disabledCls)} aria-label={t("common.next")}>
           <ChevronRight className="h-4 w-4 flip-x" />
         </Link>
       </div>
