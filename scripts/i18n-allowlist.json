@@ -1,0 +1,18 @@
+{
+  "baseline": 2477,
+  "exemptFiles": [],
+  "exemptSubstrings": [
+    "NEXORA",
+    "KWD",
+    "USD",
+    "SAR",
+    "AED",
+    "SKU",
+    "IBAN",
+    "CSV",
+    "OpenAPI",
+    "otpauth",
+    "sha256",
+    "HMAC"
+  ]
+}
