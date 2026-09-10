@@ -33,7 +33,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     { key: "desc", header: t("common.description"), render: (l) => <span className="text-ink">{l.description}</span> },
     { key: "qty", header: t("acct.col.qty"), align: "end", render: (l) => <span className="tabular text-ink-3">{num(l.quantity)}</span> },
     { key: "price", header: t("acct.col.unitPrice"), align: "end", render: (l) => <span className="tabular text-ink-3">{num(l.unitPrice)}</span> },
-    { key: "disc", header: "Disc %", align: "end", render: (l) => <span className="tabular text-ink-3">{Number(l.discountPct) ? num(l.discountPct) : "—"}</span> },
+    { key: "disc", header: t("fin.discPct2"), align: "end", render: (l) => <span className="tabular text-ink-3">{Number(l.discountPct) ? num(l.discountPct) : "—"}</span> },
     { key: "tax", header: t("acct.col.tax"), align: "end", render: (l) => <span className="tabular text-ink-3">{Number(l.taxAmount) ? num(l.taxAmount) : "—"}</span> },
     { key: "net", header: t("acct.col.lineTotal"), align: "end", render: (l) => <span className="tabular text-ink">{num(l.lineNet)}</span> },
   ];
@@ -42,15 +42,15 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     <div className="flex items-center gap-2">
       {inv.status === "draft" && canCreate && <IssueButton id={inv.id} kind="invoice" />}
       {(inv.status === "issued" || inv.status === "draft") && canManage && <VoidInvoiceButton id={inv.id} />}
-      {inv.journalEntryId && <Link href={`/accounting/journal/${inv.journalEntryId}`} className="text-[12px] text-accent hover:underline">View GL entry →</Link>}
+      {inv.journalEntryId && <Link href={`/accounting/journal/${inv.journalEntryId}`} className="text-[12px] text-accent hover:underline">{t("fin.viewGlEntry")}</Link>}
     </div>
   );
 
   return (
     <>
-      <div className="mb-1 text-xs text-ink-3"><Link href={`/accounting/invoices?company=${inv.companyId}`} className="hover:text-ink-2">Sales Invoices</Link> / {inv.invoiceNumber ?? "draft"}</div>
-      <PageHeader title={inv.invoiceNumber ?? "Draft invoice"} description={inv.customer.name}
-        meta={<div className="flex items-center gap-2"><Badge category={STATUS_CAT[inv.status] ?? "neutral"}>{inv.status.replace("_", " ")}</Badge><span className="text-xs text-ink-3">{formatDate(inv.issueDate, locale)}</span></div>}
+      <div className="mb-1 text-xs text-ink-3"><Link href={`/accounting/invoices?company=${inv.companyId}`} className="hover:text-ink-2">{t("acct.salesInvoices")}</Link> / {inv.invoiceNumber ?? t("fin.draft")}</div>
+      <PageHeader title={inv.invoiceNumber ?? t("acct.draftInvoice")} description={inv.customer.name}
+        meta={<div className="flex items-center gap-2"><Badge category={STATUS_CAT[inv.status] ?? "neutral"}>{t(`status.${inv.status}`)}</Badge><span className="text-xs text-ink-3">{formatDate(inv.issueDate, locale)}</span></div>}
         actions={actions} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]">
@@ -58,30 +58,30 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           <PanelHeader title={t("acct.lines")} />
           <DataTable columns={columns} rows={inv.lines} getRowKey={(l) => l.id} />
           <div className="space-y-1 border-t border-line px-4 py-3 text-[13px]">
-            <div className="flex justify-end gap-8"><span className="text-ink-3">Subtotal</span><span className="tabular text-ink-2">{num(inv.subtotal)} {inv.currency}</span></div>
-            <div className="flex justify-end gap-8"><span className="text-ink-3">Tax</span><span className="tabular text-ink-2">{num(inv.taxTotal)}</span></div>
-            <div className="flex justify-end gap-8 font-semibold"><span>Total</span><span className="tabular text-ink">{num(inv.total)}</span></div>
-            <div className="flex justify-end gap-8"><span className="text-ink-3">Paid</span><span className="tabular text-ink-2">{num(inv.amountPaid)}</span></div>
-            <div className="flex justify-end gap-8 font-semibold"><span>Balance due</span><span className="tabular text-ink">{num(inv.amountDue)}</span></div>
+            <div className="flex justify-end gap-8"><span className="text-ink-3">{t("fin.subtotal")}</span><span className="tabular text-ink-2">{num(inv.subtotal)} {inv.currency}</span></div>
+            <div className="flex justify-end gap-8"><span className="text-ink-3">{t("fin.tax")}</span><span className="tabular text-ink-2">{num(inv.taxTotal)}</span></div>
+            <div className="flex justify-end gap-8 font-semibold"><span>{t("common.total")}</span><span className="tabular text-ink">{num(inv.total)}</span></div>
+            <div className="flex justify-end gap-8"><span className="text-ink-3">{t("fin.paid")}</span><span className="tabular text-ink-2">{num(inv.amountPaid)}</span></div>
+            <div className="flex justify-end gap-8 font-semibold"><span>{t("fin.balanceDue")}</span><span className="tabular text-ink">{num(inv.amountDue)}</span></div>
           </div>
         </Panel>
         <div className="space-y-4">
           <Panel>
             <PanelHeader title={t("acct.details")} />
             <dl className="space-y-2 px-4 py-3 text-[13px]">
-              <Row label="Customer" value={inv.customer.name} />
-              <Row label="Issue date" value={formatDate(inv.issueDate, locale)} />
-              <Row label="Due date" value={inv.dueDate ? formatDate(inv.dueDate, locale) : "—"} />
-              <Row label="Currency" value={inv.currency + (inv.currency !== inv.baseCurrency && inv.exchangeRate ? ` @ ${inv.exchangeRate}` : "")} />
-              {inv.reference && <Row label="Reference" value={inv.reference} />}
+              <Row label={t("fin.customer")} value={inv.customer.name} />
+              <Row label={t("fin.issueDate")} value={formatDate(inv.issueDate, locale)} />
+              <Row label={t("fin.dueDate")} value={inv.dueDate ? formatDate(inv.dueDate, locale) : "—"} />
+              <Row label={t("common.currency")} value={inv.currency + (inv.currency !== inv.baseCurrency && inv.exchangeRate ? ` @ ${inv.exchangeRate}` : "")} />
+              {inv.reference && <Row label={t("fin.reference")} value={inv.reference} />}
             </dl>
           </Panel>
           {(inv.allocations.length > 0 || inv.creditApplications.length > 0) && (
             <Panel>
               <PanelHeader title={t("acct.paymentsCredits")} />
               <div className="space-y-1.5 px-4 py-3 text-[13px]">
-                {inv.allocations.map((a) => <div key={a.id} className="flex justify-between"><span className="text-ink-2">Receipt {a.receipt.receiptNumber}</span><span className="tabular text-ink">{num(a.amount)}</span></div>)}
-                {inv.creditApplications.map((a) => <div key={a.id} className="flex justify-between"><span className="text-ink-2">Credit {a.creditNote.creditNoteNumber}</span><span className="tabular text-ink">{num(a.amount)}</span></div>)}
+                {inv.allocations.map((a) => <div key={a.id} className="flex justify-between"><span className="text-ink-2">{t("acct.receiptN", { number: a.receipt.receiptNumber ?? "" })}</span><span className="tabular text-ink">{num(a.amount)}</span></div>)}
+                {inv.creditApplications.map((a) => <div key={a.id} className="flex justify-between"><span className="text-ink-2">{t("acct.creditN", { number: a.creditNote.creditNoteNumber ?? "" })}</span><span className="tabular text-ink">{num(a.amount)}</span></div>)}
               </div>
             </Panel>
           )}
@@ -89,7 +89,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       </div>
 
       <Panel className="mt-4">
-        <PanelHeader title="Comments" />
+        <PanelHeader title={t("acct.comments")} />
         <div className="px-4 py-3"><RecordComments entityType="invoice" entityId={inv.id} currentUserId={principal.userId} /></div>
       </Panel>
     </>

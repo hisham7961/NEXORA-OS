@@ -38,13 +38,13 @@ export default async function BillDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <>
-      <div className="mb-1 text-xs text-ink-3"><Link href={`/accounting/bills?company=${bill.companyId}`} className="hover:text-ink-2">Supplier Bills</Link> / {bill.billNumber ?? "draft"}</div>
-      <PageHeader title={bill.billNumber ?? "Draft bill"} description={bill.supplier.name}
-        meta={<div className="flex items-center gap-2"><Badge category={STATUS_CAT[bill.status] ?? "neutral"}>{bill.status.replace("_", " ")}</Badge><span className="text-xs text-ink-3">{formatDate(bill.issueDate, locale)}</span></div>}
+      <div className="mb-1 text-xs text-ink-3"><Link href={`/accounting/bills?company=${bill.companyId}`} className="hover:text-ink-2">{t("acct.supplierBills")}</Link> / {bill.billNumber ?? t("fin.draft")}</div>
+      <PageHeader title={bill.billNumber ?? t("acct.draftBill")} description={bill.supplier.name}
+        meta={<div className="flex items-center gap-2"><Badge category={STATUS_CAT[bill.status] ?? "neutral"}>{t(`status.${bill.status}`)}</Badge><span className="text-xs text-ink-3">{formatDate(bill.issueDate, locale)}</span></div>}
         actions={<div className="flex items-center gap-2">
           {bill.status === "draft" && canCreate && <PostBillButton id={bill.id} kind="bill" />}
           {(bill.status === "open" || bill.status === "draft") && canManage && <VoidBillButton id={bill.id} />}
-          {bill.journalEntryId && <Link href={`/accounting/journal/${bill.journalEntryId}`} className="text-[12px] text-accent hover:underline">View GL entry →</Link>}
+          {bill.journalEntryId && <Link href={`/accounting/journal/${bill.journalEntryId}`} className="text-[12px] text-accent hover:underline">{t("fin.viewGlEntry")}</Link>}
         </div>} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]">
@@ -52,30 +52,30 @@ export default async function BillDetailPage({ params }: { params: Promise<{ id:
           <PanelHeader title={t("acct.lines")} />
           <DataTable columns={columns} rows={bill.lines} getRowKey={(l) => l.id} />
           <div className="space-y-1 border-t border-line px-4 py-3 text-[13px]">
-            <div className="flex justify-end gap-8"><span className="text-ink-3">Subtotal</span><span className="tabular text-ink-2">{num(bill.subtotal)} {bill.currency}</span></div>
-            <div className="flex justify-end gap-8"><span className="text-ink-3">Tax</span><span className="tabular text-ink-2">{num(bill.taxTotal)}</span></div>
-            <div className="flex justify-end gap-8 font-semibold"><span>Total</span><span className="tabular text-ink">{num(bill.total)}</span></div>
-            <div className="flex justify-end gap-8"><span className="text-ink-3">Paid</span><span className="tabular text-ink-2">{num(bill.amountPaid)}</span></div>
-            <div className="flex justify-end gap-8 font-semibold"><span>Balance due</span><span className="tabular text-ink">{num(bill.amountDue)}</span></div>
+            <div className="flex justify-end gap-8"><span className="text-ink-3">{t("fin.subtotal")}</span><span className="tabular text-ink-2">{num(bill.subtotal)} {bill.currency}</span></div>
+            <div className="flex justify-end gap-8"><span className="text-ink-3">{t("fin.tax")}</span><span className="tabular text-ink-2">{num(bill.taxTotal)}</span></div>
+            <div className="flex justify-end gap-8 font-semibold"><span>{t("common.total")}</span><span className="tabular text-ink">{num(bill.total)}</span></div>
+            <div className="flex justify-end gap-8"><span className="text-ink-3">{t("fin.paid")}</span><span className="tabular text-ink-2">{num(bill.amountPaid)}</span></div>
+            <div className="flex justify-end gap-8 font-semibold"><span>{t("fin.balanceDue")}</span><span className="tabular text-ink">{num(bill.amountDue)}</span></div>
           </div>
         </Panel>
         <div className="space-y-4">
           <Panel>
             <PanelHeader title={t("acct.details")} />
             <dl className="space-y-2 px-4 py-3 text-[13px]">
-              <div className="flex justify-between"><dt className="text-ink-3">Supplier</dt><dd className="text-ink">{bill.supplier.name}</dd></div>
-              {bill.supplierRef && <div className="flex justify-between"><dt className="text-ink-3">Supplier ref</dt><dd className="text-ink">{bill.supplierRef}</dd></div>}
-              <div className="flex justify-between"><dt className="text-ink-3">Issue date</dt><dd className="text-ink">{formatDate(bill.issueDate, locale)}</dd></div>
-              <div className="flex justify-between"><dt className="text-ink-3">Due date</dt><dd className="text-ink">{bill.dueDate ? formatDate(bill.dueDate, locale) : "—"}</dd></div>
-              <div className="flex justify-between"><dt className="text-ink-3">Currency</dt><dd className="text-ink">{bill.currency}</dd></div>
+              <div className="flex justify-between"><dt className="text-ink-3">{t("fin.supplier")}</dt><dd className="text-ink">{bill.supplier.name}</dd></div>
+              {bill.supplierRef && <div className="flex justify-between"><dt className="text-ink-3">{t("fin.supplierRef")}</dt><dd className="text-ink">{bill.supplierRef}</dd></div>}
+              <div className="flex justify-between"><dt className="text-ink-3">{t("fin.issueDate")}</dt><dd className="text-ink">{formatDate(bill.issueDate, locale)}</dd></div>
+              <div className="flex justify-between"><dt className="text-ink-3">{t("fin.dueDate")}</dt><dd className="text-ink">{bill.dueDate ? formatDate(bill.dueDate, locale) : "—"}</dd></div>
+              <div className="flex justify-between"><dt className="text-ink-3">{t("common.currency")}</dt><dd className="text-ink">{bill.currency}</dd></div>
             </dl>
           </Panel>
           {(bill.allocations.length > 0 || bill.creditApplications.length > 0) && (
             <Panel>
               <PanelHeader title={t("acct.paymentsCredits")} />
               <div className="space-y-1.5 px-4 py-3 text-[13px]">
-                {bill.allocations.map((a) => <div key={a.id} className="flex justify-between"><span className="text-ink-2">Payment {a.payment.paymentNumber}</span><span className="tabular text-ink">{num(a.amount)}</span></div>)}
-                {bill.creditApplications.map((a) => <div key={a.id} className="flex justify-between"><span className="text-ink-2">Credit {a.credit.creditNumber}</span><span className="tabular text-ink">{num(a.amount)}</span></div>)}
+                {bill.allocations.map((a) => <div key={a.id} className="flex justify-between"><span className="text-ink-2">{t("acct.paymentN", { number: a.payment.paymentNumber ?? "" })}</span><span className="tabular text-ink">{num(a.amount)}</span></div>)}
+                {bill.creditApplications.map((a) => <div key={a.id} className="flex justify-between"><span className="text-ink-2">{t("acct.creditN", { number: a.credit.creditNumber ?? "" })}</span><span className="tabular text-ink">{num(a.amount)}</span></div>)}
               </div>
             </Panel>
           )}

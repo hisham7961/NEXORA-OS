@@ -13,7 +13,7 @@ import { PageHeader, Panel, PanelHeader, PanelBody, DataTable, Badge, EmptyState
 import { CompanyPicker } from "@/components/accounting/company-picker";
 import { ExportButton } from "@/components/list/export-button";
 
-export const metadata: Metadata = { title: "Financial Reports" };
+export const metadata: Metadata = { title: "Financial Reports" }; // i18n-ignore browser-tab title
 
 function money(v: string, locale: string) { const n = Number(v); return n === 0 ? "—" : n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 3 }); }
 
@@ -38,7 +38,7 @@ export default async function AccountingReportsPage({ searchParams }: { searchPa
 
   return (
     <>
-      <PageHeader title={t("acct.reports")} description={`Derived only from posted ledger data for ${current.name} (${cur}).`}
+      <PageHeader title={t("acct.reports")} description={t("acct.reportsSub", { name: current.name, cur })}
         actions={<div className="flex items-center gap-2"><CompanyPicker companies={companies} current={current.id} />{["trial-balance", "ar-aging", "ap-aging"].includes(tab) && <ExportButton resource={tab} />}</div>} />
       <div className="mb-4 flex gap-1 border-b border-line">
         {tabs.map((tb) => (
@@ -57,11 +57,11 @@ export default async function AccountingReportsPage({ searchParams }: { searchPa
         ];
         return (
           <Panel>
-            <PanelHeader title="Trial Balance" icon={<Scale className="h-4 w-4" />} action={<Badge category={tb.balanced ? "success" : "critical"}>{tb.balanced ? "Balanced" : "Out of balance"}</Badge>} />
-            <DataTable columns={columns} rows={tb.rows} getRowKey={(r) => r.accountId} empty={<EmptyState title="No postings" description="Post journal entries to populate the trial balance." />} />
+            <PanelHeader title={t("acct.rep.trialBalance")} icon={<Scale className="h-4 w-4" />} action={<Badge category={tb.balanced ? "success" : "critical"}>{tb.balanced ? t("acct.balanced") : t("acct.outOfBalance")}</Badge>} />
+            <DataTable columns={columns} rows={tb.rows} getRowKey={(r) => r.accountId} empty={<EmptyState title={t("acct.noPostings")} description={t("acct.noPostingsBody")} />} />
             <div className="flex justify-end gap-8 border-t border-line px-4 py-2 text-[13px] font-medium">
-              <span>{t("common.total")} Debit <span className="ms-2 tabular text-ink">{money(tb.totalDebit, locale)} {cur}</span></span>
-              <span>{t("common.total")} Credit <span className="ms-2 tabular text-ink">{money(tb.totalCredit, locale)} {cur}</span></span>
+              <span>{t("acct.totalDebit")} <span className="ms-2 tabular text-ink">{money(tb.totalDebit, locale)} {cur}</span></span>
+              <span>{t("acct.totalCredit")} <span className="ms-2 tabular text-ink">{money(tb.totalCredit, locale)} {cur}</span></span>
             </div>
           </Panel>
         );
@@ -74,16 +74,16 @@ export default async function AccountingReportsPage({ searchParams }: { searchPa
         );
         return (
           <Panel>
-            <PanelHeader title="Profit & Loss" />
+            <PanelHeader title={t("acct.rep.pl")} />
             <div className="divide-y divide-line">
-              <Row label="Revenue" value={pl.revenue} />
-              <Row label="Cost of Sales" value={pl.cogs} />
-              <Row label="Gross Profit" value={pl.grossProfit} strong />
-              <Row label="Operating Expenses" value={pl.operatingExpense} />
-              <Row label="Operating Profit" value={pl.operatingProfit} strong />
-              <Row label="Other Income" value={pl.otherIncome} />
-              <Row label="Other Expense" value={pl.otherExpense} />
-              <Row label="Net Profit" value={pl.netProfit} strong />
+              <Row label={t("acct.pl.revenue")} value={pl.revenue} />
+              <Row label={t("acct.pl.cogs")} value={pl.cogs} />
+              <Row label={t("acct.pl.grossProfit")} value={pl.grossProfit} strong />
+              <Row label={t("acct.pl.opex")} value={pl.operatingExpense} />
+              <Row label={t("acct.pl.operatingProfit")} value={pl.operatingProfit} strong />
+              <Row label={t("acct.pl.otherIncome")} value={pl.otherIncome} />
+              <Row label={t("acct.pl.otherExpense")} value={pl.otherExpense} />
+              <Row label={t("acct.pl.netProfit")} value={pl.netProfit} strong />
             </div>
           </Panel>
         );
@@ -93,14 +93,14 @@ export default async function AccountingReportsPage({ searchParams }: { searchPa
         const bs = await balanceSheet(principal, current.id);
         return (
           <Panel>
-            <PanelHeader title="Balance Sheet" action={<Badge category={bs.balanced ? "success" : "critical"}>{bs.balanced ? "Balanced" : "Out of balance"}</Badge>} />
+            <PanelHeader title={t("acct.rep.balanceSheet")} action={<Badge category={bs.balanced ? "success" : "critical"}>{bs.balanced ? t("acct.balanced") : t("acct.outOfBalance")}</Badge>} />
             <PanelBody>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <Metric label="Assets" value={`${money(bs.assets, locale)} ${cur}`} category="info" />
-                <Metric label="Liabilities" value={`${money(bs.liabilities, locale)} ${cur}`} category="warning" />
-                <Metric label="Equity (incl. earnings)" value={`${money(bs.totalEquity, locale)} ${cur}`} category="success" />
+                <Metric label={t("acct.bs.assets")} value={`${money(bs.assets, locale)} ${cur}`} category="info" />
+                <Metric label={t("acct.bs.liabilities")} value={`${money(bs.liabilities, locale)} ${cur}`} category="warning" />
+                <Metric label={t("acct.bs.equityIncl")} value={`${money(bs.totalEquity, locale)} ${cur}`} category="success" />
               </div>
-              <p className="mt-3 text-[12px] text-ink-3">Assets {money(bs.assets, locale)} = Liabilities {money(bs.liabilities, locale)} + Equity {money(bs.totalEquity, locale)} (of which current-period earnings {money(bs.currentEarnings, locale)}).</p>
+              <p className="mt-3 text-[12px] text-ink-3">{t("acct.bs.equation", { a: money(bs.assets, locale), l: money(bs.liabilities, locale), e: money(bs.totalEquity, locale), c: money(bs.currentEarnings, locale) })}</p>
             </PanelBody>
           </Panel>
         );
@@ -120,7 +120,7 @@ export default async function AccountingReportsPage({ searchParams }: { searchPa
         const tot = aging.totals;
         return (
           <Panel>
-            <PanelHeader title={t("acct.arAgingTitle")} action={<Badge category="info">{aging.rows.length} customers</Badge>} />
+            <PanelHeader title={t("acct.arAgingTitle")} action={<Badge category="info">{t("acct.customersCount", { count: aging.rows.length })}</Badge>} />
             <DataTable columns={columns} rows={aging.rows} getRowKey={(r) => r.customerId} empty={<EmptyState title={t("acct.noReceivables")} description={t("acct.allSettledInv")} />} />
             <div className="flex flex-wrap justify-end gap-6 border-t border-line px-4 py-2 text-[13px] font-medium">
               <span>{t("acct.col.current")} <span className="ms-1 tabular text-ink">{money(String(tot.current), locale)}</span></span>
@@ -148,7 +148,7 @@ export default async function AccountingReportsPage({ searchParams }: { searchPa
         const tot = aging.totals;
         return (
           <Panel>
-            <PanelHeader title={t("acct.apAgingTitle")} action={<Badge category="info">{aging.rows.length} suppliers</Badge>} />
+            <PanelHeader title={t("acct.apAgingTitle")} action={<Badge category="info">{t("acct.suppliersCount", { count: aging.rows.length })}</Badge>} />
             <DataTable columns={columns} rows={aging.rows} getRowKey={(r) => r.supplierId} empty={<EmptyState title={t("acct.noPayables")} description={t("acct.allSettledBills")} />} />
             <div className="flex flex-wrap justify-end gap-6 border-t border-line px-4 py-2 text-[13px] font-medium">
               <span>{t("acct.col.current")} <span className="ms-1 tabular text-ink">{money(String(tot.current), locale)}</span></span>
@@ -165,15 +165,15 @@ export default async function AccountingReportsPage({ searchParams }: { searchPa
       {tab === "cash-flow" && await (async () => {
         const yr = new Date().getFullYear();
         const cf = await cashFlow(principal, current.id, new Date(yr, 0, 1), new Date());
-        const catLabel: Record<string, string> = { operating: "Operating", investing: "Investing", financing: "Financing" };
+        const catLabel: Record<string, string> = { operating: t("acct.cf.operating"), investing: t("acct.cf.investing"), financing: t("acct.cf.financing") };
         return (
           <Panel>
-            <PanelHeader title="Cash Flow (direct method)" action={<Badge category="info">YTD</Badge>} />
+            <PanelHeader title={t("acct.cf.title")} action={<Badge category="info">YTD</Badge>} />
             <PanelBody>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <Metric label="Opening cash" value={`${money(cf.opening, locale)} ${cur}`} />
-                <Metric label="Net change" value={`${money(cf.netChange, locale)} ${cur}`} category={Number(cf.netChange) >= 0 ? "success" : "critical"} />
-                <Metric label="Closing cash" value={`${money(cf.closing, locale)} ${cur}`} category="info" />
+                <Metric label={t("acct.cf.opening")} value={`${money(cf.opening, locale)} ${cur}`} />
+                <Metric label={t("acct.cf.netChange")} value={`${money(cf.netChange, locale)} ${cur}`} category={Number(cf.netChange) >= 0 ? "success" : "critical"} />
+                <Metric label={t("acct.cf.closing")} value={`${money(cf.closing, locale)} ${cur}`} category="info" />
               </div>
               <div className="mt-4 space-y-3">
                 {["operating", "investing", "financing"].map((cat) => {
@@ -182,14 +182,14 @@ export default async function AccountingReportsPage({ searchParams }: { searchPa
                   const net = cf.categories.find((c) => c.category === cat)?.net ?? "0";
                   return (
                     <div key={cat} className="rounded-lg border border-line">
-                      <div className="flex items-center justify-between border-b border-line px-3 py-1.5 text-[12px] font-medium text-ink-2">{catLabel[cat]} activities<span className="tabular">{money(net, locale)}</span></div>
+                      <div className="flex items-center justify-between border-b border-line px-3 py-1.5 text-[12px] font-medium text-ink-2">{catLabel[cat]}<span className="tabular">{money(net, locale)}</span></div>
                       <div className="divide-y divide-line">
                         {rows.map((r) => <div key={r.accountId} className="flex items-center justify-between px-3 py-1.5 text-[13px]"><span className="text-ink-2"><span className="font-mono text-ink-3">{r.code}</span> {r.name}</span><span className={`tabular ${Number(r.flow) >= 0 ? "text-success" : "text-critical"}`}>{money(r.flow, locale)}</span></div>)}
                       </div>
                     </div>
                   );
                 })}
-                {cf.rows.length === 0 && <p className="text-[13px] text-ink-3">No cash movements in the period.</p>}
+                {cf.rows.length === 0 && <p className="text-[13px] text-ink-3">{t("acct.cf.noMovements")}</p>}
               </div>
             </PanelBody>
           </Panel>
