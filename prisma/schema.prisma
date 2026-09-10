@@ -2232,6 +2232,7 @@ model CompanyAccountingSettings {
   fxLossAccountId           String?
   suspenseAccountId         String?
   roundingAccountId         String?
+  roundingAdjustmentAccountId String? // base-currency rounding plug for multi-line FX (§Phase4-2)
   // Numbering + terms.
   journalPrefix             String    @default("GJ")
   invoicePrefix             String    @default("INV")

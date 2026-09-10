@@ -91,6 +91,12 @@ rate, the residual belongs in **FX Gain** (`fxGainAccountId`) / **FX Loss**
 (above); per-settlement revaluation of open AR/AP at period close is a documented
 period-end process for a later increment. Balances are never silently adjusted.
 
-## Rounding
-Any document/base rounding residual beyond tolerance posts explicitly to the
-**Rounding** account (`roundingAccountId`).
+## Rounding (built — Phase 4 §2)
+The posting engine guarantees **base-currency Debit == Credit exactly** on every
+posted entry. Per-line base conversion of a multi-line foreign-currency document can
+accumulate a sub-tolerance residual; rather than leave a base imbalance or mutate a
+real line, the engine posts an explicit **Rounding adjustment** line to
+`roundingAdjustmentAccountId` (falling back to `roundingAccountId`) so the entry
+balances to the minor unit. A residual larger than one minor unit per line is a
+genuine imbalance and is rejected. The rounding line is shown on the journal and the
+adjustment amount is audited. Transaction-currency totals are never altered.

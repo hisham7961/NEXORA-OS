@@ -81,7 +81,9 @@ export async function initializeCompanyAccounting(ctx: ActorContext, companyId: 
     }
     // Journals
     for (const j of JOURNALS) await tx.journal.create({ data: { companyId, code: j.code, name: j.name, type: j.type, numberPrefix: j.code } });
-    // Settings with mapped system accounts
+    // Settings with mapped system accounts. The rounding-adjustment plug (§Phase4-2)
+    // defaults to the standard Rounding account unless later remapped.
+    if (systemMap.roundingAccountId) systemMap.roundingAdjustmentAccountId = systemMap.roundingAccountId;
     await tx.companyAccountingSettings.create({
       data: { companyId, baseCurrency, fiscalYearStartMonth: company.fiscalYearStartMonth ?? 1, timezone: company.timezone ?? "Asia/Kuwait", ...systemMap },
     });

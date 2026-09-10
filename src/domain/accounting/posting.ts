@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { assertCan, audit, type ActorContext } from "@/domain/mutation";
 import { ServiceError } from "@/lib/api/handler";
 import { optionalString } from "@/lib/validation";
-import { D, ZERO, add, mul, roundMoney, balances, isNeg, gt, isZero } from "@/lib/money";
+import { D, ZERO, add, sub, mul, roundMoney, balancingTolerance, isNeg, gt, isZero } from "@/lib/money";
 import { canFinance, requireSettings } from "./common";
 import { assertOpenPeriod } from "./fiscal";
 import { resolveExchangeRate } from "./setup";
@@ -65,7 +65,9 @@ interface PreparedLine {
  * and asserts balance. Returns the prepared lines + totals. Shared by draft
  * validation and posting. Throws ServiceError on any violation.
  */
-async function prepare(input: JournalInput): Promise<{ baseCurrency: string; currency: string; rate: number; lines: PreparedLine[]; totalDebit: Prisma.Decimal; totalCredit: Prisma.Decimal }> {
+const NO_DIMS = { brandId: null, countryId: null, departmentId: null, campaignId: null, storeId: null, productId: null, costCenterId: null, customerId: null, supplierId: null } as const;
+
+async function prepare(input: JournalInput): Promise<{ baseCurrency: string; currency: string; rate: number; lines: PreparedLine[]; totalDebit: Prisma.Decimal; totalCredit: Prisma.Decimal; roundingAdjustment: Prisma.Decimal }> {
   const settings = await requireSettings(input.companyId);
   const baseCurrency = settings.baseCurrency;
   const currency = (input.currency ?? baseCurrency).toUpperCase();
@@ -105,11 +107,37 @@ async function prepare(input: JournalInput): Promise<{ baseCurrency: string; cur
     });
   }
 
-  // Transaction currency must balance exactly; base within rounding tolerance.
+  // Transaction currency must balance exactly.
   if (!txnDebit.equals(txnCredit)) throw new ServiceError("unbalanced", `Debits (${txnDebit}) and credits (${txnCredit}) must be equal.`, 422);
-  if (!balances(totalDebit, totalCredit, baseCurrency)) throw new ServiceError("unbalanced_base", `Base-currency debits (${totalDebit}) and credits (${totalCredit}) do not balance.`, 422);
 
-  return { baseCurrency, currency, rate, lines: prepared, totalDebit, totalCredit };
+  /**
+   * Base-currency rounding safeguard (§Phase4-2). Independent per-line base
+   * conversion can accumulate a sub-tolerance residual under many-line foreign-
+   * currency documents. Rather than leave a base imbalance or mutate a real line,
+   * post an explicit rounding-adjustment line so base Dr == Cr EXACTLY. A residual
+   * larger than one minor unit per line is a genuine imbalance and is rejected.
+   */
+  let roundingAdjustment = ZERO;
+  const residual = sub(totalDebit, totalCredit); // + = debits exceed credits
+  if (!residual.isZero()) {
+    const maxDrift = mul(balancingTolerance(baseCurrency), input.lines.length + 1);
+    if (residual.abs().greaterThan(maxDrift)) throw new ServiceError("unbalanced_base", `Base-currency debits (${totalDebit}) and credits (${totalCredit}) do not balance.`, 422);
+    const roundingAccountId = settings.roundingAdjustmentAccountId ?? settings.roundingAccountId;
+    if (!roundingAccountId) throw new ServiceError("no_rounding_account", "A base-currency rounding difference needs a rounding adjustment account configured.", 422);
+    const acct = byId.get(roundingAccountId) ?? (await prisma.account.findUnique({ where: { id: roundingAccountId } }));
+    if (!acct || acct.companyId !== input.companyId || !acct.isActive || acct.archivedAt || !acct.allowPosting) throw new ServiceError("bad_rounding_account", "The configured rounding adjustment account must be an active, postable account in this company.", 422);
+    const amount = residual.abs();
+    const plugDebit = residual.greaterThan(0) ? ZERO : amount;
+    const plugCredit = residual.greaterThan(0) ? amount : ZERO;
+    prepared.push({ accountId: roundingAccountId, description: "Rounding adjustment", debit: plugDebit, credit: plugCredit, transactionCurrency: baseCurrency, transactionAmount: amount, exchangeRate: D(1), dims: { ...NO_DIMS } });
+    totalDebit = add(totalDebit, plugDebit); totalCredit = add(totalCredit, plugCredit);
+    roundingAdjustment = residual.greaterThan(0) ? amount.negated() : amount;
+  }
+
+  // After the plug, base debits and credits must be exactly equal.
+  if (!totalDebit.equals(totalCredit)) throw new ServiceError("unbalanced_base", `Base-currency debits (${totalDebit}) and credits (${totalCredit}) do not balance.`, 422);
+
+  return { baseCurrency, currency, rate, lines: prepared, totalDebit, totalCredit, roundingAdjustment };
 }
 
 /** Validate a would-be journal without posting (for the builder's live check). */
@@ -183,7 +211,8 @@ export async function writePostedEntry(tx: Prisma.TransactionClient, ctx: ActorC
 export async function postJournalEntry(ctx: ActorContext, raw: unknown): Promise<JournalEntry> {
   const { input, prepared, postingDate, periodId } = await prepareForPost(ctx, raw);
   const entry = await prisma.$transaction((tx) => writePostedEntry(tx, ctx, input, prepared, postingDate, periodId));
-  await audit(ctx, { action: "journal.posted", entityType: "JournalEntry", entityId: entry.id, summary: `${entry.journalNumber} ${prepared.totalDebit} ${prepared.baseCurrency}`, companyId: input.companyId });
+  const roundingNote = prepared.roundingAdjustment.isZero() ? "" : ` (rounding adj ${prepared.roundingAdjustment})`;
+  await audit(ctx, { action: "journal.posted", entityType: "JournalEntry", entityId: entry.id, summary: `${entry.journalNumber} ${prepared.totalDebit} ${prepared.baseCurrency}${roundingNote}`, companyId: input.companyId });
   return entry;
 }
 

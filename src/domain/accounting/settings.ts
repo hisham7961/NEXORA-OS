@@ -14,6 +14,7 @@ const SYSTEM_ACCOUNT_FIELDS = [
   "receivableAccountId", "payableAccountId", "revenueAccountId", "cogsAccountId", "inventoryAccountId",
   "bankClearingAccountId", "cashAccountId", "inputTaxAccountId", "outputTaxAccountId",
   "retainedEarningsAccountId", "fxGainAccountId", "fxLossAccountId", "suspenseAccountId", "roundingAccountId",
+  "roundingAdjustmentAccountId",
 ] as const;
 
 export const settingsSchema = z.object({
@@ -46,6 +47,8 @@ export async function upsertAccountingSettings(ctx: ActorContext, companyId: str
     if (val) {
       const acct = await prisma.account.findUnique({ where: { id: val } });
       if (!acct || acct.companyId !== companyId) throw new ServiceError("bad_account", `Account for ${f} must belong to this company.`, 422);
+      // Accounts that receive automatic postings must be active and postable.
+      if (f === "roundingAdjustmentAccountId" && (!acct.isActive || acct.archivedAt || !acct.allowPosting)) throw new ServiceError("bad_account", "The rounding adjustment account must be an active, postable account.", 422);
     }
   }
 
