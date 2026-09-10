@@ -1,13 +1,23 @@
 import type { Metadata } from "next";
-import { requireUser } from "@/lib/auth/current-user";
+import { requireUser, requirePrincipal } from "@/lib/auth/current-user";
 import { describeUserAccess } from "@/domain/permissions-admin";
+import { listMySessions } from "@/domain/sessions";
+import { getCurrentSessionId } from "@/lib/auth/session";
+import { SessionManager, type SessionRow } from "@/components/settings/session-manager";
 import { PageHeader, Panel, PanelHeader, PanelBody, Avatar, Badge } from "@/components/ui";
 
 export const metadata: Metadata = { title: "My Profile" };
 
 export default async function ProfilePage() {
   const user = await requireUser();
+  const principal = await requirePrincipal();
   const access = await describeUserAccess(user.id);
+  const currentSessionId = await getCurrentSessionId();
+  const sessions = await listMySessions(principal, currentSessionId);
+  const sessionRows: SessionRow[] = sessions.map((s) => ({
+    id: s.id, userAgent: s.userAgent, ip: s.ip, current: s.current,
+    createdAt: s.createdAt.toISOString(), lastActiveAt: s.lastActiveAt ? s.lastActiveAt.toISOString() : null,
+  }));
 
   return (
     <>
@@ -61,6 +71,13 @@ export default async function ProfilePage() {
                 </table>
               </div>
             )}
+          </PanelBody>
+        </Panel>
+
+        <Panel className="lg:col-span-3">
+          <PanelHeader title="Active sessions" description="Devices signed in as you. Revoke any you don't recognize — access is cut on their next request." />
+          <PanelBody>
+            <SessionManager sessions={sessionRows} />
           </PanelBody>
         </Panel>
       </div>

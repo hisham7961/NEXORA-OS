@@ -46,6 +46,8 @@ export async function createSession(userId: string, ctx: SessionContext = {}): P
   return token;
 }
 
+const ACTIVITY_REFRESH_MS = 5 * 60_000;
+
 /** Resolve the current session's userId from the cookie, or null. */
 export async function getSessionUserId(): Promise<string | null> {
   const store = await cookies();
@@ -58,7 +60,22 @@ export async function getSessionUserId(): Promise<string | null> {
   if (!session || session.revokedAt || session.expiresAt.getTime() < Date.now()) {
     return null;
   }
+  // Refresh the activity timestamp at most once every few minutes (§28 — powers
+  // the "active sessions" list without a write on every request).
+  if (!session.lastActiveAt || Date.now() - session.lastActiveAt.getTime() > ACTIVITY_REFRESH_MS) {
+    await prisma.session.update({ where: { id: session.id }, data: { lastActiveAt: new Date() } }).catch(() => undefined);
+  }
   return session.userId;
+}
+
+/** The DB id of the current session (to mark "this device" in session lists), or null. */
+export async function getCurrentSessionId(): Promise<string | null> {
+  const store = await cookies();
+  const token = store.get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+  const session = await prisma.session.findUnique({ where: { tokenHash: hashToken(token) }, select: { id: true, revokedAt: true, expiresAt: true } });
+  if (!session || session.revokedAt || session.expiresAt.getTime() < Date.now()) return null;
+  return session.id;
 }
 
 /** Revoke the current session and clear the cookie. */

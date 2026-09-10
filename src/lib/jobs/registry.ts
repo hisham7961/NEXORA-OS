@@ -4,6 +4,7 @@ import { generateRecurringPublishing } from "@/domain/social";
 import { backfillCampaignSpend } from "@/domain/campaigns";
 import { escalateOverdueInstances } from "@/domain/workflows";
 import { generateCertificateReminders } from "@/domain/documents";
+import { purgeStaleSessions } from "@/domain/sessions";
 
 /**
  * The single source of truth for scheduled jobs (§10). The scheduler (and the
@@ -61,6 +62,13 @@ export const JOB_DEFINITIONS: JobDefinition[] = [
     description: "Recomputes derived campaign spend from metrics.",
     permission: "campaigns.manage",
     run: (actorId) => backfillCampaignSpend(actorId),
+  },
+  {
+    name: "Session cleanup",
+    cron: "40 2 * * *",
+    description: "Purges sessions long past expiry or revocation (§28). Live sessions are untouched.",
+    permission: "settings.manage",
+    run: async () => ({ purged: await purgeStaleSessions() }),
   },
 ];
 
