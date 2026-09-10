@@ -26,7 +26,9 @@ const exemptSubstrings = allow.exemptSubstrings ?? [];
 
 const USERFACING_PROPS = /\b(title|description|subtitle|placeholder|header|label|empty|heading|emptyLabel|confirmText|cta|hint)\s*[:=]\s*(["'])((?:(?!\2).){2,120})\2/g;
 const CONFIRM = /\bconfirm\(\s*(["'])((?:(?!\1).){3,200})\1/g;
-const JSX_TEXT = />\s*([A-Z][A-Za-z][^<>{}\n]{1,90})</g;
+// The leading `[^=]` guards against TypeScript arrow-return generics such as
+// `() => Promise<ActionResult>`, whose `=>` would otherwise read as a `>Text<` node.
+const JSX_TEXT = /[^=]>\s*([A-Z][A-Za-z][^<>{}\n]{1,90})</g;
 
 // Looks technical → skip.
 function isTechnical(s) {

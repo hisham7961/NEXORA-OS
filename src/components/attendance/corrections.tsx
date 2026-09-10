@@ -5,16 +5,16 @@ import { useRouter } from "next/navigation";
 import { Plus, Check, X, RotateCcw } from "lucide-react";
 import { Button, Input, Textarea, Select, Drawer, StatusBadge } from "@/components/ui";
 import { ActionForm, FormField, FormSection } from "@/components/form/action-form";
-import { useToast } from "@/components/providers";
+import { useToast, useI18n } from "@/components/providers";
 import { requestCorrectionAction, decideCorrectionAction } from "@/app/actions/attendance";
 
 const TYPES = [
-  { v: "missed_check_in", label: "Missed check-in", field: "actualStart", time: true },
-  { v: "missed_check_out", label: "Missed check-out", field: "actualEnd", time: true },
-  { v: "incorrect_time", label: "Incorrect time", field: "actualStart", time: true },
-  { v: "break_error", label: "Break error", field: "breakMinutes", time: false },
-  { v: "other", label: "Other", field: "", time: false },
-];
+  { v: "missed_check_in", labelKey: "att.corrMissedIn", field: "actualStart", time: true },
+  { v: "missed_check_out", labelKey: "att.corrMissedOut", field: "actualEnd", time: true },
+  { v: "incorrect_time", labelKey: "att.corrIncorrectTime", field: "actualStart", time: true },
+  { v: "break_error", labelKey: "att.corrBreakError", field: "breakMinutes", time: false },
+  { v: "other", labelKey: "att.corrOther", field: "", time: false },
+] as const;
 
 export interface CorrectionRow {
   id: string;
@@ -29,28 +29,29 @@ export interface CorrectionRow {
 
 export function RequestCorrectionButton() {
   const [open, setOpen] = useState(false);
-  const [type, setType] = useState(TYPES[0]);
+  const [type, setType] = useState<(typeof TYPES)[number]>(TYPES[0]);
   const router = useRouter();
+  const { t } = useI18n();
   return (
     <>
-      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Request correction</Button>
-      <Drawer open={open} onClose={() => setOpen(false)} title="Request attendance correction" description="Your manager reviews the request; your original record is preserved.">
-        <ActionForm action={requestCorrectionAction} submitLabel="Submit request" onCancel={() => setOpen(false)} onSuccess={() => { setOpen(false); router.refresh(); }}>
+      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> {t("att.requestCorrection")}</Button>
+      <Drawer open={open} onClose={() => setOpen(false)} title={t("att.requestCorrectionTitle")} description={t("att.requestCorrectionDesc")}>
+        <ActionForm action={requestCorrectionAction} submitLabel={t("att.submitRequest")} onCancel={() => setOpen(false)} onSuccess={() => { setOpen(false); router.refresh(); }}>
           <input type="hidden" name="field" value={type.field} />
           <FormSection>
-            <FormField label="Type" name="type" required>
-              <Select name="type" defaultValue={type.v} onChange={(e) => setType(TYPES.find((t) => t.v === e.target.value) ?? TYPES[0])}>
-                {TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}
+            <FormField label={t("common.type")} name="type" required>
+              <Select name="type" defaultValue={type.v} onChange={(e) => setType(TYPES.find((x) => x.v === e.target.value) ?? TYPES[0])}>
+                {TYPES.map((x) => <option key={x.v} value={x.v}>{t(x.labelKey)}</option>)}
               </Select>
             </FormField>
-            <FormField label="Date" name="date" required><Input type="date" name="date" required /></FormField>
+            <FormField label={t("common.date")} name="date" required><Input type="date" name="date" required /></FormField>
             {type.field && (
-              <FormField label={type.time ? "Correct time" : "Correct break minutes"} name="requestedValue" hint={type.time ? "The right time" : "Minutes"}>
+              <FormField label={type.time ? t("att.correctTime") : t("att.correctBreak")} name="requestedValue" hint={type.time ? t("att.theRightTime") : t("att.minutes")}>
                 <Input type={type.time ? "datetime-local" : "number"} name="requestedValue" min={type.time ? undefined : "0"} />
               </FormField>
             )}
           </FormSection>
-          <FormField label="Reason" name="reason" required><Textarea name="reason" required placeholder="Explain what needs correcting…" className="min-h-16" /></FormField>
+          <FormField label={t("att.reason")} name="reason" required><Textarea name="reason" required placeholder={t("att.reasonPlaceholder")} className="min-h-16" /></FormField>
         </ActionForm>
       </Drawer>
     </>
@@ -60,15 +61,16 @@ export function RequestCorrectionButton() {
 export function CorrectionList({ rows, canDecide }: { rows: CorrectionRow[]; canDecide: boolean }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [pending, start] = useTransition();
   const decide = (id: string, decision: "approved" | "rejected" | "changes_requested") =>
     start(async () => {
       const r = await decideCorrectionAction(id, decision);
-      if (r.ok) { toast({ kind: "success", title: `Correction ${decision.replace("_", " ")}` }); router.refresh(); }
+      if (r.ok) { toast({ kind: "success", title: decision === "approved" ? t("att.correctionApproved") : decision === "rejected" ? t("att.correctionRejected") : t("att.correctionChanges") }); router.refresh(); }
       else toast({ kind: "error", title: r.error });
     });
 
-  if (rows.length === 0) return <p className="px-4 py-3 text-[13px] text-ink-3">No corrections.</p>;
+  if (rows.length === 0) return <p className="px-4 py-3 text-[13px] text-ink-3">{t("att.noCorrections")}</p>;
   return (
     <ul className="divide-y divide-line">
       {rows.map((c) => (
@@ -81,7 +83,7 @@ export function CorrectionList({ rows, canDecide }: { rows: CorrectionRow[]; can
               <StatusBadge module="generic" status={c.status} />
             </div>
             <p className="mt-0.5 text-[12px] text-ink-3">{c.reason}</p>
-            {c.requestedValue && <p className="text-[11px] text-ink-3">Requested: {c.requestedValue}{c.oldValue ? ` (was ${c.oldValue})` : ""}</p>}
+            {c.requestedValue && <p className="text-[11px] text-ink-3">{t("att.requestedWas", { value: c.requestedValue })}{c.oldValue ? ` (${c.oldValue})` : ""}</p>}
           </div>
           {canDecide && c.status === "pending" && (
             <div className="flex shrink-0 gap-1.5">
