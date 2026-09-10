@@ -59,7 +59,7 @@ export function ImportWizard({ resources, companies }: { resources: Resource[]; 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <label className="block"><span className="mb-1 block text-[12px] text-ink-2">What to import</span><Select value={resourceKey} onChange={(e) => { setResourceKey(e.target.value); setPreview(null); setResult(null); setMapping({}); }}>{resources.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}</Select></label>
         {resource.needsCompany && <label className="block"><span className="mb-1 block text-[12px] text-ink-2">Company</span><Select value={companyId} onChange={(e) => setCompanyId(e.target.value)}>{companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select></label>}
-        <label className="block"><span className="mb-1 block text-[12px] text-ink-2">CSV file</span><input type="file" accept=".csv,text/csv" onChange={(e) => onFile(e.target.files?.[0] ?? null)} className="block w-full text-[13px] text-ink-2 file:mr-3 file:rounded file:border-0 file:bg-surface-2 file:px-3 file:py-1.5 file:text-ink" /></label>
+        <label className="block"><span className="mb-1 block text-[12px] text-ink-2">CSV file</span><input type="file" accept=".csv,text/csv" onChange={(e) => onFile(e.target.files?.[0] ?? null)} className="block w-full text-[13px] text-ink-2 file:me-3 file:rounded file:border-0 file:bg-surface-2 file:px-3 file:py-1.5 file:text-ink" /></label>
       </div>
 
       {headers.length > 0 && (
