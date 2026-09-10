@@ -110,6 +110,8 @@ export const dictionaries = {
     "nav.auditLog": "Audit Log",
     "nav.developer": "Developer Portal",
     "nav.systemHealth": "System Health",
+    "nav.importData": "Import Data",
+    "nav.dataQuality": "Data Quality",
     "nav.settings": "Settings",
 
     "auth.signIn": "Sign in",
@@ -244,6 +246,8 @@ export const dictionaries = {
     "nav.auditLog": "سجل التدقيق",
     "nav.developer": "بوابة المطورين",
     "nav.systemHealth": "حالة النظام",
+    "nav.importData": "استيراد البيانات",
+    "nav.dataQuality": "جودة البيانات",
     "nav.settings": "الإعدادات",
 
     "auth.signIn": "تسجيل الدخول",

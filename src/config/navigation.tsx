@@ -5,7 +5,7 @@ import {
   Globe, Users, UserRound, Clock, BookOpen, Folder, MessageSquare, Wallet,
   Receipt, CreditCard, BarChart3, PieChart, UserCog, KeyRound, History, Terminal,
   Activity, Settings, Workflow, BookOpenCheck, Scale, BarChart4, Landmark,
-  FileMinus, HandCoins, ReceiptText, type LucideIcon,
+  FileMinus, HandCoins, ReceiptText, Upload, ShieldAlert, type LucideIcon,
 } from "lucide-react";
 import type { TranslationKey } from "@/i18n";
 
@@ -181,6 +181,8 @@ export const NAVIGATION: NavGroup[] = [
       { key: "audit", labelKey: "nav.auditLog", href: "/admin/audit", icon: History, permission: "audit.view" },
       { key: "developer", labelKey: "nav.developer", href: "/admin/developer", icon: Terminal, permission: "developer.view" },
       { key: "system-health", labelKey: "nav.systemHealth", href: "/admin/system", icon: Activity, permission: "developer.view" },
+      { key: "import", labelKey: "nav.importData", href: "/admin/import", icon: Upload, permission: "settings.view" },
+      { key: "data-quality", labelKey: "nav.dataQuality", href: "/admin/data-quality", icon: ShieldAlert, permission: "settings.view" },
       { key: "settings", labelKey: "nav.settings", href: "/admin/settings", icon: Settings, permission: "settings.view" },
     ],
   },
