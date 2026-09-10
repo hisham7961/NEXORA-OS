@@ -48,17 +48,20 @@ export async function listChannels(principal: Principal): Promise<(Channel & { u
     where: { archivedAt: null, OR: [{ id: { in: memberIds } }, publicWhere] },
     orderBy: [{ lastMessageAt: "desc" }, { name: "asc" }],
   });
-  // Unread counts for member channels.
+  // Unread counts for member channels — one grouped query with a per-channel
+  // threshold (OR of {channelId, createdAt > lastReadAt}) instead of a COUNT per
+  // channel (N+1), counted from messages by others.
   const members = await prisma.channelMember.findMany({ where: { userId: principal.userId, channelId: { in: channels.map((c) => c.id) } } });
-  const lastReadByChannel = new Map(members.map((m) => [m.channelId, m.lastReadAt]));
-  const result = await Promise.all(channels.map(async (c) => {
-    const since = lastReadByChannel.get(c.id);
-    const unread = lastReadByChannel.has(c.id)
-      ? await prisma.message.count({ where: { channelId: c.id, archivedAt: null, authorId: { not: principal.userId }, ...(since ? { createdAt: { gt: since } } : {}) } })
-      : 0;
-    return { ...c, unread };
+  const memberChannelIds = new Set(members.map((m) => m.channelId));
+  const conditions = members.map((m) => ({
+    channelId: m.channelId, archivedAt: null, authorId: { not: principal.userId },
+    ...(m.lastReadAt ? { createdAt: { gt: m.lastReadAt } } : {}),
   }));
-  return result;
+  const grouped = conditions.length
+    ? await prisma.message.groupBy({ by: ["channelId"], where: { OR: conditions }, _count: { _all: true } })
+    : [];
+  const unreadByChannel = new Map(grouped.map((g) => [g.channelId, g._count._all]));
+  return channels.map((c) => ({ ...c, unread: memberChannelIds.has(c.id) ? (unreadByChannel.get(c.id) ?? 0) : 0 }));
 }
 
 export async function getChannel(principal: Principal, id: string) {

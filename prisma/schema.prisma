@@ -520,6 +520,8 @@ model Document {
   @@index([expiryDate])
   @@index([brandId])
   @@index([status])
+  @@index([companyId])
+  @@index([countryId])
 }
 
 // ============================================================================
@@ -623,6 +625,8 @@ model Project {
   archivedAt  DateTime?
 
   @@index([brandId])
+  @@index([companyId])
+  @@index([status])
 }
 
 model Task {
@@ -905,6 +909,7 @@ model Campaign {
   @@index([brandId, status])
   @@index([countryId])
   @@index([ownerId])
+  @@index([companyId])
 }
 
 model CampaignProduct {
@@ -1000,6 +1005,7 @@ model PublishingItem {
   @@index([brandId, publishDate])
   @@index([socialAccountId])
   @@index([status])
+  @@index([countryId])
 }
 
 model PublishingRecurrence {
@@ -1041,6 +1047,7 @@ model WhatsappCampaign {
   archivedAt        DateTime?
 
   @@index([brandId])
+  @@index([countryId])
 }
 
 // ============================================================================
@@ -1073,6 +1080,8 @@ model DesignRequest {
 
   @@index([brandId, status])
   @@index([designerId])
+  @@index([companyId])
+  @@index([countryId])
 }
 
 model DesignVersion {
@@ -1133,6 +1142,7 @@ model Store {
 
   @@index([brandId])
   @@index([countryId])
+  @@index([companyId])
 }
 
 model StoreResponsible {
@@ -1204,6 +1214,8 @@ model CustomerCase {
 
   @@index([brandId, status])
   @@index([assignedToId])
+  @@index([companyId])
+  @@index([countryId])
 }
 
 model CustomerCaseNote {
@@ -1522,6 +1534,9 @@ model Subscription {
 
   @@index([renewalDate])
   @@index([status])
+  @@index([companyId])
+  @@index([brandId])
+  @@index([countryId])
 }
 
 // Employee-initiated attendance correction request + manager decision (§25).
