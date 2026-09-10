@@ -3,8 +3,9 @@ import { Terminal, Check, X } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
 import { getDeveloperPortal } from "@/domain/platform";
-import { PageHeader, Panel, PanelHeader, DataTable, StatusBadge, Badge, EmptyState } from "@/components/ui";
-import { formatDate } from "@/lib/format";
+import { listApiTokens } from "@/domain/api-tokens";
+import { ApiTokenManager, type TokenRow } from "@/components/admin/api-token-manager";
+import { PageHeader, Panel, PanelHeader, PanelBody, DataTable, StatusBadge, Badge, EmptyState } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Developer Portal" };
 
@@ -13,9 +14,16 @@ function Bool({ ok }: { ok: boolean }) {
 }
 
 export default async function DeveloperPortalPage() {
-  const { locale, denied } = await pageGuard("developer.view");
+  const { principal, locale, denied } = await pageGuard("developer.view");
   if (denied) return <AccessDenied locale={locale} />;
-  const { features, tokens, endpoints } = await getDeveloperPortal();
+  const { features, endpoints } = await getDeveloperPortal();
+  const myTokens = await listApiTokens(principal);
+  const tokenRows: TokenRow[] = myTokens.map((t) => ({
+    id: t.id, name: t.name, prefix: t.prefix, readOnly: t.readOnly, status: t.status,
+    lastUsedAt: t.lastUsedAt ? t.lastUsedAt.toISOString() : null,
+    expiresAt: t.expiresAt ? t.expiresAt.toISOString() : null,
+    createdAt: t.createdAt.toISOString(),
+  }));
 
   return (
     <>
@@ -52,17 +60,10 @@ export default async function DeveloperPortalPage() {
           </ul>
         </Panel>
         <Panel>
-          <PanelHeader title="API tokens" description="Secrets are never displayed (§35)." />
-          <DataTable
-            columns={[
-              { key: "name", header: "Name", render: (t) => t.name },
-              { key: "prefix", header: "Prefix", render: (t) => <span className="font-mono text-xs text-ink-3">{t.prefix}…</span> },
-              { key: "used", header: "Last used", align: "end", render: (t) => formatDate(t.lastUsedAt, locale) },
-            ]}
-            rows={tokens}
-            getRowKey={(t) => t.id}
-            empty={<EmptyState title="No API tokens" description="Issue tokens for integrations; only the prefix is ever shown." />}
-          />
+          <PanelHeader title="API tokens" description="Your personal tokens for /api/v1. Send as `Authorization: Bearer <token>`. Secrets are shown once at creation and never again (§32/§35)." />
+          <PanelBody>
+            <ApiTokenManager tokens={tokenRows} />
+          </PanelBody>
         </Panel>
       </div>
     </>

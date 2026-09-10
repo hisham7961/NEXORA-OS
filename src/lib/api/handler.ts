@@ -6,6 +6,22 @@ import { ForbiddenError, UnauthorizedError, type Principal } from "@/lib/permiss
 import { rateLimit, tooManyRequests, type BucketName } from "@/lib/ratelimit";
 import { fail } from "./response";
 
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/**
+ * Same-origin guard for cookie-authenticated state-changing requests (§31 CSRF).
+ * A SameSite=Lax cookie still rides along on top-level cross-site POSTs, so we also
+ * require the Origin (or, failing that, Referer) host to match the request host.
+ * Bearer-token requests skip this — they carry no ambient cookie credential.
+ */
+function isSameOrigin(req: NextRequest): boolean {
+  const host = req.headers.get("host");
+  if (!host) return false;
+  const source = req.headers.get("origin") ?? req.headers.get("referer");
+  if (!source) return false; // browsers send Origin on state-changing requests; absence is suspicious
+  try { return new URL(source).host === host; } catch { return false; }
+}
+
 /** Choose the rate-limit bucket for an API path (§1). */
 function bucketForPath(pathname: string, method: string): BucketName {
   if (/\/api\/v1\/(accounting|finance|expenses|subscriptions)\//.test(pathname) && method !== "GET") return "finance_post";
@@ -42,8 +58,32 @@ export function route<P extends Record<string, string> = Record<string, string>>
       const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
       const userAgent = req.headers.get("user-agent");
 
-      const principal = await getPrincipal();
-      const user = await getCurrentUser();
+      // Authenticate: a Bearer API token takes precedence over the session cookie
+      // (§32). Token requests carry no ambient credential, so they are exempt from
+      // the CSRF origin check; cookie requests are not.
+      let principal: Principal | null = null;
+      let user: User | null = null;
+      const bearer = req.headers.get("authorization");
+      const bearerToken = bearer?.toLowerCase().startsWith("bearer ") ? bearer.slice(7).trim() : null;
+
+      if (bearerToken) {
+        const { authenticateApiToken } = await import("@/domain/api-tokens");
+        const authed = await authenticateApiToken(bearerToken);
+        if (!authed) throw new UnauthorizedError();
+        if (authed.readOnly && !SAFE_METHODS.has(req.method)) {
+          throw new ForbiddenError("api_token.read_only");
+        }
+        principal = authed.principal;
+        user = authed.user;
+      } else {
+        principal = await getPrincipal();
+        user = await getCurrentUser();
+        // CSRF: reject cross-origin state-changing requests authenticated by cookie.
+        if (principal && !SAFE_METHODS.has(req.method) && !isSameOrigin(req)) {
+          throw new ForbiddenError("csrf_origin_mismatch");
+        }
+      }
+
       if (authRequired && (!principal || !user)) {
         throw new UnauthorizedError();
       }
