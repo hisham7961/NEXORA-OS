@@ -2899,6 +2899,19 @@ model BackgroundJobRun {
   @@index([status])
 }
 
+/** Fleet-wide run lock (§37-38). The unique (jobName, periodKey) means only one app
+ *  instance can claim a given job-minute, so scheduled jobs fire exactly once across
+ *  a multi-instance deployment. Rows are purged after a few days. */
+model JobRunClaim {
+  id        String   @id @default(cuid())
+  jobName   String
+  periodKey String // minute bucket, e.g. "202609100241"
+  claimedAt DateTime @default(now())
+
+  @@unique([jobName, periodKey])
+  @@index([claimedAt])
+}
+
 model SystemEvent {
   id        String   @id @default(cuid())
   type      String // error | integration | webhook | health

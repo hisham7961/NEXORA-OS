@@ -1,29 +1,62 @@
 import { prisma } from "@/lib/db";
+import { logger } from "@/lib/log";
 import { cronMatches, nextRun } from "./cron";
 import { JOB_DEFINITIONS, jobByName, type JobDefinition } from "./registry";
 
 /**
- * In-process job scheduler (§10). Next.js `instrumentation.ts` calls
- * `startScheduler()` once at server startup; a minute-aligned interval then fires
- * any job whose cron matches the current minute. Every run is recorded in
- * BackgroundJobRun (history, duration, error) and reflected on the job's
- * BackgroundJob row, so the Admin Operations Center shows real state — nothing
- * runs invisibly (§74/§75). Runners are idempotent, so a missed/retried tick is safe.
+ * Job scheduler (§10, §37-38). Next.js `instrumentation.ts` calls `startScheduler()`
+ * once at server startup; a minute-aligned interval then fires any job whose cron
+ * matches the current minute. Every run is recorded in BackgroundJobRun (history,
+ * duration, error) and reflected on the job's BackgroundJob row, so the Admin
+ * Operations Center shows real state — nothing runs invisibly. Runners are idempotent.
  *
- * This is a single-process scheduler suitable for a single app instance. For a
- * multi-instance deployment, front it with a DB advisory lock or an external
- * scheduler hitting the same runJobNow() path; the run-recording contract is identical.
+ * Multi-instance safety: before a SCHEDULED run, the instance claims a unique
+ * (jobName, minute) row in JobRunClaim. The DB unique constraint means only one
+ * instance's claim succeeds, so a job fires exactly once per minute across the whole
+ * fleet even when several app servers tick simultaneously. Manual "run now" is
+ * intentional and does not claim.
  */
 
 interface SchedulerState {
   started: boolean;
   timer: ReturnType<typeof setInterval> | null;
   running: Set<string>;
+  lastTickAt: Date | null;
 }
 
 const g = globalThis as unknown as { __nexoraScheduler?: SchedulerState };
-const state: SchedulerState = g.__nexoraScheduler ?? { started: false, timer: null, running: new Set() };
+const state: SchedulerState = g.__nexoraScheduler ?? { started: false, timer: null, running: new Set(), lastTickAt: null };
 g.__nexoraScheduler = state;
+
+const log = logger.child({ component: "scheduler" });
+
+/** Minute bucket key like "202609100241" — one claim per job per minute. */
+function periodKey(d: Date): string {
+  return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}${String(d.getUTCHours()).padStart(2, "0")}${String(d.getUTCMinutes()).padStart(2, "0")}`;
+}
+
+/**
+ * Try to claim a job's minute across the fleet. Returns true if THIS instance won
+ * the claim (and should run), false if another instance already claimed it or the
+ * claim could not be recorded. A unique-constraint violation is the normal "someone
+ * else got it" path, not an error.
+ */
+async function claimPeriod(jobName: string, key: string): Promise<boolean> {
+  try {
+    await prisma.jobRunClaim.create({ data: { jobName, periodKey: key } });
+    return true;
+  } catch (e) {
+    const code = (e as { code?: string }).code;
+    if (code === "P2002") return false; // already claimed by another instance
+    log.warn("job claim failed", { jobName, periodKey: key, err: e });
+    return false; // fail closed: don't double-run when the claim is uncertain
+  }
+}
+
+/** Health/liveness signal for the scheduler (used by the readiness probe). */
+export function getSchedulerHeartbeat(): { started: boolean; lastTickAt: Date | null } {
+  return { started: state.started, lastTickAt: state.lastTickAt };
+}
 
 async function systemActorId(): Promise<string | null> {
   try {
@@ -66,7 +99,7 @@ export async function runJob(def: JobDefinition, trigger: "scheduled" | "manual"
     const error = e instanceof Error ? e.message : String(e);
     if (run) await prisma.backgroundJobRun.update({ where: { id: run.id }, data: { status: "failed", finishedAt, durationMs, error } }).catch(() => {});
     if (jobRow) await prisma.backgroundJob.update({ where: { id: jobRow.id }, data: { status: "failed", lastDurationMs: durationMs, lastError: error, nextRunAt: nextRun(def.cron, finishedAt) } }).catch(() => {});
-    console.error(`[scheduler] job "${def.name}" failed:`, error);
+    log.error("job failed", { jobName: def.name, trigger, durationMs, err: e });
     return { ok: false, durationMs, error };
   } finally {
     state.running.delete(def.name);
@@ -82,12 +115,20 @@ export async function runJobNow(name: string, actorId: string | null): Promise<J
 
 async function tick(): Promise<void> {
   const now = new Date();
+  state.lastTickAt = now;
+  // Purge old fleet claims once an hour so the table stays small.
+  if (now.getUTCMinutes() === 0) void prisma.jobRunClaim.deleteMany({ where: { claimedAt: { lt: new Date(Date.now() - 3 * 86_400_000) } } }).catch(() => {});
+
   const due = JOB_DEFINITIONS.filter((d) => cronMatches(d.cron, now));
   if (due.length === 0) return;
+  const key = periodKey(now);
   const actorId = await systemActorId();
   for (const def of due) {
-    // Fire-and-forget within the tick; runJob guards against overlap.
-    void runJob(def, "scheduled", actorId);
+    // Claim this minute across the fleet; only the instance that wins the unique
+    // (jobName, minute) row runs it. Fire-and-forget; runJob also guards in-process.
+    void (async () => {
+      if (await claimPeriod(def.name, key)) void runJob(def, "scheduled", actorId);
+    })();
   }
 }
 
@@ -95,7 +136,7 @@ async function tick(): Promise<void> {
 export function startScheduler(): void {
   if (state.started) return;
   if (process.env.NEXORA_DISABLE_SCHEDULER === "1") {
-    console.log("[scheduler] disabled via NEXORA_DISABLE_SCHEDULER=1");
+    log.info("scheduler disabled via NEXORA_DISABLE_SCHEDULER=1");
     return;
   }
   state.started = true;
@@ -114,7 +155,7 @@ export function startScheduler(): void {
     void tick();
     state.timer = setInterval(() => void tick(), 60_000);
   }, msToNextMinute);
-  console.log(`[scheduler] started — ${JOB_DEFINITIONS.length} jobs, first tick in ${Math.round(msToNextMinute / 1000)}s`);
+  log.info("scheduler started", { jobs: JOB_DEFINITIONS.length, firstTickInSec: Math.round(msToNextMinute / 1000) });
 }
 
 function safeStringify(v: unknown): string | null {

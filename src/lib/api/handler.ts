@@ -4,6 +4,7 @@ import type { User } from "@prisma/client";
 import { getCurrentUser, getPrincipal } from "@/lib/auth/current-user";
 import { ForbiddenError, UnauthorizedError, type Principal } from "@/lib/permissions/engine";
 import { rateLimit, tooManyRequests, type BucketName } from "@/lib/ratelimit";
+import { logger, newRequestId } from "@/lib/log";
 import { fail } from "./response";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
@@ -37,6 +38,8 @@ export interface ApiContext<P = Record<string, string>> {
   user: User;
   ip: string | null;
   userAgent: string | null;
+  /** Correlation id for this request — set on the response and in every log line. */
+  requestId: string;
 }
 
 type Handler<P> = (ctx: ApiContext<P>) => Promise<Response> | Response;
@@ -53,6 +56,9 @@ export function route<P extends Record<string, string> = Record<string, string>>
   const authRequired = opts.auth !== false;
 
   return async (req: NextRequest, segment: { params: Promise<P> }): Promise<Response> => {
+    const requestId = req.headers.get("x-request-id") ?? newRequestId();
+    const method = req.method;
+    const path = new URL(req.url).pathname;
     try {
       const params = (await segment.params) ?? ({} as P);
       const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
@@ -95,29 +101,36 @@ export function route<P extends Record<string, string> = Record<string, string>>
       const rl = await rateLimit(bucketForPath(pathname, req.method), `${identity}:${req.method}:${pathname}`);
       if (!rl.allowed) return tooManyRequests(rl);
 
-      return await handler({
+      const res = await handler({
         req,
         params,
         principal: principal as Principal,
         user: user as User,
         ip,
         userAgent,
+        requestId,
       });
+      res.headers.set("x-request-id", requestId);
+      return res;
     } catch (err) {
-      return mapError(err);
+      // Log the true error (structured, correlated) exactly once; the client only
+      // ever sees the mapped, stack-free response.
+      const res = mapError(err, { requestId, method, path });
+      res.headers.set("x-request-id", requestId);
+      return res;
     }
   };
 }
 
-export function mapError(err: unknown): Response {
+export function mapError(err: unknown, ctx?: { requestId?: string; method?: string; path?: string }): Response {
   if (err instanceof UnauthorizedError) return fail(err.code, err.message, 401);
   if (err instanceof ForbiddenError) return fail(err.code, err.message, 403);
   if (err instanceof ZodError) {
     return fail("validation_error", "Request validation failed", 422, err.flatten());
   }
   if (err instanceof ServiceError) return fail(err.code, err.message, err.status, err.details);
-  console.error("[api] unhandled error", err);
-  // Never leak stack traces to clients (§66).
+  // Unhandled: log the real error (structured + correlated), never leak it (§66).
+  logger.error("unhandled API error", { ...ctx, err });
   return fail("internal_error", "An unexpected error occurred", 500);
 }
 

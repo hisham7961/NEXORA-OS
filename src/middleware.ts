@@ -15,6 +15,9 @@ import { NextResponse, type NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const isProd = process.env.NODE_ENV === "production";
   const nonce = btoa(crypto.randomUUID());
+  // Correlation id (§41-42): reuse an inbound one (e.g. from a proxy) or mint one,
+  // and echo it so a request can be traced across logs and to the client.
+  const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
 
   const csp = [
     `default-src 'self'`,
@@ -35,10 +38,12 @@ export function middleware(request: NextRequest) {
   // rendered document is governed by the same policy the browser receives.
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("x-request-id", requestId);
   requestHeaders.set("Content-Security-Policy", csp);
 
   const res = NextResponse.next({ request: { headers: requestHeaders } });
 
+  res.headers.set("x-request-id", requestId);
   res.headers.set("Content-Security-Policy", csp);
   res.headers.set("X-Content-Type-Options", "nosniff");
   res.headers.set("X-Frame-Options", "DENY");

@@ -37,7 +37,8 @@ export async function writeAudit(input: AuditInput): Promise<void> {
       },
     });
   } catch (err) {
-    console.error("[audit] failed to write audit log", input.action, err);
+    const { logger } = await import("@/lib/log");
+    logger.error("failed to write audit log", { action: input.action, err });
   }
 }
 
