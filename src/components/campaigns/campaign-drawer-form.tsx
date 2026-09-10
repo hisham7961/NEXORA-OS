@@ -10,6 +10,7 @@ import { ActionForm, FormField, FormSection } from "@/components/form/action-for
 import { createCampaignAction, updateCampaignAction } from "@/app/actions/campaigns";
 import type { Option } from "@/domain/options";
 import { humanize } from "@/lib/status";
+import { useI18n } from "@/components/providers";
 
 const TYPES = ["meta", "instagram", "facebook", "tiktok", "snapchat", "google", "influencer", "whatsapp", "email", "offline", "retail", "custom"];
 
@@ -40,6 +41,7 @@ export function CampaignDrawerForm({
   defaults?: CampaignDefaults;
 }) {
   const [open, setOpen] = useState(false);
+  const { t } = useI18n();
   useCreateShortcut(() => { if (mode === "create") setOpen(true); });
   const router = useRouter();
   const isEdit = mode === "edit";
@@ -48,60 +50,60 @@ export function CampaignDrawerForm({
     <>
       <Button variant={isEdit ? "secondary" : "primary"} size={isEdit ? "sm" : "md"} onClick={() => setOpen(true)}>
         {isEdit ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-        {isEdit ? "Edit" : "New campaign"}
+        {isEdit ? t("actions.edit") : t("campf.newCampaign")}
       </Button>
-      <Drawer open={open} onClose={() => setOpen(false)} title={isEdit ? "Edit campaign" : "New campaign"} description="Plan a campaign within your scope. Budget and metrics keep spend honest." width="620px">
+      <Drawer open={open} onClose={() => setOpen(false)} title={isEdit ? t("campf.editCampaign") : t("campf.newCampaign")} description={t("campf.drawerSub")} width="620px">
         <ActionForm
           action={isEdit ? updateCampaignAction : createCampaignAction}
-          submitLabel={isEdit ? "Save campaign" : "Create campaign"}
+          submitLabel={isEdit ? t("campf.saveCampaign") : t("campf.createCampaign")}
           onCancel={() => setOpen(false)}
           onSuccess={() => { setOpen(false); router.refresh(); }}
         >
           {isEdit && <input type="hidden" name="campaignId" value={defaults.id} />}
-          <FormField label="Name" name="name" required>
-            <Input name="name" defaultValue={defaults.name} placeholder="e.g. Ramadan skincare push" required />
+          <FormField label={t("common.name")} name="name" required>
+            <Input name="name" defaultValue={defaults.name} placeholder={t("campf.phName")} required />
           </FormField>
           <FormSection>
-            <FormField label="Type" name="type" required>
+            <FormField label={t("common.type")} name="type" required>
               <Select name="type" defaultValue={defaults.type ?? "meta"}>{TYPES.map((t) => <option key={t} value={t}>{humanize(t)}</option>)}</Select>
             </FormField>
-            <FormField label="Objective" name="objective">
-              <Input name="objective" defaultValue={defaults.objective ?? ""} placeholder="e.g. Awareness, conversions" />
+            <FormField label={t("camp.objective")} name="objective">
+              <Input name="objective" defaultValue={defaults.objective ?? ""} placeholder={t("campf.phObjective")} />
             </FormField>
             {!isEdit && (
               <>
-                <FormField label="Company" name="companyId">
+                <FormField label={t("common.company")} name="companyId">
                   <Select name="companyId" defaultValue={defaults.companyId ?? ""}><option value="">—</option>{options.companies.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</Select>
                 </FormField>
-                <FormField label="Brand" name="brandId">
+                <FormField label={t("common.brand")} name="brandId">
                   <Select name="brandId" defaultValue={defaults.brandId ?? ""}><option value="">—</option>{options.brands.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}</Select>
                 </FormField>
-                <FormField label="Market" name="countryId">
+                <FormField label={t("common.market")} name="countryId">
                   <Select name="countryId" defaultValue={defaults.countryId ?? ""}><option value="">—</option>{options.countries.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</Select>
                 </FormField>
               </>
             )}
-            <FormField label="Owner" name="ownerId">
-              <Select name="ownerId" defaultValue={defaults.ownerId ?? ""}><option value="">Unassigned</option>{options.users.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}</Select>
+            <FormField label={t("camp.owner")} name="ownerId">
+              <Select name="ownerId" defaultValue={defaults.ownerId ?? ""}><option value="">{t("campf.unassigned")}</option>{options.users.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}</Select>
             </FormField>
-            <FormField label="Currency" name="currency">
+            <FormField label={t("common.currency")} name="currency">
               <Input name="currency" defaultValue={defaults.currency ?? "KWD"} maxLength={8} />
             </FormField>
-            <FormField label="Planned budget" name="plannedBudget" hint={isEdit ? "Actual spend is derived from logged spend metrics" : undefined}>
+            <FormField label={t("camp.plannedBudget")} name="plannedBudget" hint={isEdit ? t("campf.plannedBudgetHint") : undefined}>
               <Input type="number" step="0.001" min="0" name="plannedBudget" defaultValue={defaults.plannedBudget ?? ""} placeholder="0.000" />
             </FormField>
-            <FormField label="Start date" name="startDate">
+            <FormField label={t("orgf.startDate")} name="startDate">
               <Input type="date" name="startDate" defaultValue={defaults.startDate ?? ""} />
             </FormField>
-            <FormField label="End date" name="endDate">
+            <FormField label={t("camp.end")} name="endDate">
               <Input type="date" name="endDate" defaultValue={defaults.endDate ?? ""} />
             </FormField>
           </FormSection>
-          <FormField label="Target audience" name="targetAudience">
-            <Input name="targetAudience" defaultValue={defaults.targetAudience ?? ""} placeholder="Who is this for?" />
+          <FormField label={t("camp.targetAudience")} name="targetAudience">
+            <Input name="targetAudience" defaultValue={defaults.targetAudience ?? ""} placeholder={t("campf.phAudience")} />
           </FormField>
-          <FormField label="Notes" name="notes">
-            <Textarea name="notes" defaultValue={defaults.notes ?? ""} placeholder="Brief, context, links…" />
+          <FormField label={t("camp.notes")} name="notes">
+            <Textarea name="notes" defaultValue={defaults.notes ?? ""} placeholder={t("campf.phNotes")} />
           </FormField>
         </ActionForm>
       </Drawer>
