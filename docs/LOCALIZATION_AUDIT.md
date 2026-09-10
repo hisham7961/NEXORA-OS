@@ -55,3 +55,11 @@ Progress is tracked per commit group (§69): 1 shared/common/auth · 2 organizat
 
 _This document records the plan and method; the page-by-page completion state and the
 final hard-coded-string count are reported in the RC audit at phase end._
+
+## Final state (phase end)
+
+- Hard-coded user-facing strings: **2,477 → 0** across 0 files (detector baseline pinned to 0).
+- Dictionary: **2,337** EN/AR pairs; parity by construction, enforced by CI.
+- All 99 application routes and their components localized; status/priority centralized.
+- Full verdict, the §91 20-item report and reproduction steps: see
+  [`docs/V1_RELEASE_CANDIDATE_AUDIT.md`](./V1_RELEASE_CANDIDATE_AUDIT.md).
