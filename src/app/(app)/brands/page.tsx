@@ -12,10 +12,12 @@ import { BrandChip } from "@/components/entity-chips";
 import { BrandForm } from "@/components/org/org-forms";
 
 export const metadata: Metadata = { title: "Brands" };
+import { getServerI18n } from "@/lib/server-i18n";
 
 export default async function BrandsPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { principal, locale, denied } = await pageGuard("brands.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
 
   const sp = await searchParams;
   const query = brandQuerySchema.parse(sp);
@@ -25,24 +27,24 @@ export default async function BrandsPage({ searchParams }: { searchParams: Promi
   const companyOptions = [...lookups.companies.values()].sort((a, b) => a.name.localeCompare(b.name)).map((c) => ({ id: c.id, label: c.name }));
 
   const columns: Column<BrandRow>[] = [
-    { key: "name", header: "Brand", render: (b) => <BrandChip name={b.name} color={b.accentColor} /> },
-    { key: "code", header: "Code", render: (b) => <span className="font-mono text-xs text-ink-3">{b.code}</span> },
-    { key: "companies", header: "Companies", align: "center", render: (b) => <span className="tabular">{b.companyCount}</span> },
-    { key: "markets", header: "Markets", align: "center", render: (b) => <span className="tabular">{b.marketCount}</span> },
-    { key: "products", header: "Products", align: "center", render: (b) => <span className="tabular">{b.productCount}</span> },
-    { key: "status", header: "Status", render: (b) => <StatusBadge module="generic" status={b.status} /> },
+    { key: "name", header: t("common.brand"), render: (b) => <BrandChip name={b.name} color={b.accentColor} /> },
+    { key: "code", header: t("common.code"), render: (b) => <span className="font-mono text-xs text-ink-3">{b.code}</span> },
+    { key: "companies", header: t("brands.col.companies"), align: "center", render: (b) => <span className="tabular">{b.companyCount}</span> },
+    { key: "markets", header: t("brands.col.markets"), align: "center", render: (b) => <span className="tabular">{b.marketCount}</span> },
+    { key: "products", header: t("brands.col.products"), align: "center", render: (b) => <span className="tabular">{b.productCount}</span> },
+    { key: "status", header: t("common.status"), render: (b) => <StatusBadge module="generic" status={b.status} /> },
   ];
 
   return (
     <>
       <PageHeader
-        title="Brands"
-        description="Every brand connects companies, markets, products, campaigns, regulatory and finance."
+        title={t("brands.title")}
+        description={t("brands.subtitle")}
         meta={<Badge category="neutral">{total} brands</Badge>}
         actions={canCreate ? <BrandForm mode="create" companies={companyOptions} /> : undefined}
       />
       <ListToolbar
-        placeholder="Search brands…"
+        placeholder={t("brands.searchPlaceholder")}
         filters={[{ name: "status", label: "Status", options: [{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }] }]}
       />
       <Panel>
@@ -54,7 +56,7 @@ export default async function BrandsPage({ searchParams }: { searchParams: Promi
           empty={
             <div className="text-center">
               <Gem className="mx-auto mb-2 h-6 w-6 text-ink-3" />
-              <p className="text-[13px] font-medium text-ink">No brands in your scope</p>
+              <p className="text-[13px] font-medium text-ink">{t("brands.empty")}</p>
               <p className="mt-1 text-xs text-ink-3">Brands you are assigned to will appear here.</p>
             </div>
           }

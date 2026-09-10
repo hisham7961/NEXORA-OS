@@ -11,10 +11,12 @@ import { Pagination } from "@/components/list/pagination";
 import { CompanyForm } from "@/components/org/org-forms";
 
 export const metadata: Metadata = { title: "Companies" };
+import { getServerI18n } from "@/lib/server-i18n";
 
 export default async function CompaniesPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { principal, locale, denied } = await pageGuard("companies.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
 
   const sp = await searchParams;
   const query = companyQuerySchema.parse(sp);
@@ -26,7 +28,7 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
   const columns: Column<CompanyRow>[] = [
     {
       key: "name",
-      header: "Company",
+      header: t("common.company"),
       render: (c) => (
         <span className="inline-flex items-center gap-2 text-[13px] text-ink">
           <span
@@ -39,23 +41,23 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
         </span>
       ),
     },
-    { key: "code", header: "Code", render: (c) => <span className="font-mono text-xs text-ink-3">{c.code}</span> },
-    { key: "currency", header: "Base currency", render: (c) => <span className="font-mono text-xs">{c.baseCurrency}</span> },
-    { key: "brands", header: "Brands", align: "center", render: (c) => <span className="tabular">{c.brandCount}</span> },
-    { key: "employees", header: "Employees", align: "center", render: (c) => <span className="tabular">{c.employeeCount}</span> },
-    { key: "status", header: "Status", render: (c) => <StatusBadge module="generic" status={c.status} /> },
+    { key: "code", header: t("common.code"), render: (c) => <span className="font-mono text-xs text-ink-3">{c.code}</span> },
+    { key: "currency", header: t("common.baseCurrency"), render: (c) => <span className="font-mono text-xs">{c.baseCurrency}</span> },
+    { key: "brands", header: t("companies.col.brands"), align: "center", render: (c) => <span className="tabular">{c.brandCount}</span> },
+    { key: "employees", header: t("companies.col.employees"), align: "center", render: (c) => <span className="tabular">{c.employeeCount}</span> },
+    { key: "status", header: t("common.status"), render: (c) => <StatusBadge module="generic" status={c.status} /> },
   ];
 
   return (
     <>
       <PageHeader
-        title="Companies"
-        description="Each legal entity anchors its brands, employees and books — the roots of the group hierarchy."
+        title={t("companies.title")}
+        description={t("companies.subtitle")}
         meta={<Badge category="neutral">{total} companies</Badge>}
         actions={canCreate ? <CompanyForm mode="create" countries={countryOptions} /> : undefined}
       />
       <ListToolbar
-        placeholder="Search companies…"
+        placeholder={t("companies.searchPlaceholder")}
         filters={[{ name: "status", label: "Status", options: [{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }] }]}
       />
       <Panel>
@@ -67,7 +69,7 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
           empty={
             <div className="text-center">
               <Building2 className="mx-auto mb-2 h-6 w-6 text-ink-3" />
-              <p className="text-[13px] font-medium text-ink">No companies in your scope</p>
+              <p className="text-[13px] font-medium text-ink">{t("companies.empty")}</p>
               <p className="mt-1 text-xs text-ink-3">Legal entities you are assigned to will appear here once created in Organization settings.</p>
             </div>
           }

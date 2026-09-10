@@ -15,6 +15,7 @@ import { BrandChip, CountryChip } from "@/components/entity-chips";
 import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Registrations" };
+import { getServerI18n } from "@/lib/server-i18n";
 
 const STATUS_OPTIONS = [
   { value: "preparation", label: "Preparation" },
@@ -35,6 +36,7 @@ const STATUS_OPTIONS = [
 export default async function RegistrationsPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { principal, locale, denied } = await pageGuard("registrations.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
 
   const sp = await searchParams;
   const query = registrationQuerySchema.parse(sp);
@@ -57,20 +59,20 @@ export default async function RegistrationsPage({ searchParams }: { searchParams
   const blocked = query.filter === "blocked";
 
   const columns: Column<RegistrationCase>[] = [
-    { key: "product", header: "Product", render: (r) => refName(lookups.products, r.productId) },
-    { key: "brand", header: "Brand", render: (r) => <BrandChip name={refName(lookups.brands, r.brandId)} color={lookups.brands.get(r.brandId ?? "")?.meta} /> },
-    { key: "country", header: "Market", render: (r) => <CountryChip name={refName(lookups.countries, r.countryId)} iso2={lookups.countries.get(r.countryId)?.meta} /> },
-    { key: "authority", header: "Authority", render: (r) => <span className="text-ink-2">{(r.authorityId && authorities.get(r.authorityId)) || "—"}</span> },
-    { key: "number", header: "Reg. number", render: (r) => <span className="font-mono text-xs text-ink-3">{r.registrationNumber ?? "—"}</span> },
-    { key: "status", header: "Status", render: (r) => <StatusBadge module="registration" status={r.status} /> },
-    { key: "expiry", header: "Expiry", align: "end", render: (r) => formatDate(r.expiryDate, locale) },
+    { key: "product", header: t("products.col.product"), render: (r) => refName(lookups.products, r.productId) },
+    { key: "brand", header: t("common.brand"), render: (r) => <BrandChip name={refName(lookups.brands, r.brandId)} color={lookups.brands.get(r.brandId ?? "")?.meta} /> },
+    { key: "country", header: t("common.market"), render: (r) => <CountryChip name={refName(lookups.countries, r.countryId)} iso2={lookups.countries.get(r.countryId)?.meta} /> },
+    { key: "authority", header: t("reg.col.authority"), render: (r) => <span className="text-ink-2">{(r.authorityId && authorities.get(r.authorityId)) || "—"}</span> },
+    { key: "number", header: t("reg.col.regNumber"), render: (r) => <span className="font-mono text-xs text-ink-3">{r.registrationNumber ?? "—"}</span> },
+    { key: "status", header: t("common.status"), render: (r) => <StatusBadge module="registration" status={r.status} /> },
+    { key: "expiry", header: t("documents.col.expiry"), align: "end", render: (r) => formatDate(r.expiryDate, locale) },
   ];
 
   return (
     <>
       <PageHeader
-        title="Registrations"
-        description="Every product registration across authorities and markets — one workflow from preparation to renewal, with expiry and blocked-stage visibility (§14)."
+        title={t("reg.title")}
+        description={t("reg.subtitle")}
         meta={
           <div className="flex items-center gap-2">
             <Badge category="neutral">{total} cases</Badge>
@@ -80,7 +82,7 @@ export default async function RegistrationsPage({ searchParams }: { searchParams
         actions={canCreate && options ? <NewRegistrationButton countries={options.countries} brands={options.brands} users={options.users} authorities={authorityOptions} /> : undefined}
       />
       <ListToolbar
-        placeholder="Search by registration number…"
+        placeholder={t("reg.searchPlaceholder")}
         filters={[
           { name: "status", label: "Status", options: STATUS_OPTIONS },
           { name: "brandId", label: "Brand", options: brandOptions },

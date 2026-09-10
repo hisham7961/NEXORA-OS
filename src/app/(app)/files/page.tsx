@@ -14,6 +14,7 @@ import { formatBytes, fileDownloadHref, FILE_CATEGORY_LABELS } from "@/lib/files
 import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Files" };
+import { getServerI18n } from "@/lib/server-i18n";
 
 const CATEGORIES = ["document", "image", "video", "creative", "regulatory", "contract", "spreadsheet", "other"];
 
@@ -22,6 +23,7 @@ type Row = Awaited<ReturnType<typeof listFiles>>["rows"][number];
 export default async function FilesPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { principal, locale, denied } = await pageGuard("files.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const sp = await searchParams;
   const query = fileQuerySchema.parse(sp);
   const canCreate = canAnywhere(principal, "files.create");
@@ -32,24 +34,24 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
   ]);
 
   const columns: Column<Row>[] = [
-    { key: "name", header: "File", render: (f) => (
+    { key: "name", header: t("files.col.file"), render: (f) => (
       <div className="flex items-center gap-2">
         <FileText className="h-4 w-4 text-ink-3" />
         <Link href={`/files/${f.id}`} className="font-medium text-ink hover:text-accent">{f.name}</Link>
         {f.visibility === "restricted" && <Lock className="h-3 w-3 text-warning" />}
       </div>
     ) },
-    { key: "category", header: "Category", render: (f) => <Badge category="neutral">{FILE_CATEGORY_LABELS[f.category] ?? f.category}</Badge> },
-    { key: "size", header: "Size", align: "end", render: (f) => <span className="tabular text-ink-3">{formatBytes(f.sizeBytes)}</span> },
-    { key: "updated", header: "Updated", align: "end", render: (f) => <span className="tabular text-ink-3">{formatDate(f.updatedAt, locale)}</span> },
+    { key: "category", header: t("common.category"), render: (f) => <Badge category="neutral">{FILE_CATEGORY_LABELS[f.category] ?? f.category}</Badge> },
+    { key: "size", header: t("common.size"), align: "end", render: (f) => <span className="tabular text-ink-3">{formatBytes(f.sizeBytes)}</span> },
+    { key: "updated", header: t("common.updated"), align: "end", render: (f) => <span className="tabular text-ink-3">{formatDate(f.updatedAt, locale)}</span> },
     { key: "dl", header: "", align: "end", render: (f) => <a href={fileDownloadHref(f.id)} className="text-ink-3 hover:text-accent" aria-label="Download"><Download className="h-4 w-4" /></a> },
   ];
 
   return (
     <>
       <PageHeader
-        title="Files"
-        description="Shared, brand, regulatory and restricted files — real storage, versioned and permission-protected (§21)."
+        title={t("files.title")}
+        description={t("files.subtitle")}
         meta={<Badge>{total} files</Badge>}
         actions={canCreate && options ? (
           <div className="flex items-center gap-2">
@@ -60,7 +62,7 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
       />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
         <Panel className="lg:col-span-1">
-          <PanelHeader title="Folders" />
+          <PanelHeader title={t("files.folders")} />
           {folders.length === 0 ? (
             <EmptyState icon={<Folder className="h-5 w-5" />} title="No folders" description="Organize files by scope." />
           ) : (
@@ -84,7 +86,7 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
         </Panel>
         <div className="lg:col-span-3">
           <ListToolbar
-            placeholder="Search files…"
+            placeholder={t("files.searchPlaceholder")}
             filters={[{ name: "category", label: "Category", options: CATEGORIES.map((c) => ({ value: c, label: FILE_CATEGORY_LABELS[c] })) }]}
           />
           <Panel>

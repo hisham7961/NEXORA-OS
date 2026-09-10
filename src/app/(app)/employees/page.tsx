@@ -13,10 +13,12 @@ import { UserChip } from "@/components/entity-chips";
 import { EmployeeForm } from "@/components/org/org-forms";
 
 export const metadata: Metadata = { title: "Employees" };
+import { getServerI18n } from "@/lib/server-i18n";
 
 export default async function EmployeesPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { principal, locale, denied } = await pageGuard("employees.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
 
   const sp = await searchParams;
   const query = employeeQuerySchema.parse(sp);
@@ -34,23 +36,23 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   const userOpts = unlinkedUsers.map((u) => ({ id: u.id, label: u.name }));
 
   const columns: Column<EmployeeRow>[] = [
-    { key: "name", header: "Employee", render: (e) => <UserChip name={e.name} color={e.avatarColor} /> },
-    { key: "position", header: "Position", render: (e) => <span className="text-ink-2">{e.position ?? "—"}</span> },
-    { key: "company", header: "Company", render: (e) => <span className="text-ink-2">{refName(lookups.companies, e.companyId)}</span> },
-    { key: "department", header: "Department", render: (e) => <span className="text-ink-2">{e.departmentName ?? "—"}</span> },
-    { key: "status", header: "Status", align: "end", render: (e) => <StatusBadge module="generic" status={e.status} /> },
+    { key: "name", header: t("employees.col.employee"), render: (e) => <UserChip name={e.name} color={e.avatarColor} /> },
+    { key: "position", header: t("employees.col.position"), render: (e) => <span className="text-ink-2">{e.position ?? "—"}</span> },
+    { key: "company", header: t("common.company"), render: (e) => <span className="text-ink-2">{refName(lookups.companies, e.companyId)}</span> },
+    { key: "department", header: t("common.department"), render: (e) => <span className="text-ink-2">{e.departmentName ?? "—"}</span> },
+    { key: "status", header: t("common.status"), align: "end", render: (e) => <StatusBadge module="generic" status={e.status} /> },
   ];
 
   return (
     <>
       <PageHeader
-        title="Employees"
-        description="Everyone in the group — their company, department, brand and market assignments, and workload."
+        title={t("employees.title")}
+        description={t("employees.subtitle")}
         meta={<Badge category="neutral">{total} people</Badge>}
         actions={canCreate ? <EmployeeForm mode="create" users={userOpts} companies={companyOpts} departments={deptOpts} teams={teamOpts} /> : undefined}
       />
       <ListToolbar
-        placeholder="Search by name or position…"
+        placeholder={t("employees.searchPlaceholder")}
         filters={[{
           name: "status",
           label: "Status",
@@ -71,7 +73,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
           empty={
             <div className="text-center">
               <UserRound className="mx-auto mb-2 h-6 w-6 text-ink-3" />
-              <p className="text-[13px] font-medium text-ink">No employees in your scope</p>
+              <p className="text-[13px] font-medium text-ink">{t("employees.empty")}</p>
               <p className="mt-1 text-xs text-ink-3">People in the companies you can access will appear here. Adjust filters or ask an administrator to widen your scope.</p>
             </div>
           }

@@ -17,12 +17,14 @@ import { formatDate } from "@/lib/format";
 import Link from "next/link";
 
 export const metadata: Metadata = { title: "Approved Answers" };
+import { getServerI18n } from "@/lib/server-i18n";
 
 const CATEGORIES = ["product_info", "complaint", "usage", "ingredients", "medical", "returns", "shipping", "general"];
 
 export default async function AnswersPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { principal, locale, denied } = await pageGuard("answers.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const sp = await searchParams;
   const query = answerQuerySchema.parse(sp);
   const canCreate = canAnywhere(principal, "answers.create");
@@ -35,19 +37,19 @@ export default async function AnswersPage({ searchParams }: { searchParams: Prom
   ]);
 
   const columns: Column<ApprovedAnswer>[] = [
-    { key: "q", header: "Question", render: (a) => <Link href={`/answers/${a.id}`} className="font-medium text-ink hover:text-accent">{truncate(a.question, 80)}</Link> },
-    { key: "brand", header: "Brand", render: (a) => <BrandChip name={refName(lookups.brands, a.brandId)} color={a.brandId ? lookups.brands.get(a.brandId)?.meta : null} /> },
-    { key: "category", header: "Category", render: (a) => <span className="capitalize text-ink-3">{a.category?.replace(/_/g, " ") ?? "—"}</span> },
-    { key: "lang", header: "Lang", render: (a) => <span className="uppercase text-ink-3">{a.language}</span> },
-    { key: "version", header: "Ver", align: "center", render: (a) => <span className="tabular text-ink-3">v{a.version}</span> },
-    { key: "status", header: "Status", render: (a) => <StatusBadge module="generic" status={a.status} /> },
+    { key: "q", header: t("answers.col.question"), render: (a) => <Link href={`/answers/${a.id}`} className="font-medium text-ink hover:text-accent">{truncate(a.question, 80)}</Link> },
+    { key: "brand", header: t("common.brand"), render: (a) => <BrandChip name={refName(lookups.brands, a.brandId)} color={a.brandId ? lookups.brands.get(a.brandId)?.meta : null} /> },
+    { key: "category", header: t("common.category"), render: (a) => <span className="capitalize text-ink-3">{a.category?.replace(/_/g, " ") ?? "—"}</span> },
+    { key: "lang", header: t("common.lang"), render: (a) => <span className="uppercase text-ink-3">{a.language}</span> },
+    { key: "version", header: t("common.version"), align: "center", render: (a) => <span className="tabular text-ink-3">v{a.version}</span> },
+    { key: "status", header: t("common.status"), render: (a) => <StatusBadge module="generic" status={a.status} /> },
   ];
 
   return (
     <>
       <PageHeader
-        title="Approved Answers"
-        description="Controlled knowledge: agents use approved answers and never silently edit them. Every version is retained (§13–15)."
+        title={t("answers.title")}
+        description={t("answers.subtitle")}
         meta={<Badge>{total} answers</Badge>}
         actions={
           <div className="flex items-center gap-2">
@@ -73,11 +75,11 @@ export default async function AnswersPage({ searchParams }: { searchParams: Prom
         </Panel>
       )}
       <ListToolbar
-        placeholder="Search questions…"
+        placeholder={t("answers.searchPlaceholder")}
         filters={[
-          { name: "status", label: "Status", options: ["approved", "pending", "draft", "retired"].map((v) => ({ value: v, label: v })) },
-          { name: "category", label: "Category", options: CATEGORIES.map((c) => ({ value: c, label: c.replace(/_/g, " ") })) },
-          { name: "language", label: "Language", options: [{ value: "en", label: "EN" }, { value: "ar", label: "AR" }] },
+          { name: "status", label: t("common.status"), options: ["approved", "pending", "draft", "retired"].map((v) => ({ value: v, label: v })) },
+          { name: "category", label: t("common.category"), options: CATEGORIES.map((c) => ({ value: c, label: c.replace(/_/g, " ") })) },
+          { name: "language", label: t("answers.language"), options: [{ value: "en", label: "EN" }, { value: "ar", label: "AR" }] },
         ]}
       />
       <Panel>

@@ -5,9 +5,11 @@ import { PageHeader, Badge } from "@/components/ui";
 import { NotificationCenter, type NotifGroup } from "@/components/notifications/notification-center";
 
 export const metadata: Metadata = { title: "Notifications" };
+import { getServerI18n } from "@/lib/server-i18n";
 
 export default async function NotificationsPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const principal = await requirePrincipal();
+  const { t } = await getServerI18n();
   const sp = await searchParams;
   const onlyUnread = sp.unread === "1";
   const category = sp.category || undefined;
@@ -25,8 +27,8 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   return (
     <>
       <PageHeader
-        title="Notifications"
-        description="Mentions, assignments, approvals, deadlines and renewals — grouped, filterable, with per-category preferences (§22)."
+        title={t("notif.title")}
+        description={t("notif.subtitle")}
         meta={unread > 0 ? <Badge category="info">{unread} unread</Badge> : undefined}
       />
       <NotificationCenter

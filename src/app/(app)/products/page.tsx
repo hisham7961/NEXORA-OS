@@ -13,10 +13,12 @@ import { BrandChip } from "@/components/entity-chips";
 import { ProductForm } from "@/components/products/product-controls";
 
 export const metadata: Metadata = { title: "Products" };
+import { getServerI18n } from "@/lib/server-i18n";
 
 export default async function ProductsPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { principal, locale, denied } = await pageGuard("products.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
 
   const sp = await searchParams;
   const query = productQuerySchema.parse(sp);
@@ -29,23 +31,23 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
     .map((b) => ({ value: b.id, label: b.name }));
 
   const columns: Column<ProductRow>[] = [
-    { key: "name", header: "Product", render: (p) => p.name },
-    { key: "brand", header: "Brand", render: (p) => <BrandChip name={refName(lookups.brands, p.brandId)} color={lookups.brands.get(p.brandId)?.meta} /> },
-    { key: "sku", header: "SKU", render: (p) => <span className="font-mono text-xs text-ink-3">{p.sku}</span> },
-    { key: "category", header: "Category", render: (p) => p.category ?? "—" },
-    { key: "status", header: "Status", align: "end", render: (p) => <StatusBadge module="generic" status={p.status} /> },
+    { key: "name", header: t("products.col.product"), render: (p) => p.name },
+    { key: "brand", header: t("common.brand"), render: (p) => <BrandChip name={refName(lookups.brands, p.brandId)} color={lookups.brands.get(p.brandId)?.meta} /> },
+    { key: "sku", header: t("products.col.sku"), render: (p) => <span className="font-mono text-xs text-ink-3">{p.sku}</span> },
+    { key: "category", header: t("common.category"), render: (p) => p.category ?? "—" },
+    { key: "status", header: t("common.status"), align: "end", render: (p) => <StatusBadge module="generic" status={p.status} /> },
   ];
 
   return (
     <>
       <PageHeader
-        title="Products"
-        description="The product master — every SKU, its markets, regulatory registrations, campaigns and customer cases in one place."
+        title={t("products.title")}
+        description={t("products.subtitle")}
         meta={<Badge category="neutral">{total} products</Badge>}
         actions={canCreate && options ? <ProductForm mode="create" brands={options.brands} /> : undefined}
       />
       <ListToolbar
-        placeholder="Search by name or SKU…"
+        placeholder={t("products.searchPlaceholder")}
         filters={[
           { name: "status", label: "Status", options: [{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }] },
           { name: "brandId", label: "Brand", options: brandOptions },
@@ -60,7 +62,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
           empty={
             <div className="text-center">
               <Package className="mx-auto mb-2 h-6 w-6 text-ink-3" />
-              <p className="text-[13px] font-medium text-ink">No products in your scope</p>
+              <p className="text-[13px] font-medium text-ink">{t("products.empty")}</p>
               <p className="mt-1 text-xs text-ink-3">Products belong to brands. Those for brands you can access will appear here — adjust your filters or create a product from a brand.</p>
             </div>
           }

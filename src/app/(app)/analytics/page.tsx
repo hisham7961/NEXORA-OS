@@ -6,18 +6,20 @@ import { PageHeader, Panel, PanelHeader, PanelBody, Metric } from "@/components/
 import { formatCurrency, formatNumber } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Analytics" };
+import { getServerI18n } from "@/lib/server-i18n";
 
 export default async function AnalyticsPage() {
   const { principal, locale, denied } = await pageGuard("analytics.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const a = await getAnalyticsOverview(principal);
 
   return (
     <>
-      <PageHeader title="Analytics" description="Cross-module intelligence — every tile answers a business question (§27)." />
+      <PageHeader title={t("analytics.title")} description={t("analytics.subtitle")} />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Panel>
-          <PanelHeader title="Marketing" />
+          <PanelHeader title={t("analytics.marketing")} />
           <PanelBody className="grid grid-cols-2 gap-4">
             <Metric label="Live campaigns" value={a.marketing.liveCampaigns} category="success" />
             <Metric label="ROAS" value={`${a.marketing.roas.toFixed(2)}×`} />
@@ -26,7 +28,7 @@ export default async function AnalyticsPage() {
           </PanelBody>
         </Panel>
         <Panel>
-          <PanelHeader title="Operations" />
+          <PanelHeader title={t("analytics.operations")} />
           <PanelBody className="grid grid-cols-2 gap-4">
             <Metric label="Task completion" value={`${a.operations.completion}%`} sub={`${a.operations.tasksDone}/${a.operations.tasksTotal} tasks`} />
             <Metric label="Active registrations" value={formatNumber(a.regulatory.activeRegs, locale)} />

@@ -11,12 +11,14 @@ import { ResourceList } from "@/components/list/resource-list";
 import { NewCaseButton } from "@/components/cases/new-case-button";
 import { BrandChip, UserChip } from "@/components/entity-chips";
 import { humanize, PRIORITY_CATEGORY } from "@/lib/status";
+import { getServerI18n } from "@/lib/server-i18n";
 
 export const metadata: Metadata = { title: "Customer Cases" };
 
 export default async function CasesPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { principal, locale, denied } = await pageGuard("cases.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const sp = await searchParams;
   const query = caseQuerySchema.parse(sp);
   const canCreate = canAnywhere(principal, "cases.create");
@@ -27,21 +29,21 @@ export default async function CasesPage({ searchParams }: { searchParams: Promis
   ]);
 
   const columns: Column<CustomerCase>[] = [
-    { key: "type", header: "Type", render: (c) => humanize(c.type) },
-    { key: "brand", header: "Brand", render: (c) => <BrandChip name={refName(lookups.brands, c.brandId)} color={c.brandId ? lookups.brands.get(c.brandId)?.meta : null} /> },
-    { key: "desc", header: "Summary", render: (c) => <span className="text-ink-2">{c.description ?? "—"}</span> },
-    { key: "priority", header: "Priority", render: (c) => <Badge category={PRIORITY_CATEGORY[c.priority] ?? "neutral"}>{c.priority}</Badge> },
-    { key: "assigned", header: "Assigned", render: (c) => <UserChip name={refName(lookups.users, c.assignedToId)} color={c.assignedToId ? lookups.users.get(c.assignedToId)?.meta : null} /> },
-    { key: "status", header: "Status", render: (c) => <StatusBadge module="customer_case" status={c.status} /> },
+    { key: "type", header: t("common.type"), render: (c) => humanize(c.type) },
+    { key: "brand", header: t("common.brand"), render: (c) => <BrandChip name={refName(lookups.brands, c.brandId)} color={c.brandId ? lookups.brands.get(c.brandId)?.meta : null} /> },
+    { key: "desc", header: t("cases.col.summary"), render: (c) => <span className="text-ink-2">{c.description ?? "—"}</span> },
+    { key: "priority", header: t("common.priority"), render: (c) => <Badge category={PRIORITY_CATEGORY[c.priority] ?? "neutral"}>{t(`priority.${c.priority}`)}</Badge> },
+    { key: "assigned", header: t("common.assignedTo"), render: (c) => <UserChip name={refName(lookups.users, c.assignedToId)} color={c.assignedToId ? lookups.users.get(c.assignedToId)?.meta : null} /> },
+    { key: "status", header: t("common.status"), render: (c) => <StatusBadge module="customer_case" status={c.status} /> },
   ];
 
   return (
-    <ResourceList title="Customer Cases" description="Internal customer service operations." countLabel="cases" savedViewsModule="cases"
-      searchPlaceholder="Search cases…"
+    <ResourceList title={t("cases.title")} description={t("cases.subtitle")} countLabel={t("cases.count")} savedViewsModule="cases"
+      searchPlaceholder={t("cases.searchPlaceholder")}
       actions={canCreate && options ? <NewCaseButton options={{ brands: options.brands, countries: options.countries, companies: options.companies, users: options.users }} /> : undefined}
-      filters={[{ name: "status", label: "Status", options: ["new", "assigned", "waiting", "in_progress", "escalated", "resolved", "closed"].map((v) => ({ value: v, label: humanize(v) })) }]}
+      filters={[{ name: "status", label: t("common.status"), options: ["new", "assigned", "waiting", "in_progress", "escalated", "resolved", "closed"].map((v) => ({ value: v, label: t(`status.${v}`) })) }]}
       columns={columns} rows={rows} getRowKey={(c) => c.id} getRowHref={(c) => `/cases/${c.id}`}
       page={query.page} pageSize={query.pageSize} total={total} params={sp}
-      empty={<EmptyState title="No cases in your scope" description="Product questions, complaints, returns and refunds appear here." />} />
+      empty={<EmptyState title={t("cases.empty")} description={t("cases.emptyBody")} />} />
   );
 }

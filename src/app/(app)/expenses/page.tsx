@@ -13,30 +13,32 @@ import { BrandChip } from "@/components/entity-chips";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Expenses" };
+import { getServerI18n } from "@/lib/server-i18n";
 
 export default async function ExpensesPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { principal, locale, denied } = await pageGuard("expenses.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const sp = await searchParams;
   const query = expenseQuerySchema.parse(sp);
   const [{ rows, total, showValues }, lookups] = await Promise.all([listExpenses(principal, query), getLookups()]);
   const canPost = canAnywhere(principal, "accounting.post");
 
   const columns: Column<Expense>[] = [
-    { key: "desc", header: "Description", render: (e) => e.description ?? "—" },
-    { key: "brand", header: "Brand", render: (e) => <BrandChip name={refName(lookups.brands, e.brandId)} color={e.brandId ? lookups.brands.get(e.brandId)?.meta : null} /> },
-    { key: "amount", header: "Amount", align: "end", render: (e) => (showValues ? formatCurrency(e.amount, e.currency, locale) : "•••") },
-    { key: "date", header: "Date", align: "end", render: (e) => <span className="tabular text-ink-3">{formatDate(e.date, locale)}</span> },
-    { key: "status", header: "Status", render: (e) => <StatusBadge module="expense" status={e.status} /> },
+    { key: "desc", header: t("common.description"), render: (e) => e.description ?? "—" },
+    { key: "brand", header: t("common.brand"), render: (e) => <BrandChip name={refName(lookups.brands, e.brandId)} color={e.brandId ? lookups.brands.get(e.brandId)?.meta : null} /> },
+    { key: "amount", header: t("common.amount"), align: "end", render: (e) => (showValues ? formatCurrency(e.amount, e.currency, locale) : "•••") },
+    { key: "date", header: t("common.date"), align: "end", render: (e) => <span className="tabular text-ink-3">{formatDate(e.date, locale)}</span> },
+    { key: "status", header: t("common.status"), render: (e) => <StatusBadge module="expense" status={e.status} /> },
     ...(canPost ? [{ key: "post", header: "", align: "end" as const, render: (e: Expense) => (e.status === "approved" && !e.journalEntryId ? <PostExpenseButton expenseId={e.id} /> : e.journalEntryId ? <span className="text-[11px] text-success">posted</span> : null) }] : []),
   ];
 
   return (
-    <ResourceList title="Expenses" description="Spend by brand, country, department and campaign — with approvals." countLabel="expenses" savedViewsModule="expenses"
+    <ResourceList title={t("expenses.title")} description={t("expenses.subtitle")} countLabel={t("expenses.count")} savedViewsModule="expenses"
       searchPlaceholder="Search expenses…"
       filters={[{ name: "status", label: "Status", options: ["draft", "pending", "approved", "rejected", "paid"].map((v) => ({ value: v, label: v })) }]}
       columns={columns} rows={rows} getRowKey={(e) => e.id}
       page={query.page} pageSize={query.pageSize} total={total} params={sp}
-      empty={<EmptyState icon={<Receipt className="h-5 w-5" />} title="No expenses" description="Record expenses with analytical dimensions for profitability analysis." />} />
+      empty={<EmptyState icon={<Receipt className="h-5 w-5" />} title={t("expenses.empty")} description="Record expenses with analytical dimensions for profitability analysis." />} />
   );
 }

@@ -8,10 +8,12 @@ import { StatusBadge, PageHeader, Panel, EmptyState } from "@/components/ui";
 import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Calendar" };
+import { getServerI18n } from "@/lib/server-i18n";
 
 export default async function CalendarPage() {
   const { principal, locale, denied } = await pageGuard("tasks.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const query = taskQuerySchema.parse({ pageSize: "100" });
   const { rows } = await listTasks(principal, query);
 
@@ -30,7 +32,7 @@ export default async function CalendarPage() {
 
   return (
     <>
-      <PageHeader title="Calendar" description="Agenda of upcoming work due within your scope." />
+      <PageHeader title={t("calendar.title")} description={t("calendar.subtitle")} />
       <Panel>
         {days.length === 0 ? (
           <EmptyState icon={<CalendarClock className="h-5 w-5" />} title="Nothing scheduled" description="Tasks with due dates appear here as an agenda, grouped by day." />
