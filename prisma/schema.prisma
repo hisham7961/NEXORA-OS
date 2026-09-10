@@ -2586,6 +2586,9 @@ model Notification {
 
   @@index([userId, state])
   @@index([createdAt])
+  // Write-time dedup + grouping collapse a repeat event onto the existing
+  // notification per (user, entity) instead of accumulating duplicate rows.
+  @@index([userId, groupKey])
 }
 
 model NotificationPreference {

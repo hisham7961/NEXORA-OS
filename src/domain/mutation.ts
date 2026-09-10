@@ -65,17 +65,38 @@ export async function notify(userIds: (string | null | undefined)[], n: NotifyIn
   const allowed = await recipientsAllowing(unique, n.type);
   if (allowed.length === 0) return;
   const groupKey = n.entityId ? `${n.type}:${n.entityId}` : null;
-  await prisma.notification.createMany({
-    data: allowed.map((userId) => ({
-      userId,
-      type: n.type,
-      title: n.title,
-      body: n.body ?? null,
-      entityType: n.entityType ?? null,
-      entityId: n.entityId ?? null,
-      groupKey,
-    })),
+  const mkRow = (userId: string) => ({
+    userId,
+    type: n.type,
+    title: n.title,
+    body: n.body ?? null,
+    entityType: n.entityType ?? null,
+    entityId: n.entityId ?? null,
+    groupKey,
   });
+
+  // Write-time dedup (§24-25 scaling): when a notification is keyed to an entity,
+  // a repeat event re-surfaces the recipient's existing non-archived notification
+  // (bumped back to unread, freshened, floated to the top) instead of inserting a
+  // duplicate row — so the table never accumulates one row per event. Recipients
+  // who archived (dismissed) it get a fresh row. Unkeyed notifications always insert.
+  if (groupKey) {
+    const existing = await prisma.notification.findMany({
+      where: { userId: { in: allowed }, groupKey, state: { not: "archived" } },
+      select: { userId: true },
+    });
+    const bump = new Set(existing.map((e) => e.userId));
+    if (bump.size > 0) {
+      await prisma.notification.updateMany({
+        where: { userId: { in: [...bump] }, groupKey, state: { not: "archived" } },
+        data: { title: n.title, body: n.body ?? null, entityType: n.entityType ?? null, state: "unread", readAt: null, createdAt: new Date() },
+      });
+    }
+    const fresh = allowed.filter((id) => !bump.has(id));
+    if (fresh.length > 0) await prisma.notification.createMany({ data: fresh.map(mkRow) });
+    return;
+  }
+  await prisma.notification.createMany({ data: allowed.map(mkRow) });
 }
 
 export interface ActivityItem {

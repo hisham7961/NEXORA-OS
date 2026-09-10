@@ -88,11 +88,22 @@ export async function getMyDay(principal: Principal): Promise<MyDayData> {
     prisma.channelMember.findMany({ where: { userId: uid }, select: { channelId: true, lastReadAt: true } }),
   ]);
 
-  // Unread discussion count: channels with messages after my lastReadAt (from others).
+  // Unread discussion count: channels with messages from others after my lastReadAt.
+  // One grouped query for the newest foreign message per channel, compared in memory
+  // to each channel's lastReadAt — avoids a per-channel COUNT (N+1) round-trip.
+  const channelIds = memberships.map((m) => m.channelId);
+  const latestForeign = channelIds.length
+    ? await prisma.message.groupBy({
+        by: ["channelId"],
+        where: { channelId: { in: channelIds }, archivedAt: null, authorId: { not: uid } },
+        _max: { createdAt: true },
+      })
+    : [];
+  const latestByChannel = new Map(latestForeign.map((r) => [r.channelId, r._max.createdAt]));
   let unreadDiscussions = 0;
   for (const m of memberships) {
-    const c = await prisma.message.count({ where: { channelId: m.channelId, archivedAt: null, authorId: { not: uid }, ...(m.lastReadAt ? { createdAt: { gt: m.lastReadAt } } : {}) } });
-    if (c > 0) unreadDiscussions++;
+    const latest = latestByChannel.get(m.channelId);
+    if (latest && (!m.lastReadAt || latest > m.lastReadAt)) unreadDiscussions++;
   }
 
   return {
