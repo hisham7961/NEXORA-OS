@@ -43,6 +43,21 @@ export async function audit(ctx: ActorContext, input: AuditInput): Promise<void>
     userAgent: ctx.userAgent ?? null,
     ...input,
   });
+  // Fan the audited action out to any subscribed outbound webhook (§36). This is a
+  // no-op when nothing subscribes (a cached check), non-blocking, and never throws.
+  void (async () => {
+    try {
+      const { emitWebhookEvent } = await import("@/domain/webhooks");
+      await emitWebhookEvent(input.action, {
+        entityType: input.entityType,
+        entityId: input.entityId ?? null,
+        summary: input.summary ?? null,
+        actorId: ctx.principal.userId,
+        companyId: input.companyId ?? null,
+        brandId: input.brandId ?? null,
+      });
+    } catch { /* webhook fan-out must never affect the mutation */ }
+  })();
 }
 
 export interface NotifyInput {

@@ -2837,6 +2837,47 @@ model ApiToken {
   createdAt  DateTime  @default(now())
 }
 
+/** Outbound webhook subscription (§36). A signing secret (sealed) lets the receiver
+ *  verify each delivery via the X-Nexora-Signature HMAC. eventsJson is a JSON string
+ *  array of subscribed event types, or ["*"] for all. */
+model Webhook {
+  id          String   @id @default(cuid())
+  name        String
+  url         String
+  secret      String // sealed HMAC signing key
+  eventsJson  String // JSON string[] of subscribed events, or ["*"]
+  active      Boolean  @default(true)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  deliveries WebhookDelivery[]
+
+  @@index([active])
+}
+
+/** One attempt-tracked delivery of an event to a webhook (§36). Retried with
+ *  backoff up to maxAttempts, then dead-lettered as failed. */
+model WebhookDelivery {
+  id             String    @id @default(cuid())
+  webhookId      String
+  event          String
+  payloadJson    String
+  status         String    @default("pending") // pending | success | failed
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(5)
+  responseStatus Int?
+  error          String?
+  nextAttemptAt  DateTime  @default(now())
+  lastAttemptAt  DateTime?
+  createdAt      DateTime  @default(now())
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@index([webhookId, createdAt])
+}
+
 model SystemSetting {
   id          String   @id @default(cuid())
   key         String   @unique
