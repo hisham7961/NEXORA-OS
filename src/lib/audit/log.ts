@@ -42,6 +42,22 @@ export async function writeAudit(input: AuditInput): Promise<void> {
   }
 }
 
+/**
+ * Record a platform/operational event (SystemEvent) — surfaced in the Operations
+ * Center. Distinct from the business audit trail: this is for health, integration
+ * and job signals. Never throws into the caller.
+ */
+export async function writeSystemEvent(input: { type: string; level?: "info" | "warning" | "error"; message: string; meta?: Record<string, unknown> }): Promise<void> {
+  try {
+    await prisma.systemEvent.create({
+      data: { type: input.type, level: input.level ?? "info", message: input.message, metaJson: input.meta ? JSON.stringify(input.meta) : null },
+    });
+  } catch (err) {
+    const { logger } = await import("@/lib/log");
+    logger.error("failed to write system event", { type: input.type, err });
+  }
+}
+
 /** Shallow diff helper for building old/new value maps on updates. */
 export function diff<T extends Record<string, unknown>>(before: T, after: Partial<T>) {
   const oldValues: Record<string, unknown> = {};

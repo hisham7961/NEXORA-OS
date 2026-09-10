@@ -5,6 +5,7 @@ import { backfillCampaignSpend } from "@/domain/campaigns";
 import { escalateOverdueInstances } from "@/domain/workflows";
 import { generateCertificateReminders } from "@/domain/documents";
 import { purgeStaleSessions } from "@/domain/sessions";
+import { runStorageIntegrityScan } from "@/domain/storage-integrity";
 
 /**
  * The single source of truth for scheduled jobs (§10). The scheduler (and the
@@ -69,6 +70,13 @@ export const JOB_DEFINITIONS: JobDefinition[] = [
     description: "Purges sessions long past expiry or revocation (§28). Live sessions are untouched.",
     permission: "settings.manage",
     run: async () => ({ purged: await purgeStaleSessions() }),
+  },
+  {
+    name: "Storage integrity scan",
+    cron: "50 3 * * *",
+    description: "Verifies recent file blobs still exist and match their stored checksum (§45-46); flags missing/corrupted objects.",
+    permission: "settings.manage",
+    run: async () => runStorageIntegrityScan({ limit: 1000 }),
   },
 ];
 
