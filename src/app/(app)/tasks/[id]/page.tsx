@@ -15,6 +15,7 @@ import { TaskDrawerForm, type TaskDefaults } from "@/components/tasks/task-drawe
 import { StatusControl, ChecklistPanel, ArchiveTaskButton } from "@/components/tasks/task-detail-actions";
 import { formatDate } from "@/lib/format";
 import { PRIORITY_CATEGORY } from "@/lib/status";
+import { getServerI18n } from "@/lib/server-i18n";
 
 export const metadata: Metadata = { title: "Task" };
 
@@ -22,6 +23,7 @@ const toYmd = (d: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : 
 
 export default async function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { principal, locale } = await pageGuard("tasks.view");
+  const { t } = await getServerI18n();
   const { id } = await params;
   let task;
   try {
@@ -44,7 +46,7 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
   const timeline: TimelineEntry[] = activity.map((a) => ({
     id: a.id,
     at: a.at,
-    actorName: a.actorId ? refName(lookups.users, a.actorId) : "System",
+    actorName: a.actorId ? refName(lookups.users, a.actorId) : t("common.system"),
     actorColor: a.actorId ? lookups.users.get(a.actorId)?.meta : null,
     action: a.action,
     summary: a.summary,
@@ -69,13 +71,13 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <>
-      <div className="mb-1 text-xs text-ink-3"><Link href="/tasks" className="hover:text-ink-2">Tasks</Link> / {task.title}</div>
+      <div className="mb-1 text-xs text-ink-3"><Link href="/tasks" className="hover:text-ink-2">{t("dp.tasksNav")}</Link> / {task.title}</div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-lg font-semibold tracking-tight text-ink">{task.title}</h1>
         <div className="flex items-center gap-2">
-          <Badge category={PRIORITY_CATEGORY[task.priority] ?? "neutral"}>{task.priority}</Badge>
+          <Badge category={PRIORITY_CATEGORY[task.priority] ?? "neutral"}>{t(`priority.${task.priority}`)}</Badge>
           {canEdit ? <StatusControl taskId={task.id} status={task.status} /> : <StatusBadge module="task" status={task.status} />}
-          {canEdit && options && <TaskDrawerForm mode="edit" options={options} defaults={editDefaults} variant="secondary" label="Edit" />}
+          {canEdit && options && <TaskDrawerForm mode="edit" options={options} defaults={editDefaults} variant="secondary" label={t("actions.edit")} />}
           {canDelete && <ArchiveTaskButton taskId={task.id} />}
         </div>
       </div>
@@ -83,15 +85,15 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <Panel>
-            <PanelHeader title="Details" />
+            <PanelHeader title={t("dp.details")} />
             <PanelBody className="space-y-4">
-              {task.description ? <p className="whitespace-pre-wrap text-[13px] text-ink-2">{task.description}</p> : <p className="text-[13px] text-ink-3">No description.</p>}
+              {task.description ? <p className="whitespace-pre-wrap text-[13px] text-ink-2">{task.description}</p> : <p className="text-[13px] text-ink-3">{t("dp.noDescription")}</p>}
               {(task.checklist.length > 0 || canEdit) && (
                 canEdit ? (
                   <ChecklistPanel taskId={task.id} items={task.checklist.map((c) => ({ id: c.id, text: c.text, isDone: c.isDone }))} />
                 ) : (
                   <div>
-                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-3">Checklist ({task.checklist.filter((c) => c.isDone).length}/{task.checklist.length})</div>
+                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t("dp.checklistCount", { done: task.checklist.filter((c) => c.isDone).length, total: task.checklist.length })}</div>
                     <ul className="space-y-1.5">
                       {task.checklist.map((c) => (
                         <li key={c.id} className={`text-[13px] ${c.isDone ? "text-ink-3 line-through" : "text-ink"}`}>• {c.text}</li>
@@ -104,22 +106,22 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
           </Panel>
 
           <Panel>
-            <PanelHeader title="Activity" description="Readable timeline from the audit trail (§47)." />
-            <PanelBody><ActivityTimeline entries={timeline} locale={locale} empty="No activity recorded yet." /></PanelBody>
+            <PanelHeader title={t("dp.activity")} description={t("dp.activityTimelineSub")} />
+            <PanelBody><ActivityTimeline entries={timeline} locale={locale} empty={t("dp.noActivityRecorded")} /></PanelBody>
           </Panel>
         </div>
 
         <Panel>
-          <PanelHeader title="Meta" />
+          <PanelHeader title={t("dp.meta")} />
           <PanelBody>
             <dl className="space-y-2.5 text-[13px]">
-              <Row label="Owner"><UserChip name={refName(lookups.users, task.ownerId)} color={task.ownerId ? lookups.users.get(task.ownerId)?.meta : null} /></Row>
-              <Row label="Brand"><BrandChip name={refName(lookups.brands, task.brandId)} color={task.brandId ? lookups.brands.get(task.brandId)?.meta : null} /></Row>
-              <Row label="Market"><CountryChip name={refName(lookups.countries, task.countryId)} iso2={task.countryId ? lookups.countries.get(task.countryId)?.meta : null} /></Row>
-              <Row label="Start">{formatDate(task.startDate, locale)}</Row>
-              <Row label="Due">{formatDate(task.dueDate, locale)}</Row>
-              <Row label="Assignees">{assignees.length ? assignees.map((a) => refName(lookups.users, a.userId)).join(", ") : "—"}</Row>
-              {task.approvalRequired && <Row label="Approval"><Badge category="warning">Required</Badge></Row>}
+              <Row label={t("camp.owner")}><UserChip name={refName(lookups.users, task.ownerId)} color={task.ownerId ? lookups.users.get(task.ownerId)?.meta : null} /></Row>
+              <Row label={t("common.brand")}><BrandChip name={refName(lookups.brands, task.brandId)} color={task.brandId ? lookups.brands.get(task.brandId)?.meta : null} /></Row>
+              <Row label={t("common.market")}><CountryChip name={refName(lookups.countries, task.countryId)} iso2={task.countryId ? lookups.countries.get(task.countryId)?.meta : null} /></Row>
+              <Row label={t("dp.start")}>{formatDate(task.startDate, locale)}</Row>
+              <Row label={t("dp.due")}>{formatDate(task.dueDate, locale)}</Row>
+              <Row label={t("dp.assignees")}>{assignees.length ? assignees.map((a) => refName(lookups.users, a.userId)).join(", ") : "—"}</Row>
+              {task.approvalRequired && <Row label={t("dp.approval")}><Badge category="warning">{t("dp.required")}</Badge></Row>}
             </dl>
           </PanelBody>
         </Panel>
