@@ -93,8 +93,12 @@ Cash|Payable); AP aging and supplier statements, verified by 22 live invariants.
 asset account), transfers between them (same- or cross-currency with realized FX to
 gain/loss), bank reconciliation against a statement (cleared-line matching, metadata
 only), and the cash-position report; verified by 17 live invariants.
-Pending increments: Budgets + Cash Flow, and the Financial Intelligence dashboards
-/ 360 integrations.
+**Budgets + Statements (Increment F)** — budgets with per-GL-account amounts and
+optional analytical-dimension scope, a Budget-vs-Actual variance report against
+posted GL, and a direct-method Cash Flow statement (movements attributed to their
+counterpart accounts, grouped operating/investing/financing). AR/AP aging shipped
+in C/D. `budgets.ts` and `statements.ts`; verified against the seeded ledger.
+Pending increments: the Financial Intelligence dashboards / 360 integrations.
 
 `bank.ts` holds bank accounts, transfers, reconciliation and cash position;
 transfers post in base currency through the engine, plugging any cross-currency

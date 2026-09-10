@@ -160,6 +160,7 @@ export const NAVIGATION: NavGroup[] = [
       { key: "acc-supplier-credits", labelKey: "nav.supplierCredits", href: "/accounting/supplier-credits", icon: FileMinus, permission: "ap.view" },
       { key: "acc-payments", labelKey: "nav.supplierPayments", href: "/accounting/payments", icon: Wallet, permission: "payments.view" },
       { key: "acc-bank", labelKey: "nav.bankCash", href: "/accounting/bank", icon: Landmark, permission: "banks.view" },
+      { key: "acc-budgets", labelKey: "nav.budgets", href: "/accounting/budgets", icon: PieChart, permission: "budgets.view" },
       { key: "acc-reports", labelKey: "nav.financialReports", href: "/accounting/reports", icon: Scale, permission: "accounting.view" },
     ],
   },

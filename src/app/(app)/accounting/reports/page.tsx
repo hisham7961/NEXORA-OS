@@ -6,6 +6,7 @@ import { resolveAccountingCompany } from "@/domain/accounting/access";
 import { trialBalance, profitAndLoss, balanceSheet } from "@/domain/accounting/reports";
 import { arAging } from "@/domain/accounting/ar";
 import { apAging } from "@/domain/accounting/ap";
+import { cashFlow } from "@/domain/accounting/statements";
 import Link from "next/link";
 import { PageHeader, Panel, PanelHeader, PanelBody, DataTable, Badge, EmptyState, Metric, type Column } from "@/components/ui";
 import { CompanyPicker } from "@/components/accounting/company-picker";
@@ -29,6 +30,7 @@ export default async function AccountingReportsPage({ searchParams }: { searchPa
     { key: "balance-sheet", label: "Balance Sheet" },
     { key: "ar-aging", label: "AR Aging" },
     { key: "ap-aging", label: "AP Aging" },
+    { key: "cash-flow", label: "Cash Flow" },
   ];
 
   return (
@@ -153,6 +155,40 @@ export default async function AccountingReportsPage({ searchParams }: { searchPa
               <span>90+ <span className="ms-1 tabular text-ink">{money(String(t.older), locale)}</span></span>
               <span>Total <span className="ms-1 tabular text-ink">{money(String(t.total), locale)} {cur}</span></span>
             </div>
+          </Panel>
+        );
+      })()}
+
+      {tab === "cash-flow" && await (async () => {
+        const yr = new Date().getFullYear();
+        const cf = await cashFlow(principal, current.id, new Date(yr, 0, 1), new Date());
+        const catLabel: Record<string, string> = { operating: "Operating", investing: "Investing", financing: "Financing" };
+        return (
+          <Panel>
+            <PanelHeader title="Cash Flow (direct method)" action={<Badge category="info">YTD</Badge>} />
+            <PanelBody>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <Metric label="Opening cash" value={`${money(cf.opening, locale)} ${cur}`} />
+                <Metric label="Net change" value={`${money(cf.netChange, locale)} ${cur}`} category={Number(cf.netChange) >= 0 ? "success" : "critical"} />
+                <Metric label="Closing cash" value={`${money(cf.closing, locale)} ${cur}`} category="info" />
+              </div>
+              <div className="mt-4 space-y-3">
+                {["operating", "investing", "financing"].map((cat) => {
+                  const rows = cf.rows.filter((r) => r.category === cat);
+                  if (rows.length === 0) return null;
+                  const net = cf.categories.find((c) => c.category === cat)?.net ?? "0";
+                  return (
+                    <div key={cat} className="rounded-lg border border-line">
+                      <div className="flex items-center justify-between border-b border-line px-3 py-1.5 text-[12px] font-medium text-ink-2">{catLabel[cat]} activities<span className="tabular">{money(net, locale)}</span></div>
+                      <div className="divide-y divide-line">
+                        {rows.map((r) => <div key={r.accountId} className="flex items-center justify-between px-3 py-1.5 text-[13px]"><span className="text-ink-2"><span className="font-mono text-ink-3">{r.code}</span> {r.name}</span><span className={`tabular ${Number(r.flow) >= 0 ? "text-success" : "text-critical"}`}>{money(r.flow, locale)}</span></div>)}
+                      </div>
+                    </div>
+                  );
+                })}
+                {cf.rows.length === 0 && <p className="text-[13px] text-ink-3">No cash movements in the period.</p>}
+              </div>
+            </PanelBody>
           </Panel>
         );
       })()}

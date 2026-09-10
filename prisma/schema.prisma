@@ -2109,16 +2109,38 @@ model Budget {
   countryId    String?
   departmentId String?
   campaignId   String?
-  amount       Decimal
+  amount       Decimal   @default(0) // denormalised total of lines
   currency     String    @default("KWD")
+  status       String    @default("draft") // draft | active | archived
   periodStart  DateTime?
   periodEnd    DateTime?
   notes        String?
+  createdById  String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  archivedAt   DateTime?
+
+  lines BudgetLine[]
 
   @@index([brandId])
   @@index([companyId])
+}
+
+/**
+ * A budgeted amount for one GL account within a budget (annual, or monthly when
+ * `periodMonth` is set). Budget-vs-Actual compares these to posted GL activity.
+ */
+model BudgetLine {
+  id          String  @id @default(cuid())
+  budgetId    String
+  accountId   String
+  periodMonth Int? // 1-12 for a monthly budget; null = whole-period amount
+  amount      Decimal @default(0)
+
+  budget Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
+  @@index([budgetId])
+  @@index([accountId])
 }
 
 model ExpenseCategory {

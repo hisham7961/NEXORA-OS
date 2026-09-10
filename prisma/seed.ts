@@ -18,6 +18,7 @@ import { createInvoice, issueInvoice, postReceipt, createCreditNote, issueCredit
 import { createSupplier } from "../src/domain/accounting/suppliers";
 import { createBill, postBill, postPayment } from "../src/domain/accounting/ap";
 import { createBankAccount, createTransfer } from "../src/domain/accounting/bank";
+import { createBudget } from "../src/domain/accounting/budgets";
 
 const prisma = new PrismaClient();
 
@@ -37,7 +38,7 @@ async function clear() {
     "creditNoteLine", "creditNote", "salesInvoiceLine", "salesInvoice",
     "billPaymentAllocation", "supplierCreditApplication", "supplierPayment",
     "supplierCreditLine", "supplierCredit", "supplierBillLine", "supplierBill",
-    "bankTransfer", "bankReconciliation",
+    "bankTransfer", "bankReconciliation", "budgetLine",
     "journalLine", "journalEntry", "journal", "numberSequence", "companyAccountingSettings",
     "account", "accountingPeriod", "fiscalYear", "bankAccount",
     "costCenter", "invoice", "payment", "customer", "supplier", "budget", "expense",
@@ -480,6 +481,12 @@ async function main() {
   const cashBox = await createBankAccount(fctx, pcc.id, { name: "Main Cash Box", type: "cash", currency: "KWD", glAccountId: cashAcctGl });
   const mainBank = await createBankAccount(fctx, pcc.id, { name: "NBK Current Account", type: "bank", currency: "KWD", glAccountId: bankAcctGl, bankName: "National Bank of Kuwait" });
   await createTransfer(fctx, pcc.id, { fromBankAccountId: cashBox.id, toBankAccountId: mainBank.id, date: new Date(yr, now.getMonth(), 14), fromAmount: 2000, reference: "Cash deposit" });
+
+  // ------------------------------------------------------ Budget demo (§F)
+  const fyPcc = await prisma.fiscalYear.findFirst({ where: { companyId: pcc.id } });
+  const [revAcc4000, cogsAcc, shippingAcc] = await Promise.all([acc("4000"), acc("5000"), acc("6100")]);
+  await createBudget(fctx, pcc.id, { name: `FY${yr} Operating Budget`, fiscalYearId: fyPcc?.id,
+    lines: [ { accountId: revAcc4000, amount: 250000 }, { accountId: cogsAcc, amount: 90000 }, { accountId: marketingAcc, amount: 40000 }, { accountId: shippingAcc, amount: 12000 }, { accountId: rentAcc, amount: 24000 } ] });
 
   // ------------------------------------------------------------- Attendance
   console.log("• Attendance (today)");
