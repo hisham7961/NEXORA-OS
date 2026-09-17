@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { ApprovalRequest } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { can, ForbiddenError, type Principal } from "@/lib/permissions/engine";
+import { can, assertRecordInScope, ForbiddenError, type Principal } from "@/lib/permissions/engine";
 import { listQuerySchema } from "@/lib/api/pagination";
 import { scopedWhere } from "@/domain/scope";
 import { ServiceError } from "@/lib/api/handler";
@@ -39,8 +39,12 @@ export async function getMyApprovals(principal: Principal) {
   return steps;
 }
 
-export async function getApproval(id: string) {
-  return prisma.approvalRequest.findUnique({ where: { id }, include: { steps: { orderBy: { order: "asc" } } } });
+export async function getApproval(principal: Principal, id: string) {
+  const request = await prisma.approvalRequest.findUnique({ where: { id }, include: { steps: { orderBy: { order: "asc" } } } });
+  if (!request) return null;
+  // IDOR guard (§69): fail closed unless the viewer can see this request's scope.
+  assertRecordInScope(principal, "approvals.view", { companyId: request.companyId, brandId: request.brandId }, ["companyId", "brandId"]);
+  return request;
 }
 
 // ---------------------------------------------------------------------------

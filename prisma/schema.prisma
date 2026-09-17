@@ -1729,6 +1729,11 @@ model JournalLine {
   @@index([storeId])
   @@index([customerId])
   @@index([supplierId])
+  // Every financial report (trial balance, GL, P&L, balance sheet, cash flow,
+  // budget-vs-actual, intelligence) groups JournalLine by accountId filtered on
+  // companyId. On the highest-volume table this composite avoids full-slice scans
+  // (audit finding ARCH-06).
+  @@index([companyId, accountId])
 }
 
 model Customer {
