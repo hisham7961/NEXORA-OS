@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { ForbiddenError } from "@/lib/permissions/engine";
 import { canFinance } from "./common";
 import { D, add, sub } from "@/lib/money";
+import { LEDGER_STATUSES } from "./ledger-status";
 
 /**
  * Financial reports (§53–57) — derived ONLY from POSTED ledger lines (§18/§104).
@@ -47,7 +48,7 @@ export async function generalLedger(principal: Principal, raw: unknown) {
   assertReport(principal, f.companyId);
   const where = {
     companyId: f.companyId,
-    entry: { status: "posted" as const, ...(f.from || f.to ? { postingDate: { ...(f.from ? { gte: f.from } : {}), ...(f.to ? { lte: f.to } : {}) } } : {}) },
+    entry: { status: { in: LEDGER_STATUSES }, ...(f.from || f.to ? { postingDate: { ...(f.from ? { gte: f.from } : {}), ...(f.to ? { lte: f.to } : {}) } } : {}) },
     ...dimWhere(f),
   };
   const [rows, total] = await Promise.all([
@@ -65,7 +66,7 @@ export async function trialBalance(principal: Principal, companyId: string, asOf
   assertReport(principal, companyId);
   const grouped = await prisma.journalLine.groupBy({
     by: ["accountId"],
-    where: { companyId, entry: { status: "posted", ...(asOf ? { postingDate: { lte: asOf } } : {}) } },
+    where: { companyId, entry: { status: { in: LEDGER_STATUSES }, ...(asOf ? { postingDate: { lte: asOf } } : {}) } },
     _sum: { debit: true, credit: true },
   });
   const accounts = await prisma.account.findMany({ where: { companyId }, select: { id: true, code: true, name: true, type: true, normalBalance: true } });
@@ -91,7 +92,7 @@ export async function profitAndLoss(principal: Principal, raw: unknown) {
   assertReport(principal, f.companyId);
   const grouped = await prisma.journalLine.groupBy({
     by: ["accountId"],
-    where: { companyId: f.companyId, entry: { status: "posted", ...(f.from || f.to ? { postingDate: { ...(f.from ? { gte: f.from } : {}), ...(f.to ? { lte: f.to } : {}) } } : {}) }, ...dimWhere(f) },
+    where: { companyId: f.companyId, entry: { status: { in: LEDGER_STATUSES }, ...(f.from || f.to ? { postingDate: { ...(f.from ? { gte: f.from } : {}), ...(f.to ? { lte: f.to } : {}) } } : {}) }, ...dimWhere(f) },
     _sum: { debit: true, credit: true },
   });
   const accounts = await prisma.account.findMany({ where: { companyId: f.companyId }, select: { id: true, code: true, name: true, type: true } });
@@ -129,7 +130,7 @@ export async function balanceSheet(principal: Principal, companyId: string, asOf
   assertReport(principal, companyId);
   const grouped = await prisma.journalLine.groupBy({
     by: ["accountId"],
-    where: { companyId, entry: { status: "posted", ...(asOf ? { postingDate: { lte: asOf } } : {}) } },
+    where: { companyId, entry: { status: { in: LEDGER_STATUSES }, ...(asOf ? { postingDate: { lte: asOf } } : {}) } },
     _sum: { debit: true, credit: true },
   });
   const accounts = await prisma.account.findMany({ where: { companyId }, select: { id: true, code: true, name: true, type: true } });

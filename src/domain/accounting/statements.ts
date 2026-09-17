@@ -3,6 +3,7 @@ import type { Principal } from "@/lib/permissions/engine";
 import { prisma } from "@/lib/db";
 import { assertCan } from "@/domain/mutation";
 import { D, ZERO, add, sub } from "@/lib/money";
+import { LEDGER_STATUSES } from "./ledger-status";
 
 /**
  * Financial statements beyond the core reports (§Increment F). The Cash Flow
@@ -36,14 +37,14 @@ export async function cashFlow(principal: Principal, companyId: string, from: Da
 
   // Opening / closing cash balance (sum debit-credit on cash accounts).
   const bal = async (upto: Date, inclusive: boolean) => {
-    const g = await prisma.journalLine.groupBy({ by: ["accountId"], where: { companyId, accountId: { in: cashIds }, entry: { status: "posted", postingDate: inclusive ? { lte: upto } : { lt: upto } } }, _sum: { debit: true, credit: true } });
+    const g = await prisma.journalLine.groupBy({ by: ["accountId"], where: { companyId, accountId: { in: cashIds }, entry: { status: { in: LEDGER_STATUSES }, postingDate: inclusive ? { lte: upto } : { lt: upto } } }, _sum: { debit: true, credit: true } });
     return g.reduce((s, r) => add(s, sub(D(r._sum.debit ?? 0), D(r._sum.credit ?? 0))), ZERO);
   };
   const opening = await bal(from, false);
   const closing = await bal(to, true);
 
   // Entries in the period that touch a cash account.
-  const cashLines = await prisma.journalLine.findMany({ where: { companyId, accountId: { in: cashIds }, entry: { status: "posted", postingDate: { gte: from, lte: to } } }, select: { entryId: true } });
+  const cashLines = await prisma.journalLine.findMany({ where: { companyId, accountId: { in: cashIds }, entry: { status: { in: LEDGER_STATUSES }, postingDate: { gte: from, lte: to } } }, select: { entryId: true } });
   const entryIds = [...new Set(cashLines.map((l) => l.entryId))];
   if (entryIds.length === 0) return { from, to, opening: opening.toString(), closing: closing.toString(), netChange: sub(closing, opening).toString(), categories: [], rows: [] };
 
