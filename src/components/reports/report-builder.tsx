@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Play, Download, Save, Plus, Trash2 } from "lucide-react";
 import { Button, Input, Select, Badge } from "@/components/ui";
-import { useToast } from "@/components/providers";
+import { useToast, useI18n } from "@/components/providers";
 import { saveViewAction, deleteSavedViewAction } from "@/app/actions/personal";
 import { toCsv } from "@/lib/csv";
 
@@ -18,6 +18,7 @@ type RunResult =
 
 export function ReportBuilder({ savedReports }: { savedReports: SavedReport[] }) {
   const { toast } = useToast();
+  const { t } = useI18n();
   const [pending, start] = useTransition();
   const [sources, setSources] = useState<Source[]>([]);
   const [saved, setSaved] = useState(savedReports);
@@ -42,7 +43,7 @@ export function ReportBuilder({ savedReports }: { savedReports: SavedReport[] })
   const run = () => start(async () => {
     const res = await fetch("/api/v1/report-builder/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(config()) });
     const j = await res.json();
-    if (res.ok) setResult(j.data as RunResult); else toast({ kind: "error", title: j?.error?.message ?? "Run failed" });
+    if (res.ok) setResult(j.data as RunResult); else toast({ kind: "error", title: j?.error?.message ?? t("rb.runFailed") });
   });
   const exportCsv = () => {
     if (!result) return;
@@ -53,27 +54,27 @@ export function ReportBuilder({ savedReports }: { savedReports: SavedReport[] })
     a.href = URL.createObjectURL(blob); a.download = `report-${sourceKey}.csv`; a.click();
   };
   const saveReport = () => start(async () => {
-    const name = window.prompt("Name this report"); if (!name) return;
+    const name = window.prompt(t("rb.namePrompt")); if (!name) return;
     const r = await saveViewAction({ module: `report:${sourceKey}`, name, filtersJson: JSON.stringify(config()), isShared: false });
-    if (r.ok) { toast({ kind: "success", title: "Report saved" }); setSaved((s) => [...s, { id: (r as { data?: { id: string } }).data?.id ?? "", name, module: `report:${sourceKey}`, filtersJson: JSON.stringify(config()) }]); } else toast({ kind: "error", title: r.error });
+    if (r.ok) { toast({ kind: "success", title: t("rb.reportSaved") }); setSaved((s) => [...s, { id: (r as { data?: { id: string } }).data?.id ?? "", name, module: `report:${sourceKey}`, filtersJson: JSON.stringify(config()) }]); } else toast({ kind: "error", title: r.error });
   });
   const loadReport = (rep: SavedReport) => {
     try {
       const c = JSON.parse(rep.filtersJson) as Config;
       selectSource(c.source); setTimeout(() => { setColumns(c.columns ?? []); setFilters(c.filters ?? []); setFrom(c.from ?? ""); setTo(c.to ?? ""); setGroupBy(c.groupBy ?? ""); if (c.aggregate) { setAggFn(c.aggregate.fn); setAggField(c.aggregate.field ?? ""); } }, 0);
-    } catch { toast({ kind: "error", title: "Could not load report" }); }
+    } catch { toast({ kind: "error", title: t("rb.couldNotLoad") }); }
   };
   const removeReport = (id: string) => start(async () => { const r = await deleteSavedViewAction(id); if (r.ok) setSaved((s) => s.filter((x) => x.id !== id)); });
 
-  if (!source) return <p className="text-[13px] text-ink-3">Loading report sources…</p>;
+  if (!source) return <p className="text-[13px] text-ink-3">{t("rb.loadingSources")}</p>;
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
       <div className="space-y-3">
         <div className="rounded-lg border border-line p-3">
-          <label className="block"><span className="mb-1 block text-[12px] text-ink-2">Data source</span><Select value={sourceKey} onChange={(e) => selectSource(e.target.value)}>{sources.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</Select></label>
+          <label className="block"><span className="mb-1 block text-[12px] text-ink-2">{t("rb.dataSource")}</span><Select value={sourceKey} onChange={(e) => selectSource(e.target.value)}>{sources.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</Select></label>
           <div className="mt-3">
-            <div className="mb-1 text-[12px] text-ink-2">Columns</div>
+            <div className="mb-1 text-[12px] text-ink-2">{t("rb.columns")}</div>
             <div className="flex flex-wrap gap-1">
               {source.fields.map((f) => (
                 <button key={f.key} onClick={() => setColumns((c) => c.includes(f.key) ? c.filter((x) => x !== f.key) : [...c, f.key])}
@@ -83,12 +84,12 @@ export function ReportBuilder({ savedReports }: { savedReports: SavedReport[] })
           </div>
           {source.dateField && (
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <label className="block"><span className="mb-1 block text-[11px] text-ink-3">From</span><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-8" /></label>
-              <label className="block"><span className="mb-1 block text-[11px] text-ink-3">To</span><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-8" /></label>
+              <label className="block"><span className="mb-1 block text-[11px] text-ink-3">{t("rb.from")}</span><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-8" /></label>
+              <label className="block"><span className="mb-1 block text-[11px] text-ink-3">{t("rb.to")}</span><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-8" /></label>
             </div>
           )}
           <div className="mt-3">
-            <div className="mb-1 flex items-center justify-between text-[12px] text-ink-2">Filters<button className="text-ink-3 hover:text-ink" onClick={() => setFilters((f) => [...f, { field: source.fields[0].key, op: source.fields[0].operators[0], value: "" }])}><Plus className="h-3.5 w-3.5" /></button></div>
+            <div className="mb-1 flex items-center justify-between text-[12px] text-ink-2">{t("rb.filters")}<button className="text-ink-3 hover:text-ink" onClick={() => setFilters((f) => [...f, { field: source.fields[0].key, op: source.fields[0].operators[0], value: "" }])}><Plus className="h-3.5 w-3.5" /></button></div>
             {filters.map((flt, i) => {
               const f = source.fields.find((x) => x.key === flt.field);
               return (
@@ -103,22 +104,22 @@ export function ReportBuilder({ savedReports }: { savedReports: SavedReport[] })
             })}
           </div>
           <div className="mt-3">
-            <div className="mb-1 text-[12px] text-ink-2">Group &amp; aggregate</div>
-            <Select value={groupBy} onChange={(e) => setGroupBy(e.target.value)} className="h-8"><option value="">No grouping</option>{source.fields.filter((f) => f.aggregatable).map((f) => <option key={f.key} value={f.key}>By {f.label}</option>)}</Select>
+            <div className="mb-1 text-[12px] text-ink-2">{t("rb.groupAggregate")}</div>
+            <Select value={groupBy} onChange={(e) => setGroupBy(e.target.value)} className="h-8"><option value="">{t("rb.noGrouping")}</option>{source.fields.filter((f) => f.aggregatable).map((f) => <option key={f.key} value={f.key}>{t("rb.by", { label: f.label })}</option>)}</Select>
             {groupBy && <div className="mt-1 flex gap-1">
-              <Select value={aggFn} onChange={(e) => setAggFn(e.target.value as "count" | "sum")} className="h-8 w-24"><option value="count">Count</option><option value="sum">Sum</option></Select>
-              {aggFn === "sum" && <Select value={aggField} onChange={(e) => setAggField(e.target.value)} className="h-8 flex-1"><option value="">field…</option>{source.fields.filter((f) => f.type === "number").map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}</Select>}
+              <Select value={aggFn} onChange={(e) => setAggFn(e.target.value as "count" | "sum")} className="h-8 w-24"><option value="count">{t("rb.count")}</option><option value="sum">{t("rb.sum")}</option></Select>
+              {aggFn === "sum" && <Select value={aggField} onChange={(e) => setAggField(e.target.value)} className="h-8 flex-1"><option value="">{t("rb.field")}</option>{source.fields.filter((f) => f.type === "number").map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}</Select>}
             </div>}
           </div>
           <div className="mt-3 flex gap-2">
-            <Button variant="primary" size="sm" disabled={pending} onClick={run}><Play className="h-4 w-4" /> Run</Button>
+            <Button variant="primary" size="sm" disabled={pending} onClick={run}><Play className="h-4 w-4" /> {t("rb.run")}</Button>
             <Button variant="secondary" size="sm" disabled={!result} onClick={exportCsv}><Download className="h-4 w-4" /></Button>
             <Button variant="ghost" size="sm" disabled={pending} onClick={saveReport}><Save className="h-4 w-4" /></Button>
           </div>
         </div>
         {saved.length > 0 && (
           <div className="rounded-lg border border-line p-3">
-            <div className="mb-1 text-[12px] font-medium text-ink-2">Saved reports</div>
+            <div className="mb-1 text-[12px] font-medium text-ink-2">{t("rb.savedReports")}</div>
             {saved.map((rep) => (
               <div key={rep.id} className="group flex items-center justify-between gap-1 rounded px-1 py-1 hover:bg-surface-2">
                 <button className="min-w-0 flex-1 truncate text-start text-[13px] text-ink-2" onClick={() => loadReport(rep)}>{rep.name}</button>
@@ -130,15 +131,15 @@ export function ReportBuilder({ savedReports }: { savedReports: SavedReport[] })
       </div>
 
       <div className="rounded-lg border border-line">
-        {!result ? <div className="p-8 text-center text-[13px] text-ink-3">Configure a report and press Run. Reports enforce your permissions and scope.</div>
+        {!result ? <div className="p-8 text-center text-[13px] text-ink-3">{t("rb.configureHint")}</div>
           : result.kind === "aggregate" ? (
             <table className="w-full text-[13px]">
-              <thead><tr className="border-b border-line text-ink-3"><th className="px-3 py-2 text-start font-medium">{result.groupBy}</th><th className="px-3 py-2 text-end font-medium">Count</th>{result.aggregate.fn === "sum" && <th className="px-3 py-2 text-end font-medium">Sum({result.aggregate.field})</th>}</tr></thead>
+              <thead><tr className="border-b border-line text-ink-3"><th className="px-3 py-2 text-start font-medium">{result.groupBy}</th><th className="px-3 py-2 text-end font-medium">{t("rb.count")}</th>{result.aggregate.fn === "sum" && <th className="px-3 py-2 text-end font-medium">Sum({result.aggregate.field})</th>}</tr></thead>
               <tbody>{result.rows.map((r, i) => <tr key={i} className="border-b border-line last:border-0"><td className="px-3 py-1.5 text-ink">{r.group}</td><td className="px-3 py-1.5 text-end tabular text-ink-2">{r.count}</td>{result.aggregate.fn === "sum" && <td className="px-3 py-1.5 text-end tabular text-ink">{r.sum?.toLocaleString()}</td>}</tr>)}</tbody>
             </table>
           ) : (
             <div className="overflow-x-auto">
-              <div className="flex items-center justify-between px-3 py-2"><Badge category="info">{result.rows.length} rows</Badge></div>
+              <div className="flex items-center justify-between px-3 py-2"><Badge category="info">{t("rb.nRows", { n: result.rows.length })}</Badge></div>
               <table className="w-full text-[13px]">
                 <thead><tr className="border-y border-line text-ink-3">{result.columns.map((c) => <th key={c.key} className="px-3 py-2 text-start font-medium">{c.label}</th>)}</tr></thead>
                 <tbody>{result.rows.map((r, i) => <tr key={i} className="border-b border-line last:border-0">{result.columns.map((c) => <td key={c.key} className="px-3 py-1.5 text-ink-2">{String(r[c.key] ?? "")}</td>)}</tr>)}</tbody>

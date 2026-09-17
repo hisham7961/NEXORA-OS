@@ -16,11 +16,13 @@ import { CaseActionBar } from "@/components/cases/case-actions";
 import { FindAnswer } from "@/components/answers/find-answer";
 import { formatDateTime } from "@/lib/format";
 import { humanize } from "@/lib/status";
+import { getServerI18n } from "@/lib/server-i18n";
 
 export const metadata: Metadata = { title: "Customer Case" };
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { principal, locale } = await pageGuard("cases.view");
+  const { t } = await getServerI18n();
   const { id } = await params;
   let c;
   try {
@@ -40,33 +42,33 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
     canEdit ? getScopedOptions(principal, "cases.edit") : Promise.resolve(null),
   ]);
   const timeline: TimelineEntry[] = activity.map((a) => ({
-    id: a.id, at: a.at, actorName: a.actorId ? refName(lookups.users, a.actorId) : "System",
+    id: a.id, at: a.at, actorName: a.actorId ? refName(lookups.users, a.actorId) : t("common.system"),
     actorColor: a.actorId ? lookups.users.get(a.actorId)?.meta : null, action: a.action, summary: a.summary,
   }));
 
   return (
     <>
-      <div className="mb-1 text-xs text-ink-3"><Link href="/cases" className="hover:text-ink-2">Cases</Link> / {humanize(c.type)}</div>
+      <div className="mb-1 text-xs text-ink-3"><Link href="/cases" className="hover:text-ink-2">{t("dp.casesNav")}</Link> / {humanize(c.type)}</div>
       <div className="mb-4 flex items-center justify-between gap-3">
         <h1 className="text-lg font-semibold tracking-tight text-ink">{humanize(c.type)}</h1>
-        <div className="flex items-center gap-2"><Badge className="capitalize">{c.priority}</Badge><StatusBadge module="customer_case" status={c.status} /></div>
+        <div className="flex items-center gap-2"><Badge className="capitalize">{t(`priority.${c.priority}`)}</Badge><StatusBadge module="customer_case" status={c.status} /></div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <Panel>
-            <PanelHeader title="Case" />
+            <PanelHeader title={t("dp.case")} />
             <PanelBody className="space-y-3">
-              <p className="text-[13px] text-ink-2">{c.description ?? "No description."}</p>
-              {c.resolution && <div><div className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">Resolution</div><p className="mt-1 text-[13px] text-ink">{c.resolution}</p></div>}
+              <p className="text-[13px] text-ink-2">{c.description ?? t("dp.noDescription")}</p>
+              {c.resolution && <div><div className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t("dp.resolution")}</div><p className="mt-1 text-[13px] text-ink">{c.resolution}</p></div>}
               <div>
-                <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-3">Notes</div>
-                {c.notes.length === 0 ? <p className="text-[13px] text-ink-3">No notes.</p> : (
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t("dp.notes")}</div>
+                {c.notes.length === 0 ? <p className="text-[13px] text-ink-3">{t("dp.noNotes")}</p> : (
                   <ul className="space-y-2">
                     {c.notes.map((n) => (
                       <li key={n.id} className="rounded-md border border-line bg-surface-2/40 p-2.5 text-[13px]">
                         <div className="mb-1 flex items-center justify-between text-[11px] text-ink-3"><span>{refName(lookups.users, n.authorId)}</span><span>{formatDateTime(n.createdAt, locale)}</span></div>
-                        {n.body}{n.isInternal && <Badge className="ms-2" category="neutral">Internal</Badge>}
+                        {n.body}{n.isInternal && <Badge className="ms-2" category="neutral">{t("dp.internal")}</Badge>}
                       </li>
                     ))}
                   </ul>
@@ -75,8 +77,8 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
             </PanelBody>
           </Panel>
           <Panel>
-            <PanelHeader title="Activity" />
-            <PanelBody><ActivityTimeline entries={timeline} locale={locale} empty="No activity yet." /></PanelBody>
+            <PanelHeader title={t("dp.activity")} />
+            <PanelBody><ActivityTimeline entries={timeline} locale={locale} empty={t("dp.noActivity")} /></PanelBody>
           </Panel>
           <EntityFiles principal={principal} entityType="CustomerCase" entityId={c.id} scope={{ companyId: c.companyId, brandId: c.brandId, countryId: c.countryId }} />
         </div>
@@ -84,25 +86,25 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
         <div className="space-y-4">
           {canEdit && options && (
             <Panel>
-              <PanelHeader title="Actions" />
+              <PanelHeader title={t("dp.actions")} />
               <PanelBody><CaseActionBar caseId={c.id} status={c.status} users={options.users} assignedToId={c.assignedToId} /></PanelBody>
             </Panel>
           )}
           {canViewAnswers && answerOptions && (
             <Panel>
-              <PanelHeader title="Approved answers" description="Find and copy an official answer, or request one." />
+              <PanelHeader title={t("dp.approvedAnswers")} description={t("dp.approvedAnswersSub")} />
               <PanelBody><FindAnswer caseId={c.id} brandId={c.brandId} countryId={c.countryId} options={{ brands: answerOptions.brands, countries: answerOptions.countries }} /></PanelBody>
             </Panel>
           )}
           <Panel>
-            <PanelHeader title="Details" />
+            <PanelHeader title={t("dp.details")} />
             <PanelBody>
               <dl className="space-y-2.5 text-[13px]">
-                <div className="flex justify-between"><dt className="text-ink-3">Brand</dt><dd><BrandChip name={refName(lookups.brands, c.brandId)} color={c.brandId ? lookups.brands.get(c.brandId)?.meta : null} /></dd></div>
-                <div className="flex justify-between"><dt className="text-ink-3">Country</dt><dd><CountryChip name={refName(lookups.countries, c.countryId)} iso2={c.countryId ? lookups.countries.get(c.countryId)?.meta : null} /></dd></div>
-                <div className="flex justify-between"><dt className="text-ink-3">Assigned</dt><dd><UserChip name={refName(lookups.users, c.assignedToId)} color={c.assignedToId ? lookups.users.get(c.assignedToId)?.meta : null} /></dd></div>
-                <div className="flex justify-between"><dt className="text-ink-3">Order ref</dt><dd className="text-ink">{c.orderRef ?? "—"}</dd></div>
-                <div className="flex justify-between"><dt className="text-ink-3">Customer</dt><dd className="text-ink">{c.customerRef ?? "—"}</dd></div>
+                <div className="flex justify-between"><dt className="text-ink-3">{t("common.brand")}</dt><dd><BrandChip name={refName(lookups.brands, c.brandId)} color={c.brandId ? lookups.brands.get(c.brandId)?.meta : null} /></dd></div>
+                <div className="flex justify-between"><dt className="text-ink-3">{t("common.country")}</dt><dd><CountryChip name={refName(lookups.countries, c.countryId)} iso2={c.countryId ? lookups.countries.get(c.countryId)?.meta : null} /></dd></div>
+                <div className="flex justify-between"><dt className="text-ink-3">{t("dp.assigned")}</dt><dd><UserChip name={refName(lookups.users, c.assignedToId)} color={c.assignedToId ? lookups.users.get(c.assignedToId)?.meta : null} /></dd></div>
+                <div className="flex justify-between"><dt className="text-ink-3">{t("dp.orderRef")}</dt><dd className="text-ink">{c.orderRef ?? "—"}</dd></div>
+                <div className="flex justify-between"><dt className="text-ink-3">{t("dp.customer")}</dt><dd className="text-ink">{c.customerRef ?? "—"}</dd></div>
               </dl>
             </PanelBody>
           </Panel>

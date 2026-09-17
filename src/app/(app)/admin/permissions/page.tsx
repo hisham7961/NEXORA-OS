@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Fragment } from "react";
 import { Check, ShieldCheck, UserCheck, KeyRound, Users } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
+import { getServerI18n } from "@/lib/server-i18n";
+import type { Translator } from "@/i18n";
 import { AccessDenied } from "@/components/access-denied";
 import {
   getPermissionMatrix, describeUserAccess, listSelectableUsers,
@@ -21,39 +23,40 @@ export const metadata: Metadata = { title: "Permissions" };
 export default async function PermissionsPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { principal, locale, denied } = await pageGuard("permissions.manage");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
 
   const sp = await searchParams;
   const tab = sp.tab ?? "matrix";
   const tabs: TabItem[] = [
-    { key: "matrix", label: "Permission Matrix" },
-    { key: "roles", label: "Roles" },
-    { key: "assignments", label: "Assignments" },
-    { key: "tester", label: "Permission Tester" },
+    { key: "matrix", label: t("admin.permMatrix") },
+    { key: "roles", label: t("admin.roles") },
+    { key: "assignments", label: t("admin.assignments") },
+    { key: "tester", label: t("admin.permTester") },
   ];
 
   return (
     <>
       <PageHeader
-        title="Permissions"
-        description="Roles are configurable bundles of permissions; access is granted within a scope (company · brand · country · department · team). Every change is audited."
+        title={t("admin.permissions")}
+        description={t("admin.permissionsSub")}
       />
       <TabBar tabs={tabs} current={tab} className="mb-4" />
-      {tab === "matrix" && <Matrix />}
-      {tab === "roles" && <Roles />}
-      {tab === "assignments" && <Assignments principal={principal} locale={locale} />}
-      {tab === "tester" && <Tester selected={sp.user} />}
+      {tab === "matrix" && <Matrix t={t} />}
+      {tab === "roles" && <Roles t={t} />}
+      {tab === "assignments" && <Assignments principal={principal} locale={locale} t={t} />}
+      {tab === "tester" && <Tester selected={sp.user} t={t} />}
     </>
   );
 }
 
-async function Roles() {
+async function Roles({ t }: { t: Translator }) {
   const roles = await listRolesFull();
   return (
     <Panel>
       <PanelHeader
-        title="Roles"
+        title={t("admin.roles")}
         icon={<KeyRound className="h-4 w-4" />}
-        description="Create and edit reusable permission bundles."
+        description={t("admin.rolesSub")}
         action={<RoleForm mode="create" />}
       />
       <ul className="divide-y divide-line">
@@ -63,9 +66,9 @@ async function Roles() {
               <div className="flex items-center gap-2">
                 <span className="text-[13px] font-medium text-ink">{r.name}</span>
                 <span className="font-mono text-[11px] text-ink-3">{r.key}</span>
-                {r.isSystem && <Badge category="neutral">System</Badge>}
+                {r.isSystem && <Badge category="neutral">{t("common.system")}</Badge>}
               </div>
-              <div className="text-xs text-ink-3">{r.permissions.includes("*") ? "All permissions" : `${r.permissions.length} permissions`} · {r.assignments} assignments</div>
+              <div className="text-xs text-ink-3">{r.permissions.includes("*") ? t("admin.allPermissions") : t("admin.nPermissions", { count: r.permissions.length })} · {t("admin.nAssignments", { count: r.assignments })}</div>
             </div>
             {r.key !== "super_admin" && <RoleForm mode="edit" defaults={{ id: r.id, name: r.name, description: r.description, permissions: r.permissions }} />}
           </li>
@@ -75,7 +78,7 @@ async function Roles() {
   );
 }
 
-async function Assignments({ principal, locale }: { principal: import("@/lib/permissions/engine").Principal; locale: "en" | "ar" }) {
+async function Assignments({ principal, locale, t }: { principal: import("@/lib/permissions/engine").Principal; locale: "en" | "ar"; t: Translator }) {
   const [rows, roles, users, options] = await Promise.all([
     listAssignments(),
     listRolesFull(),
@@ -88,19 +91,19 @@ async function Assignments({ principal, locale }: { principal: import("@/lib/per
   return (
     <Panel>
       <PanelHeader
-        title="Role assignments"
+        title={t("admin.roleAssignments")}
         icon={<Users className="h-4 w-4" />}
-        description="Who has which role, in which scope. You can only grant within your own administration scope."
+        description={t("admin.roleAssignmentsSub")}
         action={<AssignRoleButton users={userOptions} roles={roleOptions} brands={options.brands} countries={options.countries} companies={options.companies} />}
       />
       <DataTable
         columns={[
-          { key: "user", header: "User", render: (a) => <UserChip name={a.userName} color={a.userColor} /> },
-          { key: "role", header: "Role", render: (a) => a.roleName },
-          { key: "company", header: "Company", render: (a) => a.company },
-          { key: "brand", header: "Brand", render: (a) => a.brand },
-          { key: "country", header: "Country", render: (a) => a.country },
-          { key: "expires", header: "Expires", render: (a) => (a.expiresAt ? formatDate(a.expiresAt, locale) : "—") },
+          { key: "user", header: t("admin.col.user"), render: (a) => <UserChip name={a.userName} color={a.userColor} /> },
+          { key: "role", header: t("common.role"), render: (a) => a.roleName },
+          { key: "company", header: t("common.company"), render: (a) => a.company },
+          { key: "brand", header: t("common.brand"), render: (a) => a.brand },
+          { key: "country", header: t("common.country"), render: (a) => a.country },
+          { key: "expires", header: t("admin.col.expires"), render: (a) => (a.expiresAt ? formatDate(a.expiresAt, locale) : "—") },
           { key: "remove", header: "", align: "end", render: (a) => <RemoveAssignmentButton assignmentId={a.id} /> },
         ]}
         rows={rows}
@@ -110,16 +113,16 @@ async function Assignments({ principal, locale }: { principal: import("@/lib/per
   );
 }
 
-async function Matrix() {
+async function Matrix({ t }: { t: Translator }) {
   const { roles, grants } = await getPermissionMatrix();
   return (
     <Panel>
-      <PanelHeader title="Role × Permission matrix" icon={<ShieldCheck className="h-4 w-4" />} description="Which role grants which capability. Manage (m) implies the module's standard actions." />
+      <PanelHeader title={t("admin.permMatrixTitle")} icon={<ShieldCheck className="h-4 w-4" />} description={t("admin.permMatrixSub")} />
       <div className="w-full overflow-x-auto">
         <table className="w-full border-collapse text-[12.5px]">
           <thead className="sticky top-0 z-10">
             <tr className="bg-surface-2/80 backdrop-blur">
-              <th className="sticky start-0 z-20 bg-surface-2/95 px-3 py-2 text-start text-[11px] font-semibold uppercase tracking-wide text-ink-3 min-w-56">Permission</th>
+              <th className="sticky start-0 z-20 bg-surface-2/95 px-3 py-2 text-start text-[11px] font-semibold uppercase tracking-wide text-ink-3 min-w-56">{t("admin.col.permission")}</th>
               {roles.map((r) => (
                 <th key={r.id} className="px-2 py-2 text-center text-[11px] font-semibold text-ink-2 whitespace-nowrap">{r.name}</th>
               ))}
@@ -159,7 +162,7 @@ async function Matrix() {
   );
 }
 
-async function Tester({ selected }: { selected?: string }) {
+async function Tester({ selected, t }: { selected?: string; t: Translator }) {
   const users = await listSelectableUsers();
   const result = selected ? await describeUserAccess(selected) : null;
 
@@ -167,13 +170,13 @@ async function Tester({ selected }: { selected?: string }) {
     <div className="space-y-4">
       <Panel>
         <PanelHeader
-          title="Permission Tester"
+          title={t("admin.permTester")}
           icon={<UserCheck className="h-4 w-4" />}
-          description="Select a user to preview exactly what they can access — computed from the real permission engine."
+          description={t("admin.permTesterSub")}
           action={<TesterUserPicker users={users} current={selected} />}
         />
         {!result ? (
-          <PanelBody className="text-[13px] text-ink-3">Choose a user above to see their effective access.</PanelBody>
+          <PanelBody className="text-[13px] text-ink-3">{t("admin.chooseUser")}</PanelBody>
         ) : (
           <PanelBody className="space-y-5">
             <div className="flex items-center gap-3">
@@ -182,22 +185,22 @@ async function Tester({ selected }: { selected?: string }) {
                 <div className="text-[14px] font-semibold text-ink">{result.user.name}</div>
                 <div className="text-xs text-ink-3">{result.user.email}</div>
               </div>
-              {result.user.isSuperAdmin && <Badge category="critical" dot>Super Admin — full access</Badge>}
+              {result.user.isSuperAdmin && <Badge category="critical" dot>{t("admin.superAdminFull")}</Badge>}
             </div>
 
             <div>
-              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-3">Role assignments &amp; scope</div>
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t("admin.rolesScope")}</div>
               {result.assignments.length === 0 ? (
-                <p className="text-[13px] text-ink-3">No role assignments{result.user.isSuperAdmin ? " (super admin bypasses scopes)." : "."}</p>
+                <p className="text-[13px] text-ink-3">{result.user.isSuperAdmin ? t("admin.noRoleAssignmentsBypass") : t("admin.noRoleAssignments")}</p>
               ) : (
                 <div className="overflow-x-auto rounded-md border border-line">
                   <table className="w-full text-[12.5px]">
                     <thead className="bg-surface-2/60">
                       <tr className="text-start text-[11px] uppercase tracking-wide text-ink-3">
-                        <th className="px-3 py-2 text-start">Role</th>
-                        <th className="px-3 py-2 text-start">Company</th>
-                        <th className="px-3 py-2 text-start">Brand</th>
-                        <th className="px-3 py-2 text-start">Country</th>
+                        <th className="px-3 py-2 text-start">{t("common.role")}</th>
+                        <th className="px-3 py-2 text-start">{t("common.company")}</th>
+                        <th className="px-3 py-2 text-start">{t("common.brand")}</th>
+                        <th className="px-3 py-2 text-start">{t("common.country")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -216,7 +219,7 @@ async function Tester({ selected }: { selected?: string }) {
             </div>
 
             <div>
-              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-3">What can this user do? (within the scopes above)</div>
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t("admin.whatCanDo")}</div>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {result.capabilities.filter((c) => c.anyAccess).map((c) => (
                   <div key={c.module} className="rounded-md border border-line bg-surface p-2.5">
@@ -229,7 +232,7 @@ async function Tester({ selected }: { selected?: string }) {
                   </div>
                 ))}
                 {result.capabilities.every((c) => !c.anyAccess) && (
-                  <p className="text-[13px] text-ink-3">This user has no module access.</p>
+                  <p className="text-[13px] text-ink-3">{t("admin.noModuleAccess")}</p>
                 )}
               </div>
             </div>

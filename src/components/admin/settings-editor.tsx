@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Check, Lock } from "lucide-react";
 import { Input, Select, Button, Badge } from "@/components/ui";
-import { useToast } from "@/components/providers";
+import { useToast, useI18n } from "@/components/providers";
 import { updateSettingAction } from "@/app/actions/settings";
 
 type Setting = {
@@ -13,14 +13,14 @@ type Setting = {
 };
 
 function SettingRow({ s, canManage }: { s: Setting; canManage: boolean }) {
-  const { toast } = useToast();
+  const { toast } = useToast(); const { t } = useI18n();
   const [pending, start] = useTransition();
   const [val, setVal] = useState(s.value);
   const [dirty, setDirty] = useState(false);
 
   const save = (next: string | number | boolean) => start(async () => {
     const r = await updateSettingAction(s.key, next);
-    if (r.ok) { toast({ kind: "success", title: "Saved" }); setDirty(false); } else { toast({ kind: "error", title: r.error }); }
+    if (r.ok) { toast({ kind: "success", title: t("toast.saved") }); setDirty(false); } else { toast({ kind: "error", title: r.error }); }
   });
 
   return (

@@ -30,7 +30,7 @@ export default async function CommandCenterPage() {
     <>
       <PageHeader
         title={t("cc.title")}
-        description="What requires attention right now across the group."
+        description={t("home.subtitle")}
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -52,7 +52,7 @@ export default async function CommandCenterPage() {
               <EmptyState
                 icon={<CircleCheck className="h-5 w-5 text-success" />}
                 title={t("cc.allClear")}
-                description="Overdue work, expiring documents, blocked cases and pending approvals will surface here."
+                description={t("home.emptyBody")}
               />
             ) : (
               <ul className="divide-y divide-line">

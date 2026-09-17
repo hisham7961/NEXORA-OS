@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ShieldCheck, ShieldAlert, Copy, Check, KeyRound } from "lucide-react";
 import { Button, Input, Label } from "@/components/ui";
-import { useToast } from "@/components/providers";
+import { useToast, useI18n } from "@/components/providers";
 import { beginMfaEnrollmentAction, confirmMfaEnrollmentAction, disableMfaAction } from "@/app/actions/mfa";
 
 export interface MfaStatusView { enabled: boolean; enrolledAt: string | null; recoveryRemaining: number }
@@ -18,6 +18,7 @@ export interface MfaStatusView { enabled: boolean; enrolledAt: string | null; re
 export function MfaCard({ status, required }: { status: MfaStatusView; required: boolean }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [pending, start] = useTransition();
   const [setup, setSetup] = useState<{ secret: string; otpauthUri: string } | null>(null);
   const [code, setCode] = useState("");
@@ -31,16 +32,16 @@ export function MfaCard({ status, required }: { status: MfaStatusView; required:
 
   const begin = () => start(async () => {
     const r = await beginMfaEnrollmentAction();
-    if (r.ok && r.data) { setSetup(r.data); setCode(""); } else toast({ kind: "error", title: r.ok ? "Failed" : r.error });
+    if (r.ok && r.data) { setSetup(r.data); setCode(""); } else toast({ kind: "error", title: r.ok ? t("sec.failed") : r.error });
   });
   const confirm = () => start(async () => {
     const r = await confirmMfaEnrollmentAction(code.trim());
     if (r.ok && r.data) { setRecovery(r.data.recoveryCodes); setSetup(null); setCode(""); router.refresh(); }
-    else toast({ kind: "error", title: r.ok ? "Failed" : r.error });
+    else toast({ kind: "error", title: r.ok ? t("sec.failed") : r.error });
   });
   const disable = () => start(async () => {
     const r = await disableMfaAction(code.trim());
-    if (r.ok) { toast({ kind: "success", title: "MFA disabled" }); setDisabling(false); setCode(""); router.refresh(); }
+    if (r.ok) { toast({ kind: "success", title: t("sec.mfaDisabled") }); setDisabling(false); setCode(""); router.refresh(); }
     else toast({ kind: "error", title: r.error });
   });
 
@@ -48,15 +49,15 @@ export function MfaCard({ status, required }: { status: MfaStatusView; required:
   if (recovery) {
     return (
       <div className="space-y-3">
-        <div className="flex items-center gap-1.5 text-[13px] font-semibold text-success"><ShieldCheck className="h-4 w-4" /> Two-factor authentication is on.</div>
+        <div className="flex items-center gap-1.5 text-[13px] font-semibold text-success"><ShieldCheck className="h-4 w-4" /> {t("sec.twoFactorOn")}</div>
         <div className="rounded-lg border border-accent bg-accent-soft/40 p-3">
-          <div className="mb-2 flex items-center gap-1.5 text-[12px] font-semibold text-accent"><KeyRound className="h-3.5 w-3.5" /> Recovery codes — store these now, each works once and they won’t be shown again</div>
+          <div className="mb-2 flex items-center gap-1.5 text-[12px] font-semibold text-accent"><KeyRound className="h-3.5 w-3.5" /> {t("sec.recoveryCodesTitle")}</div>
           <div className="grid grid-cols-2 gap-1.5 font-mono text-[13px] text-ink">
             {recovery.map((c) => <code key={c} className="rounded bg-surface px-2 py-1">{c}</code>)}
           </div>
           <div className="mt-2 flex gap-2">
-            <Button size="sm" variant="secondary" onClick={() => copy(recovery.join("\n"), "rec")}>{copied === "rec" ? <><Check className="h-3.5 w-3.5" /> Copied</> : <><Copy className="h-3.5 w-3.5" /> Copy all</>}</Button>
-            <Button size="sm" variant="ghost" onClick={() => setRecovery(null)}>Done</Button>
+            <Button size="sm" variant="secondary" onClick={() => copy(recovery.join("\n"), "rec")}>{copied === "rec" ? <><Check className="h-3.5 w-3.5" /> {t("sec.copied")}</> : <><Copy className="h-3.5 w-3.5" /> {t("sec.copyAll")}</>}</Button>
+            <Button size="sm" variant="ghost" onClick={() => setRecovery(null)}>{t("sec.done")}</Button>
           </div>
         </div>
       </div>
@@ -66,18 +67,18 @@ export function MfaCard({ status, required }: { status: MfaStatusView; required:
   if (status.enabled) {
     return (
       <div className="space-y-3">
-        <div className="flex items-center gap-1.5 text-[13px] font-semibold text-success"><ShieldCheck className="h-4 w-4" /> Two-factor authentication is on{status.enrolledAt ? ` since ${new Date(status.enrolledAt).toLocaleDateString()}` : ""}.</div>
-        <p className="text-[12px] text-ink-3">{status.recoveryRemaining} recovery code{status.recoveryRemaining === 1 ? "" : "s"} remaining. You’ll be asked for a code from your authenticator app at every sign-in.</p>
+        <div className="flex items-center gap-1.5 text-[13px] font-semibold text-success"><ShieldCheck className="h-4 w-4" /> {t("sec.twoFactorOnSince", { since: status.enrolledAt ? t("sec.since", { date: new Date(status.enrolledAt).toLocaleDateString() }) : "" })}</div>
+        <p className="text-[12px] text-ink-3">{status.recoveryRemaining === 1 ? t("sec.recoveryRemainingOne", { count: status.recoveryRemaining }) : t("sec.recoveryRemainingMany", { count: status.recoveryRemaining })}</p>
         {!disabling ? (
-          <Button size="sm" variant="ghost" onClick={() => setDisabling(true)}>Disable two-factor…</Button>
+          <Button size="sm" variant="ghost" onClick={() => setDisabling(true)}>{t("sec.disableTwoFactor")}</Button>
         ) : (
           <div className="flex flex-wrap items-end gap-2 rounded-lg border border-line p-3">
             <div>
-              <Label htmlFor="mfa-off-code">Enter a current code or a recovery code to disable</Label>
+              <Label htmlFor="mfa-off-code">{t("sec.enterCodeDisable")}</Label>
               <Input id="mfa-off-code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="123 456" className="w-40" />
             </div>
-            <Button size="sm" variant="primary" disabled={pending || !code.trim()} onClick={disable}>Disable</Button>
-            <Button size="sm" variant="ghost" onClick={() => { setDisabling(false); setCode(""); }}>Cancel</Button>
+            <Button size="sm" variant="primary" disabled={pending || !code.trim()} onClick={disable}>{t("sec.disable")}</Button>
+            <Button size="sm" variant="ghost" onClick={() => { setDisabling(false); setCode(""); }}>{t("common.cancel")}</Button>
           </div>
         )}
       </div>
@@ -89,30 +90,30 @@ export function MfaCard({ status, required }: { status: MfaStatusView; required:
     <div className="space-y-3">
       {required && (
         <div className="flex items-start gap-1.5 rounded-md border border-warning/40 bg-warning/10 p-2.5 text-[12.5px] text-warning">
-          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" /> Your role requires two-factor authentication. Please set it up now.
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" /> {t("sec.roleRequiresMfa")}
         </div>
       )}
       {!setup ? (
         <>
-          <p className="text-[13px] text-ink-2">Add a second step at sign-in using an authenticator app (Google Authenticator, Authy, 1Password…).</p>
-          <Button size="sm" variant="primary" disabled={pending} onClick={begin}><ShieldCheck className="h-3.5 w-3.5" /> Enable two-factor</Button>
+          <p className="text-[13px] text-ink-2">{t("sec.addSecondStep")}</p>
+          <Button size="sm" variant="primary" disabled={pending} onClick={begin}><ShieldCheck className="h-3.5 w-3.5" /> {t("sec.enableTwoFactor")}</Button>
         </>
       ) : (
         <div className="space-y-3 rounded-lg border border-line p-3">
           <div>
-            <div className="mb-1 text-[12px] font-semibold text-ink">1 · Add this key to your authenticator app</div>
+            <div className="mb-1 text-[12px] font-semibold text-ink">{t("sec.mfaStep1")}</div>
             <div className="flex items-center gap-2">
               <code className="min-w-0 flex-1 truncate rounded bg-surface-2 px-2 py-1.5 font-mono text-[13px] tracking-wider text-ink">{setup.secret}</code>
               <Button size="sm" variant="secondary" onClick={() => copy(setup.secret, "sec")}>{copied === "sec" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}</Button>
             </div>
-            <button type="button" className="mt-1 text-[11px] text-accent hover:underline" onClick={() => copy(setup.otpauthUri, "uri")}>{copied === "uri" ? "Copied setup link" : "Or copy the otpauth:// setup link"}</button>
+            <button type="button" className="mt-1 text-[11px] text-accent hover:underline" onClick={() => copy(setup.otpauthUri, "uri")}>{copied === "uri" ? t("sec.copiedSetupLink") : t("sec.copyOtpauth")}</button>
           </div>
           <div>
-            <Label htmlFor="mfa-code">2 · Enter the 6-digit code it shows</Label>
+            <Label htmlFor="mfa-code">{t("sec.mfaStep2")}</Label>
             <div className="flex items-center gap-2">
               <Input id="mfa-code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="123 456" className="w-40" inputMode="numeric" autoComplete="one-time-code" />
-              <Button size="sm" variant="primary" disabled={pending || code.trim().length < 6} onClick={confirm}>Verify &amp; enable</Button>
-              <Button size="sm" variant="ghost" onClick={() => { setSetup(null); setCode(""); }}>Cancel</Button>
+              <Button size="sm" variant="primary" disabled={pending || code.trim().length < 6} onClick={confirm}>{t("sec.verifyEnable")}</Button>
+              <Button size="sm" variant="ghost" onClick={() => { setSetup(null); setCode(""); }}>{t("common.cancel")}</Button>
             </div>
           </div>
         </div>

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Select, Textarea } from "@/components/ui";
-import { useToast } from "@/components/providers";
+import { useToast, useI18n } from "@/components/providers";
 import { setCaseStatusAction, assignCaseAction, addCaseNoteAction } from "@/app/actions/cases";
 import type { Option } from "@/domain/options";
 import type { ActionResult } from "@/lib/action";
@@ -23,16 +23,17 @@ function useRun() {
   return { run, pending };
 }
 
-const TRANSITIONS: { status: string; label: string; variant?: "primary" | "secondary" | "danger" }[] = [
-  { status: "in_progress", label: "Start" },
-  { status: "waiting", label: "Waiting" },
-  { status: "escalated", label: "Escalate", variant: "danger" },
-  { status: "resolved", label: "Resolve", variant: "primary" },
-  { status: "closed", label: "Close" },
+const TRANSITIONS: { status: string; labelKey: string; variant?: "primary" | "secondary" | "danger" }[] = [
+  { status: "in_progress", labelKey: "caseb.start" },
+  { status: "waiting", labelKey: "caseb.waiting" },
+  { status: "escalated", labelKey: "caseb.escalate", variant: "danger" },
+  { status: "resolved", labelKey: "caseb.resolve", variant: "primary" },
+  { status: "closed", labelKey: "caseb.close" },
 ];
 
 export function CaseActionBar({ caseId, status, users, assignedToId }: { caseId: string; status: string; users: Option[]; assignedToId: string | null }) {
   const { run, pending } = useRun();
+  const { t } = useI18n();
   const [note, setNote] = useState("");
   const [internal, setInternal] = useState(true);
   const isClosed = status === "resolved" || status === "closed";
@@ -40,14 +41,14 @@ export function CaseActionBar({ caseId, status, users, assignedToId }: { caseId:
   return (
     <div className="space-y-4">
       <div>
-        <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-3">Status</div>
+        <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t("common.status")}</div>
         <div className="flex flex-wrap gap-2">
           {isClosed ? (
-            <Button variant="secondary" size="sm" disabled={pending} onClick={() => run(() => setCaseStatusAction(caseId, "in_progress"), "Reopened")}>Reopen</Button>
+            <Button variant="secondary" size="sm" disabled={pending} onClick={() => run(() => setCaseStatusAction(caseId, "in_progress"), t("caseb.reopened"))}>{t("caseb.reopen")}</Button>
           ) : (
-            TRANSITIONS.filter((t) => t.status !== status).map((t) => (
-              <Button key={t.status} variant={t.variant ?? "secondary"} size="sm" disabled={pending} onClick={() => run(() => setCaseStatusAction(caseId, t.status), `Moved to ${t.label}`)}>
-                {t.label}
+            TRANSITIONS.filter((tr) => tr.status !== status).map((tr) => (
+              <Button key={tr.status} variant={tr.variant ?? "secondary"} size="sm" disabled={pending} onClick={() => run(() => setCaseStatusAction(caseId, tr.status), t("common.movedTo", { status: t(tr.labelKey) }))}>
+                {t(tr.labelKey)}
               </Button>
             ))
           )}
@@ -55,19 +56,19 @@ export function CaseActionBar({ caseId, status, users, assignedToId }: { caseId:
       </div>
 
       <div>
-        <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-3">Assigned to</div>
-        <Select value={assignedToId ?? ""} disabled={pending} onChange={(e) => run(() => assignCaseAction(caseId, e.target.value), "Reassigned")} className="w-56">
-          <option value="">Unassigned</option>
+        <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t("caseb.assignedTo")}</div>
+        <Select value={assignedToId ?? ""} disabled={pending} onChange={(e) => run(() => assignCaseAction(caseId, e.target.value), t("caseb.reassigned"))} className="w-56">
+          <option value="">{t("caseb.unassigned")}</option>
           {users.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}
         </Select>
       </div>
 
       <div>
-        <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-3">Add note</div>
-        <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Internal note or customer reply…" className="min-h-16" />
+        <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t("caseb.addNote")}</div>
+        <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("caseb.notePlaceholder")} className="min-h-16" />
         <div className="mt-2 flex items-center justify-between">
           <label className="flex items-center gap-2 text-xs text-ink-2">
-            <input type="checkbox" checked={internal} onChange={(e) => setInternal(e.target.checked)} className="accent-[var(--accent)]" /> Internal only
+            <input type="checkbox" checked={internal} onChange={(e) => setInternal(e.target.checked)} className="accent-[var(--accent)]" /> {t("caseb.internalOnly")}
           </label>
           <Button
             variant="primary"
@@ -78,10 +79,10 @@ export function CaseActionBar({ caseId, status, users, assignedToId }: { caseId:
                 const res = await addCaseNoteAction(caseId, note.trim(), internal);
                 if (res.ok) setNote("");
                 return res;
-              }, "Note added")
+              }, t("caseb.noteAdded"))
             }
           >
-            Add note
+            {t("caseb.addNote")}
           </Button>
         </div>
       </div>

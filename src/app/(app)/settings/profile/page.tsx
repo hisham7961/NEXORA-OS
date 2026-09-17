@@ -7,12 +7,14 @@ import { mfaStatus, mfaRequiredFor } from "@/domain/mfa";
 import { SessionManager, type SessionRow } from "@/components/settings/session-manager";
 import { MfaCard } from "@/components/settings/mfa-card";
 import { PageHeader, Panel, PanelHeader, PanelBody, Avatar, Badge } from "@/components/ui";
+import { getServerI18n } from "@/lib/server-i18n";
 
 export const metadata: Metadata = { title: "My Profile" };
 
 export default async function ProfilePage() {
   const user = await requireUser();
   const principal = await requirePrincipal();
+  const { t } = await getServerI18n();
   const access = await describeUserAccess(user.id);
   const currentSessionId = await getCurrentSessionId();
   const sessions = await listMySessions(principal, currentSessionId);
@@ -24,7 +26,7 @@ export default async function ProfilePage() {
 
   return (
     <>
-      <PageHeader title="My Profile" description="Your account, scope and what you can access." />
+      <PageHeader title={t("prof.myProfile")} description={t("prof.myProfileSub")} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Panel className="lg:col-span-1">
@@ -33,32 +35,32 @@ export default async function ProfilePage() {
             <div className="mt-3 text-[15px] font-semibold text-ink">{user.name}</div>
             <div className="text-xs text-ink-3">{user.email}</div>
             {user.title && <div className="mt-1 text-[13px] text-ink-2">{user.title}</div>}
-            {user.isSuperAdmin && <Badge category="critical" className="mt-3" dot>Super Admin</Badge>}
+            {user.isSuperAdmin && <Badge category="critical" className="mt-3" dot>{t("prof.superAdmin")}</Badge>}
             <dl className="mt-4 w-full space-y-1.5 text-start text-[13px]">
-              <div className="flex justify-between"><dt className="text-ink-3">Language</dt><dd className="text-ink">{user.locale === "ar" ? "العربية" : "English"}</dd></div>
-              <div className="flex justify-between"><dt className="text-ink-3">Timezone</dt><dd className="text-ink">{user.timezone}</dd></div>
-              <div className="flex justify-between"><dt className="text-ink-3">Status</dt><dd className="text-ink capitalize">{user.status}</dd></div>
+              <div className="flex justify-between"><dt className="text-ink-3">{t("prof.language")}</dt><dd className="text-ink">{user.locale === "ar" ? "العربية" : "English"}</dd></div>
+              <div className="flex justify-between"><dt className="text-ink-3">{t("prof.timezone")}</dt><dd className="text-ink">{user.timezone}</dd></div>
+              <div className="flex justify-between"><dt className="text-ink-3">{t("prof.status")}</dt><dd className="text-ink">{t(`status.${user.status}`)}</dd></div>
             </dl>
-            <p className="mt-4 text-[11px] text-ink-3">Switch language and theme from the top bar.</p>
+            <p className="mt-4 text-[11px] text-ink-3">{t("prof.switchHint")}</p>
           </PanelBody>
         </Panel>
 
         <Panel className="lg:col-span-2">
-          <PanelHeader title="Roles &amp; scope" description="Where and what you are authorized to do." />
+          <PanelHeader title={t("prof.rolesScope")} description={t("prof.rolesScopeSub")} />
           <PanelBody>
             {!access || access.assignments.length === 0 ? (
               <p className="text-[13px] text-ink-3">
-                {user.isSuperAdmin ? "You have full, unscoped access as Super Admin." : "You have no role assignments yet."}
+                {user.isSuperAdmin ? t("prof.fullAccess") : t("prof.noRoles")}
               </p>
             ) : (
               <div className="overflow-x-auto rounded-md border border-line">
                 <table className="w-full text-[12.5px]">
                   <thead className="bg-surface-2/60 text-[11px] uppercase tracking-wide text-ink-3">
                     <tr>
-                      <th className="px-3 py-2 text-start">Role</th>
-                      <th className="px-3 py-2 text-start">Company</th>
-                      <th className="px-3 py-2 text-start">Brand</th>
-                      <th className="px-3 py-2 text-start">Country</th>
+                      <th className="px-3 py-2 text-start">{t("common.role")}</th>
+                      <th className="px-3 py-2 text-start">{t("common.company")}</th>
+                      <th className="px-3 py-2 text-start">{t("common.brand")}</th>
+                      <th className="px-3 py-2 text-start">{t("common.country")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -78,14 +80,14 @@ export default async function ProfilePage() {
         </Panel>
 
         <Panel className="lg:col-span-3">
-          <PanelHeader title="Two-factor authentication" description="Protect your account with a second step at sign-in." />
+          <PanelHeader title={t("prof.twoFactor")} description={t("prof.twoFactorSub")} />
           <PanelBody>
             <MfaCard status={{ enabled: mfa.enabled, enrolledAt: mfa.enrolledAt ? mfa.enrolledAt.toISOString() : null, recoveryRemaining: mfa.recoveryRemaining }} required={mfaRequired} />
           </PanelBody>
         </Panel>
 
         <Panel className="lg:col-span-3">
-          <PanelHeader title="Active sessions" description="Devices signed in as you. Revoke any you don't recognize — access is cut on their next request." />
+          <PanelHeader title={t("prof.activeSessions")} description={t("prof.activeSessionsSub")} />
           <PanelBody>
             <SessionManager sessions={sessionRows} />
           </PanelBody>

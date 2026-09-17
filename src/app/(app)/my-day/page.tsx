@@ -19,7 +19,7 @@ export default async function MyDayPage() {
     <>
       <PageHeader
         title={t("myday.title")}
-        description="Your responsibilities for today, in one place."
+        description={t("myday.subtitle")}
         actions={
           <div className="flex items-center gap-2">
             {attendanceToday?.checkedIn ? (
@@ -37,7 +37,7 @@ export default async function MyDayPage() {
         <Panel>
           <PanelHeader title={t("myday.tasks")} icon={<ListTodo className="h-4 w-4" />} action={<span className="text-xs text-ink-3 tabular">{tasks.length}</span>} />
           {tasks.length === 0 ? (
-            <EmptyState title={t("myday.empty")} description="Tasks assigned to you or that you own will appear here." />
+            <EmptyState title={t("myday.empty")} description={t("myday.tasksEmptyBody")} />
           ) : (
             <ul className="divide-y divide-line">
               {tasks.map((task) => {
@@ -62,7 +62,7 @@ export default async function MyDayPage() {
         <Panel>
           <PanelHeader title={t("myday.checks")} icon={<ClipboardCheck className="h-4 w-4" />} action={<Link href="/daily-checks" className="text-xs text-accent hover:underline">{t("common.viewAll")}</Link>} />
           {checks.length === 0 ? (
-            <EmptyState title="No checks for today" description="Recurring daily checks assigned to you will appear here (§8)." />
+            <EmptyState title={t("myday.noChecks")} description={t("myday.noChecksBody")} />
           ) : (
             <ul className="divide-y divide-line">
               {checks.map((c) => (
@@ -79,14 +79,14 @@ export default async function MyDayPage() {
         <Panel>
           <PanelHeader title={t("myday.approvals")} icon={<Stamp className="h-4 w-4" />} action={<Link href="/approvals" className="text-xs text-accent hover:underline">{t("common.viewAll")}</Link>} />
           {approvals.length === 0 ? (
-            <EmptyState title="Nothing waiting for you" description="Items needing your approval will appear here (§24)." />
+            <EmptyState title={t("myday.nothingWaiting")} description={t("myday.nothingWaitingBody")} />
           ) : (
             <ul className="divide-y divide-line">
               {approvals.map((a) => (
                 <li key={a.id}>
                   <Link href={`/approvals/${a.requestId}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-2">
                     <span className="flex-1 truncate text-[13px] text-ink">{a.title}</span>
-                    <Badge category="warning" dot>Pending</Badge>
+                    <Badge category="warning" dot>{t("myday.pending")}</Badge>
                   </Link>
                 </li>
               ))}
@@ -97,7 +97,7 @@ export default async function MyDayPage() {
         <Panel>
           <PanelHeader title={t("myday.deadlines")} icon={<CalendarClock className="h-4 w-4" />} />
           {deadlines.length === 0 ? (
-            <EmptyState title="No upcoming deadlines" description="Work due within the next 7 days will appear here." />
+            <EmptyState title={t("myday.noDeadlines")} description={t("myday.noDeadlinesBody")} />
           ) : (
             <ul className="divide-y divide-line">
               {deadlines.map((d) => (
@@ -112,7 +112,7 @@ export default async function MyDayPage() {
 
         {mentions.length > 0 && (
           <Panel>
-            <PanelHeader title="Mentions" icon={<AtSign className="h-4 w-4" />} action={<Link href="/notifications" className="text-xs text-accent hover:underline">All</Link>} />
+            <PanelHeader title={t("myday.mentions")} icon={<AtSign className="h-4 w-4" />} action={<Link href="/notifications" className="text-xs text-accent hover:underline">{t("common.all")}</Link>} />
             <ul className="divide-y divide-line">
               {mentions.map((m) => (
                 <li key={m.id}><Link href={m.channelId ? `/discussions/${m.channelId}` : "/notifications"} className="block px-4 py-2.5 hover:bg-surface-2"><div className="text-[13px] text-ink">{m.title}</div>{m.body && <div className="truncate text-xs text-ink-3">{m.body}</div>}</Link></li>
@@ -123,10 +123,10 @@ export default async function MyDayPage() {
 
         {cases.length > 0 && (
           <Panel>
-            <PanelHeader title="My customer cases" icon={<LifeBuoy className="h-4 w-4" />} action={<Link href="/cases" className="text-xs text-accent hover:underline">All</Link>} />
+            <PanelHeader title={t("myday.myCases")} icon={<LifeBuoy className="h-4 w-4" />} action={<Link href="/cases" className="text-xs text-accent hover:underline">{t("common.all")}</Link>} />
             <ul className="divide-y divide-line">
               {cases.map((c) => (
-                <li key={c.id}><Link href={`/cases/${c.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-2"><span className="flex-1 truncate text-[13px] capitalize text-ink">{c.type.replace(/_/g, " ")}</span><Badge className="capitalize">{c.priority}</Badge><StatusBadge module="customer_case" status={c.status} /></Link></li>
+                <li key={c.id}><Link href={`/cases/${c.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-2"><span className="flex-1 truncate text-[13px] capitalize text-ink">{c.type.replace(/_/g, " ")}</span><Badge className="capitalize">{t(`priority.${c.priority}`)}</Badge><StatusBadge module="customer_case" status={c.status} /></Link></li>
               ))}
             </ul>
           </Panel>
@@ -134,7 +134,7 @@ export default async function MyDayPage() {
 
         {designs.length > 0 && (
           <Panel>
-            <PanelHeader title="My design requests" icon={<Palette className="h-4 w-4" />} action={<Link href="/design" className="text-xs text-accent hover:underline">All</Link>} />
+            <PanelHeader title={t("myday.myDesigns")} icon={<Palette className="h-4 w-4" />} action={<Link href="/design" className="text-xs text-accent hover:underline">{t("common.all")}</Link>} />
             <ul className="divide-y divide-line">
               {designs.map((d) => (
                 <li key={d.id}><Link href={`/design/${d.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-2"><span className="flex-1 truncate text-[13px] capitalize text-ink">{d.assetType}</span><StatusBadge module="design" status={d.status} /></Link></li>
@@ -145,7 +145,7 @@ export default async function MyDayPage() {
 
         {campaigns.length > 0 && (
           <Panel>
-            <PanelHeader title="My campaigns" icon={<Megaphone className="h-4 w-4" />} action={<Link href="/campaigns" className="text-xs text-accent hover:underline">All</Link>} />
+            <PanelHeader title={t("myday.myCampaigns")} icon={<Megaphone className="h-4 w-4" />} action={<Link href="/campaigns" className="text-xs text-accent hover:underline">{t("common.all")}</Link>} />
             <ul className="divide-y divide-line">
               {campaigns.map((c) => (
                 <li key={c.id}><Link href={`/campaigns/${c.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-2"><span className="flex-1 truncate text-[13px] text-ink">{c.name}</span><StatusBadge module="campaign" status={c.status} /></Link></li>
@@ -156,7 +156,7 @@ export default async function MyDayPage() {
 
         {publishingToday.length > 0 && (
           <Panel>
-            <PanelHeader title="Publishing due today" icon={<Share2 className="h-4 w-4" />} action={<Link href="/social" className="text-xs text-accent hover:underline">All</Link>} />
+            <PanelHeader title={t("myday.publishingToday")} icon={<Share2 className="h-4 w-4" />} action={<Link href="/social" className="text-xs text-accent hover:underline">{t("common.all")}</Link>} />
             <ul className="divide-y divide-line">
               {publishingToday.map((p) => (
                 <li key={p.id}><Link href={`/social/${p.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-2"><span className="flex-1 truncate text-[13px] capitalize text-ink">{p.contentType}{p.platform ? ` · ${p.platform}` : ""}</span><StatusBadge module="publishing" status={p.status} /></Link></li>
@@ -167,7 +167,7 @@ export default async function MyDayPage() {
 
         {registrations.length > 0 && (
           <Panel>
-            <PanelHeader title="Registration actions" icon={<FileCheck className="h-4 w-4" />} action={<Link href="/registrations" className="text-xs text-accent hover:underline">All</Link>} />
+            <PanelHeader title={t("myday.regActions")} icon={<FileCheck className="h-4 w-4" />} action={<Link href="/registrations" className="text-xs text-accent hover:underline">{t("common.all")}</Link>} />
             <ul className="divide-y divide-line">
               {registrations.map((r) => (
                 <li key={r.id}><Link href={`/registrations/${r.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-2"><span className="flex-1 truncate text-[13px] text-ink">{r.label}</span>{r.dueDate && <span className="text-xs text-ink-3 tabular">{formatDateShort(r.dueDate, locale)}</span>}<StatusBadge module="generic" status={r.stage} /></Link></li>
@@ -178,7 +178,7 @@ export default async function MyDayPage() {
 
         {renewals.length > 0 && (
           <Panel>
-            <PanelHeader title="Upcoming renewals" icon={<CreditCard className="h-4 w-4" />} action={<Link href="/subscriptions" className="text-xs text-accent hover:underline">All</Link>} />
+            <PanelHeader title={t("myday.renewals")} icon={<CreditCard className="h-4 w-4" />} action={<Link href="/subscriptions" className="text-xs text-accent hover:underline">{t("common.all")}</Link>} />
             <ul className="divide-y divide-line">
               {renewals.map((s) => (
                 <li key={s.id}><Link href={`/subscriptions/${s.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-2"><span className="flex-1 truncate text-[13px] text-ink">{s.provider}</span><span className="text-xs text-warning tabular">{s.renewalDate ? formatDateShort(s.renewalDate, locale) : ""}</span></Link></li>
@@ -189,9 +189,9 @@ export default async function MyDayPage() {
 
         {unreadDiscussions > 0 && (
           <Panel>
-            <PanelHeader title="Discussions" icon={<MessagesSquare className="h-4 w-4" />} />
+            <PanelHeader title={t("myday.discussions")} icon={<MessagesSquare className="h-4 w-4" />} />
             <Link href="/discussions" className="flex items-center gap-3 px-4 py-3 hover:bg-surface-2">
-              <span className="flex-1 text-[13px] text-ink">You have unread messages in <span className="font-semibold">{unreadDiscussions}</span> {unreadDiscussions === 1 ? "channel" : "channels"}</span>
+              <span className="flex-1 text-[13px] text-ink">{t("myday.unreadPrefix")} <span className="font-semibold">{unreadDiscussions}</span> {unreadDiscussions === 1 ? t("myday.channelOne") : t("myday.channelMany")}</span>
               <Badge category="info">{unreadDiscussions}</Badge>
             </Link>
           </Panel>

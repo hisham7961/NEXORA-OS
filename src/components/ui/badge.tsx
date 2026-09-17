@@ -1,6 +1,9 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { statusMeta, type StatusCategory } from "@/lib/status";
+import { useI18n } from "@/components/providers";
 
 const CATEGORY_STYLES: Record<StatusCategory, string> = {
   neutral: "bg-neutral-soft text-ink-2",
@@ -45,10 +48,16 @@ export function StatusBadge({
   status: string | null | undefined;
   className?: string;
 }) {
+  const { t } = useI18n();
   const meta = statusMeta(module, status);
+  // Localized status label with a graceful fallback for config-defined statuses
+  // that have no dictionary key yet (humanized English, never a raw key).
+  const key = `status.${meta.key}`;
+  const translated = t(key);
+  const label = translated === key ? meta.label : translated;
   return (
     <Badge category={meta.category} dot className={className}>
-      {meta.label}
+      {label}
     </Badge>
   );
 }

@@ -34,7 +34,7 @@ export function CommandPalette({ allowed, createCommands = [] }: { allowed: stri
     for (const group of NAVIGATION) {
       for (const item of group.items) {
         if (allowedSet.has(item.key)) {
-          cmds.push({ type: "nav", id: item.key, title: t(item.labelKey), href: item.href, subtitle: "Go to" });
+          cmds.push({ type: "nav", id: item.key, title: t(item.labelKey), href: item.href, subtitle: t("cmd.goTo") });
         }
       }
     }
@@ -43,8 +43,8 @@ export function CommandPalette({ allowed, createCommands = [] }: { allowed: stri
 
   // "Create …" commands (§29) — deep-link to the module with ?new=1.
   const createHits = useMemo<SearchHit[]>(
-    () => createCommands.map((c) => ({ type: "create", id: c.key, title: c.label, href: c.href, subtitle: "Create" })),
-    [createCommands],
+    () => createCommands.map((c) => ({ type: "create", id: c.key, title: c.label, href: c.href, subtitle: t("cmd.create") })),
+    [createCommands, t],
   );
 
   const filteredNav = useMemo(() => {
@@ -69,8 +69,8 @@ export function CommandPalette({ allowed, createCommands = [] }: { allowed: stri
       setTimeout(() => inputRef.current?.focus(), 20);
       // Load personal favorites + recent items as default suggestions (§10/§11).
       Promise.all([fetch("/api/v1/favorites").then((r) => r.json()).catch(() => null), fetch("/api/v1/recent").then((r) => r.json()).catch(() => null)]).then(([fav, rec]) => {
-        const favHits: SearchHit[] = (fav?.data ?? []).filter((f: { href?: string }) => f.href).slice(0, 6).map((f: { entityType: string; entityId: string; label?: string; href: string }) => ({ type: "favorite", id: f.entityId, title: f.label ?? f.entityType, subtitle: "Favorite", href: f.href }));
-        const recHits: SearchHit[] = (rec?.data ?? []).filter((f: { href?: string }) => f.href).slice(0, 6).map((f: { entityType: string; entityId: string; label?: string; href: string }) => ({ type: "recent", id: f.entityId, title: f.label ?? f.entityType, subtitle: "Recent", href: f.href }));
+        const favHits: SearchHit[] = (fav?.data ?? []).filter((f: { href?: string }) => f.href).slice(0, 6).map((f: { entityType: string; entityId: string; label?: string; href: string }) => ({ type: "favorite", id: f.entityId, title: f.label ?? f.entityType, subtitle: t("cmd.favorite"), href: f.href }));
+        const recHits: SearchHit[] = (rec?.data ?? []).filter((f: { href?: string }) => f.href).slice(0, 6).map((f: { entityType: string; entityId: string; label?: string; href: string }) => ({ type: "recent", id: f.entityId, title: f.label ?? f.entityType, subtitle: t("cmd.recent"), href: f.href }));
         // Dedupe recents already in favorites.
         const favKeys = new Set(favHits.map((h) => h.href));
         setBookmarks([...favHits, ...recHits.filter((h) => !favKeys.has(h.href))]);

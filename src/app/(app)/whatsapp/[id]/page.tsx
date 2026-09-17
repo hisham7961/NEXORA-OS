@@ -16,6 +16,7 @@ import { WhatsappForm } from "@/components/whatsapp/whatsapp-form";
 import { WhatsappActionBar } from "@/components/whatsapp/whatsapp-actions";
 import { BrandChip, CountryChip, UserChip } from "@/components/entity-chips";
 import { formatDate, formatDateTime, formatNumber } from "@/lib/format";
+import { getServerI18n } from "@/lib/server-i18n";
 
 export const metadata: Metadata = { title: "WhatsApp campaign" };
 
@@ -25,6 +26,7 @@ function isoDate(d: Date | null | undefined): string {
 
 export default async function WhatsappDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { principal, locale } = await pageGuard("whatsapp.view");
+  const { t } = await getServerI18n();
   const { id } = await params;
 
   let data;
@@ -45,18 +47,18 @@ export default async function WhatsappDetailPage({ params }: { params: Promise<{
     canEdit ? getScopedOptions(principal, "whatsapp.edit") : Promise.resolve(null),
   ]);
   const timeline: TimelineEntry[] = activity.map((a) => ({
-    id: a.id, at: a.at, actorName: a.actorId ? refName(lookups.users, a.actorId) : "System",
+    id: a.id, at: a.at, actorName: a.actorId ? refName(lookups.users, a.actorId) : t("common.system"),
     actorColor: a.actorId ? lookups.users.get(a.actorId)?.meta : null, action: a.action, summary: a.summary,
   }));
 
   return (
     <>
-      <div className="mb-1 text-xs text-ink-3"><Link href="/whatsapp" className="hover:text-ink-2">WhatsApp Campaigns</Link> / {wa.objective ?? "Campaign"}</div>
+      <div className="mb-1 text-xs text-ink-3"><Link href="/whatsapp" className="hover:text-ink-2">{t("wa.title")}</Link> / {wa.objective ?? t("wa.campaignFallback")}</div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#25D366]/15 text-[#128C7E]"><MessageCircle className="h-5 w-5" /></div>
           <div>
-            <h1 className="text-lg font-semibold tracking-tight text-ink">{wa.objective ?? "WhatsApp campaign"}</h1>
+            <h1 className="text-lg font-semibold tracking-tight text-ink">{wa.objective ?? t("wa.campaignFallback")}</h1>
             <div className="mt-0.5 flex items-center gap-2 text-xs text-ink-3">
               <BrandChip name={refName(lookups.brands, wa.brandId)} color={wa.brandId ? lookups.brands.get(wa.brandId)?.meta : null} />
               <CountryChip name={refName(lookups.countries, wa.countryId)} iso2={wa.countryId ? lookups.countries.get(wa.countryId)?.meta : null} />
@@ -76,35 +78,35 @@ export default async function WhatsappDetailPage({ params }: { params: Promise<{
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <Panel>
-            <PanelHeader title="Brief" />
+            <PanelHeader title={t("wa.brief")} />
             <PanelBody className="space-y-3">
               <div className="grid grid-cols-2 gap-3 text-[13px]">
-                <div><div className="text-ink-3 text-xs">Audience</div><div className="text-ink">{wa.audience ?? "—"}</div></div>
-                <div><div className="text-ink-3 text-xs">Planned</div><div className="text-ink">{formatDate(wa.plannedDate, locale)}</div></div>
-                <div><div className="text-ink-3 text-xs">Responsible</div><div>{wa.responsibleUserId ? <UserChip name={refName(lookups.users, wa.responsibleUserId)} color={lookups.users.get(wa.responsibleUserId)?.meta} /> : "—"}</div></div>
-                <div><div className="text-ink-3 text-xs">Sent at</div><div className="text-ink">{wa.sentAt ? formatDateTime(wa.sentAt, locale) : "—"}</div></div>
+                <div><div className="text-ink-3 text-xs">{t("wa.audience")}</div><div className="text-ink">{wa.audience ?? "—"}</div></div>
+                <div><div className="text-ink-3 text-xs">{t("wa.planned")}</div><div className="text-ink">{formatDate(wa.plannedDate, locale)}</div></div>
+                <div><div className="text-ink-3 text-xs">{t("wa.responsible")}</div><div>{wa.responsibleUserId ? <UserChip name={refName(lookups.users, wa.responsibleUserId)} color={lookups.users.get(wa.responsibleUserId)?.meta} /> : "—"}</div></div>
+                <div><div className="text-ink-3 text-xs">{t("wa.sentAt")}</div><div className="text-ink">{wa.sentAt ? formatDateTime(wa.sentAt, locale) : "—"}</div></div>
               </div>
-              {wa.messageCopy && <div><div className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">Message</div><p className="mt-1 rounded-md border border-line bg-surface-2/40 p-2.5 text-[13px] text-ink whitespace-pre-line">{wa.messageCopy}</p></div>}
+              {wa.messageCopy && <div><div className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t("wa.message")}</div><p className="mt-1 rounded-md border border-line bg-surface-2/40 p-2.5 text-[13px] text-ink whitespace-pre-line">{wa.messageCopy}</p></div>}
             </PanelBody>
           </Panel>
 
           {results && (
             <Panel>
-              <PanelHeader title="Results" description="Reported delivery and engagement." />
+              <PanelHeader title={t("wa.results")} description={t("wa.resultsSub")} />
               <PanelBody className="grid grid-cols-3 gap-4 sm:grid-cols-6">
-                <Metric label="Sent" value={formatNumber(results.sent ?? 0, locale)} />
-                <Metric label="Delivered" value={formatNumber(results.delivered ?? 0, locale)} />
-                <Metric label="Read" value={formatNumber(results.read ?? 0, locale)} />
-                <Metric label="Replied" value={formatNumber(results.replied ?? 0, locale)} category="success" />
-                <Metric label="Opt-outs" value={formatNumber(results.optOut ?? 0, locale)} category={Number(results.optOut ?? 0) > 0 ? "warning" : "neutral"} />
-                <Metric label="Conversions" value={formatNumber(results.conversions ?? 0, locale)} category="success" />
+                <Metric label={t("wa.sent")} value={formatNumber(results.sent ?? 0, locale)} />
+                <Metric label={t("wa.delivered")} value={formatNumber(results.delivered ?? 0, locale)} />
+                <Metric label={t("wa.read")} value={formatNumber(results.read ?? 0, locale)} />
+                <Metric label={t("wa.replied")} value={formatNumber(results.replied ?? 0, locale)} category="success" />
+                <Metric label={t("wa.optOuts")} value={formatNumber(results.optOut ?? 0, locale)} category={Number(results.optOut ?? 0) > 0 ? "warning" : "neutral"} />
+                <Metric label={t("wa.conversions")} value={formatNumber(results.conversions ?? 0, locale)} category="success" />
               </PanelBody>
             </Panel>
           )}
 
           <Panel>
-            <PanelHeader title="Activity" />
-            <PanelBody><ActivityTimeline entries={timeline} locale={locale} empty="No activity yet." /></PanelBody>
+            <PanelHeader title={t("common.activity")} />
+            <PanelBody><ActivityTimeline entries={timeline} locale={locale} empty={t("common.noActivity")} /></PanelBody>
           </Panel>
           <EntityFiles principal={principal} entityType="WhatsappCampaign" entityId={wa.id} scope={{ brandId: wa.brandId, countryId: wa.countryId }} />
         </div>
@@ -112,11 +114,11 @@ export default async function WhatsappDetailPage({ params }: { params: Promise<{
         <div className="space-y-4">
           {canEdit ? (
             <Panel>
-              <PanelHeader title="Workflow" />
+              <PanelHeader title={t("wa.workflow")} />
               <PanelBody><WhatsappActionBar waId={wa.id} status={wa.status} canApprove={canApprove} /></PanelBody>
             </Panel>
           ) : (
-            <Panel><PanelBody><EmptyState title="Read-only" description="You don't have edit access to advance this campaign." /></PanelBody></Panel>
+            <Panel><PanelBody><EmptyState title={t("wa.readOnly")} description={t("wa.readOnlyBody")} /></PanelBody></Panel>
           )}
         </div>
       </div>

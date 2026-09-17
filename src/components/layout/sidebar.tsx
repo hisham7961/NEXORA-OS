@@ -87,7 +87,7 @@ export function Sidebar({ allowed }: { allowed: string[] }) {
           <aside className="relative flex w-64 flex-col border-e border-line bg-surface animate-slide-up">
             <div className="flex items-center justify-between border-b border-line pe-2">
               <div className="flex-1">{brandHeader}</div>
-              <button className="p-2 text-ink-3 hover:text-ink" onClick={() => setMobileNavOpen(false)} aria-label="Close">
+              <button className="p-2 text-ink-3 hover:text-ink" onClick={() => setMobileNavOpen(false)} aria-label={t("common.close")}>
                 <X className="h-4 w-4" />
               </button>
             </div>

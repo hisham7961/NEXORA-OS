@@ -4,12 +4,14 @@ import { AccessDenied } from "@/components/access-denied";
 import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/ui";
 import { ReportBuilder } from "@/components/reports/report-builder";
+import { getServerI18n } from "@/lib/server-i18n";
 
 export const metadata: Metadata = { title: "Reports" };
 
 export default async function ReportsPage() {
   const { principal, locale, denied } = await pageGuard("reports.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   // Saved operational reports are SavedViews under a "report:*" module namespace.
   const savedReports = await prisma.savedView.findMany({
     where: { userId: principal.userId, module: { startsWith: "report:" } },
@@ -19,7 +21,7 @@ export default async function ReportsPage() {
 
   return (
     <>
-      <PageHeader title="Report Builder" description="Build operational reports from approved fields — filters, columns, grouping and aggregation. Every report enforces your permissions and scope; export carries the same. Distinct from the statutory Accounting reports." />
+      <PageHeader title={t("rpt.title")} description={t("rpt.subtitle")} />
       <ReportBuilder savedReports={savedReports} />
     </>
   );

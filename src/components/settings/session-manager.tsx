@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Monitor, LogOut, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui";
-import { useToast } from "@/components/providers";
+import { useToast, useI18n } from "@/components/providers";
 import { revokeSessionAction, revokeOtherSessionsAction } from "@/app/actions/sessions";
 
 export interface SessionRow {
@@ -32,27 +32,28 @@ function deviceLabel(ua: string | null): string {
 export function SessionManager({ sessions }: { sessions: SessionRow[] }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [pending, start] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
   const hasOthers = sessions.some((s) => !s.current);
 
   const revoke = (id: string, current: boolean) => {
-    if (current && !confirm("This signs out your current device. Continue?")) return;
-    if (!current && !confirm("Sign out this device? It will need to log in again.")) return;
+    if (current && !confirm(t("ss.signOutCurrentConfirm"))) return;
+    if (!current && !confirm(t("ss.signOutDeviceConfirm"))) return;
     setBusyId(id);
     start(async () => {
       const r = await revokeSessionAction(id);
       setBusyId(null);
-      if (r.ok) { toast({ kind: "success", title: "Session revoked" }); if (current) router.push("/login"); else router.refresh(); }
+      if (r.ok) { toast({ kind: "success", title: t("ss.sessionRevoked") }); if (current) router.push("/login"); else router.refresh(); }
       else toast({ kind: "error", title: r.error });
     });
   };
 
   const revokeOthers = () => {
-    if (!confirm("Sign out every other device? This keeps you signed in here only.")) return;
+    if (!confirm(t("ss.signOutOthersConfirm"))) return;
     start(async () => {
       const r = await revokeOtherSessionsAction();
-      if (r.ok) { toast({ kind: "success", title: `Signed out ${r.data?.revoked ?? 0} other session(s)` }); router.refresh(); }
+      if (r.ok) { toast({ kind: "success", title: t("ss.signedOutN", { count: r.data?.revoked ?? 0 }) }); router.refresh(); }
       else toast({ kind: "error", title: r.error });
     });
   };
@@ -67,17 +68,17 @@ export function SessionManager({ sessions }: { sessions: SessionRow[] }) {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 text-[13px] text-ink">
                   <span className="truncate font-medium">{deviceLabel(s.userAgent)}</span>
-                  {s.current && <span className="inline-flex items-center gap-1 rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase text-accent"><ShieldCheck className="h-3 w-3" /> This device</span>}
+                  {s.current && <span className="inline-flex items-center gap-1 rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase text-accent"><ShieldCheck className="h-3 w-3" /> {t("ss.thisDevice")}</span>}
                 </div>
-                <div className="text-[11px] text-ink-3">{s.ip ?? "unknown IP"} · {s.lastActiveAt ? `active ${new Date(s.lastActiveAt).toLocaleString()}` : `signed in ${new Date(s.createdAt).toLocaleDateString()}`}</div>
+                <div className="text-[11px] text-ink-3">{s.ip ?? t("ss.unknownIp")} · {s.lastActiveAt ? t("ss.activeAt", { date: new Date(s.lastActiveAt).toLocaleString() }) : t("ss.signedInAt", { date: new Date(s.createdAt).toLocaleDateString() })}</div>
               </div>
             </div>
-            <Button size="sm" variant="ghost" disabled={pending && busyId === s.id} onClick={() => revoke(s.id, s.current)}><LogOut className="h-3.5 w-3.5" /> {s.current ? "Sign out" : "Revoke"}</Button>
+            <Button size="sm" variant="ghost" disabled={pending && busyId === s.id} onClick={() => revoke(s.id, s.current)}><LogOut className="h-3.5 w-3.5" /> {s.current ? t("ss.signOut") : t("ss.revoke")}</Button>
           </li>
         ))}
       </ul>
       {hasOthers && (
-        <Button variant="secondary" size="sm" disabled={pending} onClick={revokeOthers}><LogOut className="h-3.5 w-3.5" /> Sign out all other devices</Button>
+        <Button variant="secondary" size="sm" disabled={pending} onClick={revokeOthers}><LogOut className="h-3.5 w-3.5" /> {t("ss.signOutAllOthers")}</Button>
       )}
     </div>
   );

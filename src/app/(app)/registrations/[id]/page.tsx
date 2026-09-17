@@ -12,11 +12,13 @@ import { getLookups, refName } from "@/domain/lookups";
 import { Panel, PanelHeader, PanelBody, StatusBadge, Badge } from "@/components/ui";
 import { BrandChip, CountryChip, UserChip } from "@/components/entity-chips";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { getServerI18n } from "@/lib/server-i18n";
 
 export const metadata: Metadata = { title: "Registration Case" };
 
 export default async function RegistrationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { principal, locale } = await pageGuard("registrations.view");
+  const { t } = await getServerI18n();
   const { id } = await params;
   let data;
   try {
@@ -32,20 +34,20 @@ export default async function RegistrationDetailPage({ params }: { params: Promi
 
   return (
     <>
-      <div className="mb-1 text-xs text-ink-3"><Link href="/registrations" className="hover:text-ink-2">Registrations</Link> / {r.registrationNumber ?? "New case"}</div>
+      <div className="mb-1 text-xs text-ink-3"><Link href="/registrations" className="hover:text-ink-2">{t("dp.registrationsNav")}</Link> / {r.registrationNumber ?? t("reg.newCase")}</div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-ink">{refName(lookups.products, r.productId)}</h1>
-          <div className="mt-0.5 text-xs text-ink-3">{r.registrationNumber ? <span className="font-mono">{r.registrationNumber}</span> : "No registration number yet"}</div>
+          <div className="mt-0.5 text-xs text-ink-3">{r.registrationNumber ? <span className="font-mono">{r.registrationNumber}</span> : t("reg.noRegNumber")}</div>
         </div>
         <StatusBadge module="registration" status={r.status} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Panel className="lg:col-span-2">
-          <PanelHeader title="Timeline" description="Every event in chronological order (§14)" />
+          <PanelHeader title={t("reg.timeline")} description={t("reg.timelineSub")} />
           <PanelBody>
-            {events.length === 0 ? <p className="text-[13px] text-ink-3">No events recorded.</p> : (
+            {events.length === 0 ? <p className="text-[13px] text-ink-3">{t("reg.noEvents")}</p> : (
               <ol className="relative ms-2 space-y-4 border-s border-line ps-4">
                 {events.map((e) => (
                   <li key={e.id} className="relative">
@@ -62,31 +64,31 @@ export default async function RegistrationDetailPage({ params }: { params: Promi
 
         <div className="space-y-4">
           <Panel>
-            <PanelHeader title="Case" />
+            <PanelHeader title={t("dp.case")} />
             <PanelBody>
               <dl className="space-y-2.5 text-[13px]">
-                <div className="flex justify-between"><dt className="text-ink-3">Brand</dt><dd><BrandChip name={refName(lookups.brands, r.brandId)} color={r.brandId ? lookups.brands.get(r.brandId)?.meta : null} /></dd></div>
-                <div className="flex justify-between"><dt className="text-ink-3">Market</dt><dd><CountryChip name={refName(lookups.countries, r.countryId)} iso2={lookups.countries.get(r.countryId)?.meta} /></dd></div>
-                <div className="flex justify-between"><dt className="text-ink-3">Authority</dt><dd className="text-ink">{r.authorityId ? authorities.get(r.authorityId) ?? "—" : "—"}</dd></div>
-                <div className="flex justify-between"><dt className="text-ink-3">Assigned</dt><dd><UserChip name={refName(lookups.users, r.assignedToId)} color={r.assignedToId ? lookups.users.get(r.assignedToId)?.meta : null} /></dd></div>
-                <div className="flex justify-between"><dt className="text-ink-3">Submitted</dt><dd className="text-ink">{formatDate(r.submissionDate, locale)}</dd></div>
-                <div className="flex justify-between"><dt className="text-ink-3">Expiry</dt><dd className="text-ink">{formatDate(r.expiryDate, locale)}</dd></div>
+                <div className="flex justify-between"><dt className="text-ink-3">{t("common.brand")}</dt><dd><BrandChip name={refName(lookups.brands, r.brandId)} color={r.brandId ? lookups.brands.get(r.brandId)?.meta : null} /></dd></div>
+                <div className="flex justify-between"><dt className="text-ink-3">{t("common.market")}</dt><dd><CountryChip name={refName(lookups.countries, r.countryId)} iso2={lookups.countries.get(r.countryId)?.meta} /></dd></div>
+                <div className="flex justify-between"><dt className="text-ink-3">{t("reg.authority")}</dt><dd className="text-ink">{r.authorityId ? authorities.get(r.authorityId) ?? "—" : "—"}</dd></div>
+                <div className="flex justify-between"><dt className="text-ink-3">{t("dp.assigned")}</dt><dd><UserChip name={refName(lookups.users, r.assignedToId)} color={r.assignedToId ? lookups.users.get(r.assignedToId)?.meta : null} /></dd></div>
+                <div className="flex justify-between"><dt className="text-ink-3">{t("reg.submitted")}</dt><dd className="text-ink">{formatDate(r.submissionDate, locale)}</dd></div>
+                <div className="flex justify-between"><dt className="text-ink-3">{t("detail.expiry")}</dt><dd className="text-ink">{formatDate(r.expiryDate, locale)}</dd></div>
               </dl>
             </PanelBody>
           </Panel>
           <Panel>
-            <PanelHeader title={canEdit ? "Actions" : "Required documents"} description={canEdit ? "Advance the stage, track documents, record responses." : undefined} />
+            <PanelHeader title={canEdit ? t("dp.actions") : t("reg.docsCerts")} description={canEdit ? t("reg.timelineSub") : undefined} />
             <PanelBody>
               {canEdit ? (
                 <RegistrationActions caseId={r.id} status={r.status} requirements={docReqs.map((d) => ({ id: d.id, name: d.name, status: d.status }))} />
               ) : docReqs.length === 0 ? (
-                <p className="text-[13px] text-ink-3">No documents tracked.</p>
+                <p className="text-[13px] text-ink-3">{t("reg.noDocs")}</p>
               ) : (
                 <ul className="space-y-1.5">
                   {docReqs.map((d) => (
                     <li key={d.id} className="flex items-center justify-between text-[13px]">
                       <span className="text-ink">{d.name}</span>
-                      <Badge category={d.status === "submitted" || d.status === "received" ? "success" : d.status === "missing" ? "critical" : "warning"}>{d.status}</Badge>
+                      <Badge category={d.status === "submitted" || d.status === "received" ? "success" : d.status === "missing" ? "critical" : "warning"}>{t(`status.${d.status}`)}</Badge>
                     </li>
                   ))}
                 </ul>
@@ -106,7 +108,7 @@ export default async function RegistrationDetailPage({ params }: { params: Promi
             entityType="RegistrationCase"
             entityId={r.id}
             scope={{ companyId: r.companyId, brandId: r.brandId, countryId: r.countryId }}
-            title="Documents & certificates"
+            title={t("reg.docsCerts")}
           />
         </div>
       </div>

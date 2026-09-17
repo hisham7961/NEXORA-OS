@@ -7,6 +7,7 @@ import { UploadFileButton } from "@/components/files/file-controls";
 import { DetachFileButton } from "@/components/files/detach-button";
 import { formatBytes, fileDownloadHref, FILE_CATEGORY_LABELS } from "@/lib/files/display";
 import Link from "next/link";
+import { getServerI18n } from "@/lib/server-i18n";
 
 /**
  * Reusable "Files" panel for any entity detail page (§5). One file platform,
@@ -19,7 +20,7 @@ export async function EntityFiles({
   entityType,
   entityId,
   scope,
-  title = "Files",
+  title,
 }: {
   principal: Principal;
   entityType: string;
@@ -27,6 +28,7 @@ export async function EntityFiles({
   scope?: { companyId?: string | null; brandId?: string | null; countryId?: string | null };
   title?: string;
 }) {
+  const { t } = await getServerI18n();
   const canUpload = canAnywhere(principal, "files.create");
   const canEdit = canAnywhere(principal, "files.edit");
   const [files, options] = await Promise.all([
@@ -37,12 +39,12 @@ export async function EntityFiles({
   return (
     <Panel>
       <PanelHeader
-        title={title}
-        description="Attached files — versioned and permission-protected."
+        title={title ?? t("ef.filesTitle")}
+        description={t("ef.subtitle")}
         action={canUpload && options ? (
           <UploadFileButton
             variant="secondary"
-            label="Attach file"
+            label={t("ef.attach")}
             options={{ brands: options.brands, countries: options.countries, companies: options.companies }}
             related={{ type: entityType, id: entityId }}
             scope={scope}
@@ -50,7 +52,7 @@ export async function EntityFiles({
         ) : undefined}
       />
       {files.length === 0 ? (
-        <PanelBody className="text-[13px] text-ink-3">No files attached yet.</PanelBody>
+        <PanelBody className="text-[13px] text-ink-3">{t("ef.noFiles")}</PanelBody>
       ) : (
         <ul className="divide-y divide-line">
           {files.map((f) => (
@@ -64,7 +66,7 @@ export async function EntityFiles({
                 </div>
                 <div className="text-[11px] text-ink-3">{formatBytes(f.sizeBytes)}</div>
               </div>
-              <a href={fileDownloadHref(f.id)} className="text-ink-3 hover:text-accent" aria-label="Download"><Download className="h-4 w-4" /></a>
+              <a href={fileDownloadHref(f.id)} className="text-ink-3 hover:text-accent" aria-label={t("common.download")}><Download className="h-4 w-4" /></a>
               {canEdit && <DetachFileButton fileId={f.id} entityType={entityType} entityId={entityId} />}
             </li>
           ))}

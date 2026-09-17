@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Terminal, Check, X } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
+import { getServerI18n } from "@/lib/server-i18n";
 import { AccessDenied } from "@/components/access-denied";
 import { getDeveloperPortal } from "@/domain/platform";
 import { reconcileFeatures } from "@/domain/api-docs";
@@ -17,6 +18,7 @@ function Bool({ ok }: { ok: boolean }) {
 export default async function DeveloperPortalPage() {
   const { principal, locale, denied } = await pageGuard("developer.view");
   if (denied) return <AccessDenied locale={locale} />;
+  const { t } = await getServerI18n();
   const { features, endpoints } = await getDeveloperPortal();
   const reconcile = await reconcileFeatures();
   const myTokens = await listApiTokens(principal);
@@ -29,16 +31,16 @@ export default async function DeveloperPortalPage() {
 
   return (
     <>
-      <PageHeader title="Developer Portal" description="API, feature registry and tokens — the same backend the mobile app will use (§33, §35)." />
+      <PageHeader title={t("admin.developerPortal")} description={t("admin.developerPortalSub")} />
 
       <Panel className="mb-4">
         <PanelHeader
-          title="Feature Registry"
-          description="Web + mobile-API availability per feature (§34) — no hidden systems."
+          title={t("admin.featureRegistry")}
+          description={t("admin.featureRegistrySub")}
           icon={<Terminal className="h-4 w-4" />}
           action={reconcile.issues.length === 0
-            ? <Badge category="success">registry reconciled · {reconcile.ok} ok</Badge>
-            : <Badge category="warning">{reconcile.issues.length} drift issue{reconcile.issues.length === 1 ? "" : "s"}</Badge>}
+            ? <Badge category="success">{t("admin.registryReconciled", { ok: reconcile.ok })}</Badge>
+            : <Badge category="warning">{reconcile.issues.length === 1 ? t("admin.driftIssue", { count: reconcile.issues.length }) : t("admin.driftIssues", { count: reconcile.issues.length })}</Badge>}
         />
         {reconcile.issues.length > 0 && (
           <ul className="border-b border-line bg-warning/5 px-4 py-2 text-[12px] text-warning">
@@ -47,34 +49,34 @@ export default async function DeveloperPortalPage() {
         )}
         <DataTable
           columns={[
-            { key: "name", header: "Feature", render: (f) => f.name },
-            { key: "module", header: "Module", render: (f) => <span className="text-ink-3">{f.module}</span> },
-            { key: "web", header: "Web", align: "center", render: (f) => <Bool ok={f.webAvailable} /> },
-            { key: "mobile", header: "Mobile API", align: "center", render: (f) => <Bool ok={f.mobileApiAvailable} /> },
-            { key: "perm", header: "Permission", render: (f) => <span className="font-mono text-[11px] text-ink-3">{f.permissionKey ?? "—"}</span> },
-            { key: "endpoint", header: "Endpoint", render: (f) => <span className="font-mono text-[11px] text-ink-2">{f.endpoint ?? "—"}</span> },
-            { key: "status", header: "Status", align: "end", render: (f) => <StatusBadge module="generic" status={f.status} /> },
+            { key: "name", header: t("admin.col.feature"), render: (f) => f.name },
+            { key: "module", header: t("admin.col.module"), render: (f) => <span className="text-ink-3">{f.module}</span> },
+            { key: "web", header: t("admin.col.web"), align: "center", render: (f) => <Bool ok={f.webAvailable} /> },
+            { key: "mobile", header: t("admin.col.mobileApi"), align: "center", render: (f) => <Bool ok={f.mobileApiAvailable} /> },
+            { key: "perm", header: t("admin.col.permission"), render: (f) => <span className="font-mono text-[11px] text-ink-3">{f.permissionKey ?? "—"}</span> },
+            { key: "endpoint", header: t("admin.col.endpoint"), render: (f) => <span className="font-mono text-[11px] text-ink-2">{f.endpoint ?? "—"}</span> },
+            { key: "status", header: t("common.status"), align: "end", render: (f) => <StatusBadge module="generic" status={f.status} /> },
           ]}
           rows={features}
           getRowKey={(f) => f.id}
-          empty={<EmptyState title="No features registered" description="Register features to declare web/mobile parity and endpoints." />}
+          empty={<EmptyState title={t("admin.noFeatures")} description={t("admin.noFeaturesSub")} />}
         />
       </Panel>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel>
-          <PanelHeader title="API endpoints" description="Versioned REST — GET /api/v1/health is public." action={<a href="/api/v1/openapi.json" target="_blank" rel="noreferrer" className="text-[11px] text-accent hover:underline">OpenAPI ↗</a>} />
+          <PanelHeader title={t("admin.apiEndpoints")} description={t("admin.apiEndpointsSub")} action={<a href="/api/v1/openapi.json" target="_blank" rel="noreferrer" className="text-[11px] text-accent hover:underline">OpenAPI ↗</a>} />
           <ul className="divide-y divide-line">
             {endpoints.map((e) => (
               <li key={e.endpoint} className="flex items-center justify-between px-4 py-2.5">
                 <span className="font-mono text-[12px] text-ink">{e.endpoint}</span>
-                <span className="flex items-center gap-2">{e.mobile && <Badge category="info">mobile</Badge>}<span className="font-mono text-[10.5px] text-ink-3">{e.permission ?? ""}</span></span>
+                <span className="flex items-center gap-2">{e.mobile && <Badge category="info">{t("admin.mobile")}</Badge>}<span className="font-mono text-[10.5px] text-ink-3">{e.permission ?? ""}</span></span>
               </li>
             ))}
           </ul>
         </Panel>
         <Panel>
-          <PanelHeader title="API tokens" description="Your personal tokens for /api/v1. Send as `Authorization: Bearer <token>`. Secrets are shown once at creation and never again (§32/§35)." />
+          <PanelHeader title={t("admin.apiTokens")} description={t("admin.apiTokensSub")} />
           <PanelBody>
             <ApiTokenManager tokens={tokenRows} />
           </PanelBody>

@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 import { CheckCircle2, AlertTriangle, Info, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "./i18n";
 
 type ToastKind = "success" | "error" | "info";
 interface Toast {
@@ -27,6 +28,7 @@ const TONE = {
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const { t: tr } = useI18n();
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const remove = useCallback((id: number) => setToasts((ts) => ts.filter((t) => t.id !== id)), []);
@@ -57,7 +59,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 <div className="text-[13px] font-medium text-ink">{t.title}</div>
                 {t.description && <div className="text-xs text-ink-3">{t.description}</div>}
               </div>
-              <button onClick={() => remove(t.id)} className="text-ink-3 hover:text-ink" aria-label="Dismiss">
+              <button onClick={() => remove(t.id)} className="text-ink-3 hover:text-ink" aria-label={tr("actions.dismiss")}>
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>

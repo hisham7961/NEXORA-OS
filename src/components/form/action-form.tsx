@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { AlertTriangle } from "lucide-react";
-import { useToast } from "@/components/providers";
+import { useToast, useI18n } from "@/components/providers";
 import { Button, Field } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
@@ -39,8 +39,8 @@ export function ActionForm({
   action,
   onSuccess,
   onCancel,
-  submitLabel = "Save",
-  cancelLabel = "Cancel",
+  submitLabel,
+  cancelLabel,
   children,
   className,
   dirtyGuard = true,
@@ -56,6 +56,7 @@ export function ActionForm({
 }) {
   const [state, formAction] = useActionState<ActionResult | null, FormData>(action, null);
   const { toast } = useToast();
+  const { t } = useI18n();
   const [dirty, setDirty] = useState(false);
   const handled = useRef<ActionResult | null>(null);
 
@@ -63,7 +64,7 @@ export function ActionForm({
     if (!state || state === handled.current) return;
     handled.current = state;
     if (state.ok) {
-      toast({ kind: "success", title: "Saved" });
+      toast({ kind: "success", title: t("toast.saved") });
       setDirty(false);
       onSuccess?.(state.data);
     } else {
@@ -98,10 +99,10 @@ export function ActionForm({
         <div className="flex items-center justify-end gap-2 pt-1">
           {onCancel && (
             <Button type="button" variant="ghost" onClick={onCancel}>
-              {cancelLabel}
+              {cancelLabel ?? t("actions.cancel")}
             </Button>
           )}
-          <SubmitButton label={submitLabel} />
+          <SubmitButton label={submitLabel ?? t("actions.saveChanges")} />
         </div>
       </form>
     </FieldErrorContext.Provider>

@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Plus, Archive } from "lucide-react";
 import { Select, Input, Button } from "@/components/ui";
-import { useToast } from "@/components/providers";
+import { useToast, useI18n } from "@/components/providers";
 import { setTaskStatusAction, toggleChecklistItemAction, addChecklistItemAction, archiveTaskAction } from "@/app/actions/tasks";
 import type { ActionResult } from "@/lib/action";
 
@@ -29,27 +29,29 @@ function useAction() {
 
 export function StatusControl({ taskId, status }: { taskId: string; status: string }) {
   const { run, pending } = useAction();
+  const { t } = useI18n();
   return (
     <Select
       value={status}
       disabled={pending}
       onChange={(e) => run(() => setTaskStatusAction(taskId, e.target.value))}
       className="w-40"
-      aria-label="Change status"
+      aria-label={t("tda.changeStatus")}
     >
-      {STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
+      {STATUSES.map((s) => <option key={s} value={s}>{t(`status.${s}`)}</option>)}
     </Select>
   );
 }
 
 export function ChecklistPanel({ taskId, items }: { taskId: string; items: { id: string; text: string; isDone: boolean }[] }) {
   const { run, pending } = useAction();
+  const { t } = useI18n();
   const [draft, setDraft] = useState("");
   const done = items.filter((i) => i.isDone).length;
 
   return (
     <div>
-      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-3">Checklist ({done}/{items.length})</div>
+      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t("tda.checklist", { done, total: items.length })}</div>
       <ul className="space-y-1.5">
         {items.map((c) => (
           <li key={c.id} className="flex items-center gap-2 text-[13px]">
@@ -58,7 +60,7 @@ export function ChecklistPanel({ taskId, items }: { taskId: string; items: { id:
               disabled={pending}
               onClick={() => run(() => toggleChecklistItemAction(taskId, c.id, !c.isDone))}
               className={`flex h-4 w-4 items-center justify-center rounded border ${c.isDone ? "border-success bg-success text-white" : "border-line-strong hover:border-accent"}`}
-              aria-label={c.isDone ? "Mark incomplete" : "Mark complete"}
+              aria-label={c.isDone ? t("tda.markIncomplete") : t("tda.markComplete")}
             >
               {c.isDone && <Check className="h-3 w-3" />}
             </button>
@@ -67,9 +69,9 @@ export function ChecklistPanel({ taskId, items }: { taskId: string; items: { id:
         ))}
       </ul>
       <div className="mt-2 flex items-center gap-2">
-        <Input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Add item…" onKeyDown={(e) => { if (e.key === "Enter" && draft.trim()) { e.preventDefault(); run(() => addChecklistItemAction(taskId, draft.trim())); setDraft(""); } }} />
+        <Input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t("tda.addItem")} onKeyDown={(e) => { if (e.key === "Enter" && draft.trim()) { e.preventDefault(); run(() => addChecklistItemAction(taskId, draft.trim())); setDraft(""); } }} />
         <Button type="button" variant="secondary" size="sm" disabled={pending || !draft.trim()} onClick={() => { run(() => addChecklistItemAction(taskId, draft.trim())); setDraft(""); }}>
-          <Plus className="h-3.5 w-3.5" /> Add
+          <Plus className="h-3.5 w-3.5" /> {t("common.add")}
         </Button>
       </div>
     </div>
@@ -79,6 +81,7 @@ export function ChecklistPanel({ taskId, items }: { taskId: string; items: { id:
 export function ArchiveTaskButton({ taskId }: { taskId: string }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [pending, start] = useTransition();
   return (
     <Button
@@ -89,13 +92,13 @@ export function ArchiveTaskButton({ taskId }: { taskId: string }) {
         start(async () => {
           const res = await archiveTaskAction(taskId);
           if (res.ok) {
-            toast({ kind: "success", title: "Task archived" });
+            toast({ kind: "success", title: t("tda.taskArchived") });
             router.push("/tasks");
           } else toast({ kind: "error", title: res.error });
         })
       }
     >
-      <Archive className="h-4 w-4" /> Archive
+      <Archive className="h-4 w-4" /> {t("common.archive")}
     </Button>
   );
 }

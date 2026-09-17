@@ -2,7 +2,7 @@
   "name": "nexora-os",
   "version": "0.1.0",
   "private": true,
-  "description": "NEXORA OS — the central operating platform for a multi-company, multi-brand cosmetics group.",
+  "description": "NEXORA OS \u2014 the central operating platform for a multi-company, multi-brand cosmetics group.",
   "type": "module",
   "scripts": {
     "dev": "next dev",
@@ -18,7 +18,9 @@
     "db:studio": "prisma studio",
     "setup": "prisma generate && prisma migrate deploy && tsx prisma/seed.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "i18n:scan": "node scripts/i18n-scan.mjs",
+    "i18n:baseline": "node scripts/i18n-scan.mjs --update-baseline"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
