@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getCurrentUser, getPrincipal } from "@/lib/auth/current-user";
+import { mfaRequiredFor, isMfaEnabled } from "@/domain/mfa";
 import { allowedNavKeys, allowedCreateCommands } from "@/lib/navigation-access";
 import { DEFAULT_ROLES } from "@/lib/permissions/catalog";
 import { prisma } from "@/lib/db";
@@ -11,6 +13,16 @@ import { CommandPalette } from "@/components/layout/command-palette";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const [user, principal] = await Promise.all([getCurrentUser(), getPrincipal()]);
   if (!user || !principal) redirect("/login");
+
+  // Mandatory-MFA policy enforcement (audit SEC-02). A user covered by
+  // security.mfaRequiredForAdmins/Finance who has not enrolled is forced to the MFA
+  // setup page before reaching anything else. The enrollment page (and its API) are
+  // exempt so the requirement is satisfiable rather than a lock-out loop.
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  if (!pathname.startsWith("/settings/profile")) {
+    const [required, enrolled] = await Promise.all([mfaRequiredFor(principal), isMfaEnabled(user.id)]);
+    if (required && !enrolled) redirect("/settings/profile?mfa=required");
+  }
 
   const allowed = allowedNavKeys(principal);
   const createCommands = allowedCreateCommands(principal);
