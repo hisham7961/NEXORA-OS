@@ -10,7 +10,9 @@ export async function getFinanceOverview(principal: Principal) {
   const [accounts, journalEntries, openInvoices, recentEntries, campaigns] = await Promise.all([
     prisma.account.count(),
     prisma.journalEntry.count(),
-    prisma.invoice.count({ where: { status: { in: ["open", "overdue"] } } }),
+    // Real AR lives in SalesInvoice; the legacy Invoice model is dead (0 rows) so the
+    // KPI always read 0 (audit ARCH-01). Count open sales invoices instead.
+    prisma.salesInvoice.count({ where: { status: { in: ["issued", "partially_paid"] } } }),
     prisma.journalEntry.findMany({ orderBy: { date: "desc" }, take: 12 }),
     prisma.campaign.findMany({ where: campaignWhere, select: { actualSpend: true, currency: true } }),
   ]);
