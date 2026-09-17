@@ -60,6 +60,25 @@ scratchpad. Consolidated here rather than split across ten thin files.
 11. **SEC-02 (P2)** mandatory-MFA policy enforced server-side at the app shell (runtime-verified both states); default inert.
 12. **ARCH-07 (P2)** `RegistrationCase(companyId, status)` index + migration.
 
+## Adversarial verification of the fixes (§4 — "audit the auditors")
+
+A 13-agent verification workflow independently re-checked every fix for correctness and
+regressions, plus a cross-fix completeness critic. It confirmed 11 fixes **solid** and
+**caught two real defects in the first-pass fixes**, both then corrected and re-verified:
+
+1. **SEC-02 was UI-only.** The initial MFA gate lived only in the page layout, so the
+   shared `route()` API wrapper and `runAction` server-action wrapper never checked
+   enrollment — a covered, un-enrolled user kept full `/api/v1/*` + server-action access.
+   Corrected: `assertMfaEnrolled` now runs in both wrappers (enrollment actions exempt);
+   runtime-verified the API returns **403** under policy-on and reaches the handler under
+   policy-off. This is exactly the class of UI-only-authz defect the audit exists to catch.
+2. **UX-01 Arabic regression.** `next/font` injected a Latin-metric fallback ahead of the
+   Arabic families; fixed with `adjustFontFallback:false`.
+
+Residual minor notes accepted as-is (cosmetic, no functional break): `--ink-3` now sits
+close to `--ink-2` (muted-text hierarchy slightly flattened, both still AA); the MFA gate
+reads 2 settings per request when the policy is off (a caching optimization, not a defect).
+
 ## Remaining P0/P1/P2/P3 (§88) — after the fixes above
 
 - **P0 open: 0.**
