@@ -45,21 +45,28 @@ scratchpad. Consolidated here rather than split across ten thin files.
 | Performance | READY WITH ISSUES | Hot index added (ARCH-06); ARCH-07/09 and SSE polling (PLAT-04) open; large-data untested. |
 | Deployment | PARTIAL | Migrate-on-deploy fixed; image is root + unslimmed + leaks dev files, no graceful shutdown (PLAT-09/10/11/12). |
 
-## Fixed during this audit (verified: tsc clean · 161 tests · build green · migrate clean)
+## Fixed during this audit (verified: tsc clean · 161 tests · build green · migrate clean · 28 migrations)
 
 1. **FIN-01 (P0)** reversal double-count → `LEDGER_STATUSES` + DB-gated regression test (fails under the bug).
 2. **ARCH-06 (P1)** `JournalLine(companyId, accountId)` composite index + migration.
 3. **PLAT-08 (P1)** production compose runs `prisma migrate deploy` before start; + liveness healthcheck (PLAT-13).
 4. **SEC-01 (P2)** approvals read IDOR → `assertRecordInScope` + `denied`/ForbiddenError→AccessDenied.
 5. **RT-01 (P2)** CSP nonce on the no-FOUC theme script → runtime-verified 0 CSP errors on all sampled routes.
+6. **UX-01 (P1)** load Inter via `next/font` (self-hosted `.woff2`, CSP-safe) → the named-but-unloaded brand font now loads.
+7. **UX-02/03 (P1-a11y)** darken light-mode text/semantic tokens to WCAG AA (computed ≥4.5:1; `--ink-3` 2.8→5.2:1; badge-on-soft ≥5.1:1). Dark mode unchanged.
+8. **UX-13 (P1-a11y)** `FormField` associates `<label>` with its control app-wide (id injection + `htmlFor`).
+9. **FIN-02 (P2)** `currency_mismatch` guard on all six AR/AP allocation loops.
+10. **FIN-03 (P2)** cross-currency transfer requires an explicit destination amount; dead ternary removed.
+11. **SEC-02 (P2)** mandatory-MFA policy enforced server-side at the app shell (runtime-verified both states); default inert.
+12. **ARCH-07 (P2)** `RegistrationCase(companyId, status)` index + migration.
 
-## Remaining P0/P1/P2/P3 (§88)
+## Remaining P0/P1/P2/P3 (§88) — after the fixes above
 
 - **P0 open: 0.**
-- **P1 open: 4** — DOM-01 Documents entry, DOM-02 Certificates entry, UX-01 brand font, UX-13 form-label
-  association. (UX-02/03 contrast is P1-severity for a11y.)
-- **P2 open: ~25** — see master matrix (SEC-02, FIN-02/03/04, ARCH-01/03/07/09/10, PLAT-01/02/04/09/10/11/12,
-  DOM-03/04/06, RT-02/03, UX-07/09/10/11/14, DEP-01).
+- **P1 open: 2** — DOM-01 Documents entry, DOM-02 Certificates entry (business data-entry paths). The UX-P1
+  items (font, contrast, form labels) are now fixed.
+- **P2 open: ~20** — see master matrix (FIN-04, ARCH-01/03/09/10, PLAT-01/02/04/09/10/11/12, DOM-03/04/06,
+  RT-02/03, UX-07/09/10/11/14, DEP-01). SEC-02/FIN-02/FIN-03/ARCH-07 now fixed.
 - **P3 open: ~24** — polish/scale/governance.
 
 ## Four verdicts (§104)
@@ -74,31 +81,31 @@ scratchpad. Consolidated here rather than split across ten thin files.
   several modules look complete but have **no data-entry path** (Documents, Certificates, Expenses,
   Creative Library), and there is no consolidated executive cockpit. The group cannot yet be *run*
   end-to-end from NEXORA for compliance and expense workflows.
-- **UX / PRODUCT READINESS — READY WITH ISSUES.** Foundations are above enterprise average; no UX-P0.
-  The brand font never loads, AA contrast fails in light mode, and forms lack label association — all
-  app-wide but individually small fixes that would move perceived quality from "functional" to "premium".
+- **UX / PRODUCT READINESS — READY WITH ISSUES (improved).** The three app-wide UX-P1s are now fixed
+  (Inter loads, light-mode AA contrast passes, forms associate labels). Remaining are UX-P2 consistency
+  items (shared-primitive routing, RTL directional icons, drawer focus trap) — real polish, not blockers.
 
 **NEXORA is not yet "production ready" as a whole.** It is a strong, secure, correctly-accounting
 platform with a fixed financial P0, held back from operating-readiness by a small set of missing
 data-entry paths and a few security/UX gaps — most of which are modest, well-scoped fixes.
 
-## TOP 10 NEXT ACTIONS (ordered by business / risk impact)
+## TOP NEXT ACTIONS (ordered by business / risk impact)
+
+**Done this audit (was on the list):** SEC-02 mandatory-MFA enforcement · design-system v2 core
+(UX-01/02/03/13) · finance FIN-02/03 currency guards · ARCH-06/07 indexes. Remaining, ordered:
 
 1. **Build Documents + Certificates data-entry** (reuse the File platform) — compliance is non-functional without it. (P1)
 2. **Build Expense entry + approval** — finance + all-staff daily workflow; posting engine is ready. (P1)
-3. **Enforce mandatory-MFA** for admins/finance at login + enrolment redirect (SEC-02). (Security)
-4. **Verify & fix finance P2s** — allocation currency (FIN-02), cross-currency transfer `toAmount` (FIN-03),
-   bank-rec prior-cleared carry (FIN-04), each with an invariant test. (Finance correctness)
-5. **Make Ops Center truthful** — scheduler run-state + crash recovery (PLAT-01/02). (Ops trust)
-6. **Design-system v2 core**: load the brand font (UX-01), fix AA contrast tokens (UX-02/03), repair
-   `FormField` label association (UX-13). (Premium + a11y, app-wide, small)
-7. **Wire or remove inert settings** (DOM-04) — don't ship config that doesn't drive behaviour. (Admin trust)
-8. **Harden the production image** — non-root, `output:"standalone"`, graceful shutdown, drop dev files
-   from the image (PLAT-09/10/11/12). (Deploy)
-9. **Fix runtime defects & scale hotspots** — `/answers` hydration (RT-02), `/admin/go-live` hang (RT-03),
-   `RegistrationCase.companyId` index (ARCH-07), global-search `pg_trgm` (ARCH-09). (Reliability/perf)
-10. **Governance & hygiene** — decide repo visibility, set a real default branch + branch protection,
-    `npm audit fix` (dev-tooling CVEs), and wire the Creative Library write-path (DOM-03). (Governance)
+3. **Make Ops Center truthful** — scheduler run-state + crash recovery (PLAT-01/02). (Ops trust)
+4. **FIN-04** bank-rec prior-cleared carry (needs a schema field for the last reconciled balance). (Finance)
+5. **Wire or remove inert settings** (DOM-04) — don't ship config that doesn't drive behaviour. (Admin trust)
+6. **Harden the production image** — non-root, `output:"standalone"`, graceful shutdown, drop dev files (PLAT-09/10/11/12). (Deploy)
+7. **Fix runtime defects & scale hotspots** — `/answers` hydration (RT-02), `/admin/go-live` hang (RT-03),
+   global-search `pg_trgm` (ARCH-09), dead legacy `Invoice`/`Payment` models + finance-dashboard KPI (ARCH-01). (Reliability/perf)
+8. **Design-system v2 consistency** — route hand-rolled headers/tables through `PageHeader`/`DataTable`,
+   mirror RTL directional icons, drawer focus trap (UX-07/09/10/11/14). (Polish)
+9. **Wire Creative Library write-path** (DOM-03) + record-comments scope guard (ARCH-03). (Feature/security)
+10. **Governance & hygiene** — decide repo visibility, real default branch + branch protection, `npm audit fix`. (Governance)
 
 ## Deliverables (§102 mapping)
 
