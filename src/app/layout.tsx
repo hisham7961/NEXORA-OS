@@ -8,7 +8,10 @@ import "./globals.css";
 
 // The design system names Inter in --font-sans; load it for real (audit UX-01).
 // `display: swap` keeps first paint fast; the CSS stack still falls back for Arabic glyphs.
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+// adjustFontFallback:false — otherwise next/font injects a Latin-metric (Arial-based)
+// fallback face at the front of the stack that can capture Arabic glyphs on some systems,
+// distorting Arabic typography in this first-class-RTL app (audit verification, UX-01).
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap", adjustFontFallback: false });
 
 export const metadata: Metadata = {
   title: {

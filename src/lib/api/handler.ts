@@ -94,6 +94,15 @@ export function route<P extends Record<string, string> = Record<string, string>>
         throw new UnauthorizedError();
       }
 
+      // Mandatory-MFA gate (audit SEC-02): a covered-but-un-enrolled principal is
+      // blocked from the whole authenticated API surface, matching the server-action
+      // gate. MFA enrollment itself is via server actions (exempt there), so this is
+      // not a lock-out. Throws ServiceError(403), mapped by the error handler below.
+      if (principal) {
+        const { assertMfaEnrolled } = await import("@/domain/mfa");
+        await assertMfaEnrolled(principal);
+      }
+
       // Rate limiting (§1): keyed by the authenticated user when known, else IP.
       // Sensitive/finance/download paths get tighter buckets (see bucketForPath).
       const pathname = new URL(req.url).pathname;

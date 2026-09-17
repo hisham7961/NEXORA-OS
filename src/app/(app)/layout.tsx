@@ -19,7 +19,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // setup page before reaching anything else. The enrollment page (and its API) are
   // exempt so the requirement is satisfiable rather than a lock-out loop.
   const pathname = (await headers()).get("x-pathname") ?? "";
-  if (!pathname.startsWith("/settings/profile")) {
+  const onEnrollmentPage = pathname === "/settings/profile" || pathname.startsWith("/settings/profile/");
+  if (!onEnrollmentPage) {
     const [required, enrolled] = await Promise.all([mfaRequiredFor(principal), isMfaEnabled(user.id)]);
     if (required && !enrolled) redirect("/settings/profile?mfa=required");
   }

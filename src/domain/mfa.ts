@@ -119,3 +119,17 @@ export async function mfaRequiredFor(principal: Principal): Promise<boolean> {
   const isFinance = canAnywhere(principal, "accounting.view") || canAnywhere(principal, "finance.view") || canAnywhere(principal, "expenses.view");
   return (!!adminsFlag && isAdmin) || (!!financeFlag && isFinance);
 }
+
+/**
+ * Server-side mandatory-MFA gate (audit SEC-02). Throws when the policy covers this
+ * principal but they have not enrolled a second factor. Enforced in the shared
+ * server entry points — the route() API wrapper and runAction — so it governs the
+ * API and every server action (not just page navigation), per the server-side-authz
+ * rule. The MFA-enrollment actions are exempted by their callers so the requirement
+ * stays satisfiable rather than a lock-out.
+ */
+export async function assertMfaEnrolled(principal: Principal): Promise<void> {
+  if (!(await mfaRequiredFor(principal))) return;
+  if (await isMfaEnabled(principal.userId)) return;
+  throw new ServiceError("mfa_enrollment_required", "Multi-factor authentication is required. Enroll MFA in your profile to continue.", 403);
+}
