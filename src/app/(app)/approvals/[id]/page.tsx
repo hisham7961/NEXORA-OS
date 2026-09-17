@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { pageGuard } from "@/lib/page-guard";
-import { can } from "@/lib/permissions/engine";
+import { can, ForbiddenError } from "@/lib/permissions/engine";
+import { AccessDenied } from "@/components/access-denied";
 import { getApproval } from "@/domain/approvals";
 import { getActivity } from "@/domain/mutation";
 import { getLookups, refName } from "@/domain/lookups";
@@ -16,10 +17,17 @@ import { getServerI18n } from "@/lib/server-i18n";
 export const metadata: Metadata = { title: "Approval" };
 
 export default async function ApprovalDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { principal, locale } = await pageGuard("approvals.view");
+  const { principal, locale, denied } = await pageGuard("approvals.view");
+  if (denied) return <AccessDenied locale={locale} />;
   const { t } = await getServerI18n();
   const { id } = await params;
-  const [request, lookups] = await Promise.all([getApproval(id), getLookups()]);
+  let request, lookups;
+  try {
+    [request, lookups] = await Promise.all([getApproval(principal, id), getLookups()]);
+  } catch (e) {
+    if (e instanceof ForbiddenError) return <AccessDenied locale={locale} />;
+    throw e;
+  }
   if (!request) notFound();
   const activity = await getActivity("ApprovalRequest", id);
 

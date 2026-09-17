@@ -11,6 +11,7 @@ import { canFinance, requireSettings } from "./common";
 import { resolveExchangeRate } from "./setup";
 import { allocateNumber } from "./numbering";
 import { prepareForPost, writePostedEntry } from "./posting";
+import { LEDGER_STATUSES } from "./ledger-status";
 
 /**
  * BANK, CASH & FX (§Increment E). Bank/cash accounts (each mapped to a GL asset
@@ -171,7 +172,7 @@ export async function cashPosition(principal: Principal, companyId: string, asOf
   assertCan(principal, "banks.view", { companyId });
   const accounts = await prisma.bankAccount.findMany({ where: { companyId, archivedAt: null }, orderBy: { name: "asc" } });
   const glIds = accounts.map((a) => a.glAccountId).filter((x): x is string => !!x);
-  const grouped = glIds.length ? await prisma.journalLine.groupBy({ by: ["accountId"], where: { companyId, accountId: { in: glIds }, entry: { status: "posted", postingDate: { lte: asOf } } }, _sum: { debit: true, credit: true } }) : [];
+  const grouped = glIds.length ? await prisma.journalLine.groupBy({ by: ["accountId"], where: { companyId, accountId: { in: glIds }, entry: { status: { in: LEDGER_STATUSES }, postingDate: { lte: asOf } } }, _sum: { debit: true, credit: true } }) : [];
   const byAccount = new Map(grouped.map((g) => [g.accountId, sub(D(g._sum.debit ?? 0), D(g._sum.credit ?? 0))]));
   const rows = accounts.map((a) => ({ id: a.id, name: a.name, type: a.type, currency: a.currency, glAccountId: a.glAccountId, balance: a.glAccountId ? byAccount.get(a.glAccountId) ?? ZERO : ZERO }));
   const baseTotal = rows.reduce((s, r) => add(s, r.balance), ZERO); // GL balances are already base-currency

@@ -64,7 +64,7 @@ export function useTheme() {
 }
 
 /** Inline, render-blocking script that applies the theme before paint (no FOUC). */
-export function ThemeScript() {
+export function ThemeScript({ nonce }: { nonce?: string }) {
   const js = `(function(){try{var t=localStorage.getItem('${STORAGE_KEY}')||'system';var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){}})();`;
-  return <script dangerouslySetInnerHTML={{ __html: js }} />;
+  return <script nonce={nonce} dangerouslySetInnerHTML={{ __html: js }} />;
 }

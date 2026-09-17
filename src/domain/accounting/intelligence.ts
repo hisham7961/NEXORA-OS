@@ -6,6 +6,7 @@ import { canFinance } from "./common";
 import { profitAndLoss } from "./reports";
 import { cashPosition } from "./bank";
 import { D, ZERO, add, sub } from "@/lib/money";
+import { LEDGER_STATUSES } from "./ledger-status";
 
 /**
  * Financial Intelligence (§Increment G). Analytical P&L by any dimension (brand,
@@ -45,7 +46,7 @@ export async function dimensionPnl(principal: Principal, companyId: string, dime
   const field = DIMENSIONS[dimension];
   const where: Prisma.JournalLineWhereInput = {
     companyId, [field]: { not: null },
-    entry: { status: "posted", ...(opts.from || opts.to ? { postingDate: { ...(opts.from ? { gte: opts.from } : {}), ...(opts.to ? { lte: opts.to } : {}) } } : {}) },
+    entry: { status: { in: LEDGER_STATUSES }, ...(opts.from || opts.to ? { postingDate: { ...(opts.from ? { gte: opts.from } : {}), ...(opts.to ? { lte: opts.to } : {}) } } : {}) },
   };
   const grouped = await prisma.journalLine.groupBy({ by: [field, "accountId"], where, _sum: { debit: true, credit: true } });
   const accountIds = [...new Set(grouped.map((g) => g.accountId))];
@@ -94,7 +95,7 @@ export async function entityFinancials(principal: Principal, dimension: PnlDimen
   const rows: { companyId: string; companyName: string; baseCurrency: string; revenue: string; grossProfit: string; netProfit: string }[] = [];
   let anyActivity = false;
   for (const c of companies) {
-    const grouped = await prisma.journalLine.groupBy({ by: ["accountId"], where: { companyId: c.id, [field]: id, entry: { status: "posted", postingDate: { gte: from, lte: to } } }, _sum: { debit: true, credit: true } });
+    const grouped = await prisma.journalLine.groupBy({ by: ["accountId"], where: { companyId: c.id, [field]: id, entry: { status: { in: LEDGER_STATUSES }, postingDate: { gte: from, lte: to } } }, _sum: { debit: true, credit: true } });
     if (grouped.length === 0) continue;
     anyActivity = true;
     const accountIds = grouped.map((g) => g.accountId);

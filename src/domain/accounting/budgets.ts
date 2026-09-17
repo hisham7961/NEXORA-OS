@@ -7,6 +7,7 @@ import { ServiceError } from "@/lib/api/handler";
 import { optionalString } from "@/lib/validation";
 import { D, ZERO, add, sub } from "@/lib/money";
 import { canFinance } from "./common";
+import { LEDGER_STATUSES } from "./ledger-status";
 
 /**
  * Budgets & Budget-vs-Actual (§Increment F). A budget carries per-GL-account
@@ -128,7 +129,7 @@ export async function budgetVsActual(principal: Principal, budgetId: string) {
   const dimWhere: Prisma.JournalLineWhereInput = {
     companyId: budget.companyId ?? undefined,
     accountId: { in: accountIds },
-    entry: { status: "posted", ...(from || to ? { postingDate: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}) },
+    entry: { status: { in: LEDGER_STATUSES }, ...(from || to ? { postingDate: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}) },
     ...(budget.brandId ? { brandId: budget.brandId } : {}),
     ...(budget.countryId ? { countryId: budget.countryId } : {}),
     ...(budget.departmentId ? { departmentId: budget.departmentId } : {}),
@@ -196,7 +197,7 @@ export async function budgetVsActualMonthly(principal: Principal, budgetId: stri
   const lines = accountIds.length ? await prisma.journalLine.findMany({
     where: {
       companyId: budget.companyId ?? undefined, accountId: { in: accountIds },
-      entry: { status: "posted", postingDate: { gte: from, lte: to } },
+      entry: { status: { in: LEDGER_STATUSES }, postingDate: { gte: from, lte: to } },
       ...(budget.brandId ? { brandId: budget.brandId } : {}), ...(budget.countryId ? { countryId: budget.countryId } : {}),
       ...(budget.departmentId ? { departmentId: budget.departmentId } : {}), ...(budget.campaignId ? { campaignId: budget.campaignId } : {}),
     },
