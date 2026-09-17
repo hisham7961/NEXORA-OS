@@ -395,6 +395,7 @@ export async function applyCreditNote(ctx: ActorContext, creditNoteId: string, a
       if (gt(amt, remaining)) throw new ServiceError("over_apply", "Allocation exceeds the credit note's remaining balance.", 422);
       const inv = await tx.salesInvoice.findUnique({ where: { id: a.invoiceId } });
       if (!inv || inv.companyId !== cn.companyId || inv.customerId !== cn.customerId) throw new ServiceError("bad_invoice", "Invoice not found for this customer.", 422);
+      if (inv.currency !== cn.currency) throw new ServiceError("currency_mismatch", `Allocation currency (${cn.currency}) does not match invoice ${inv.currency}.`, 422);
       if (!["issued", "partially_paid"].includes(inv.status)) throw new ServiceError("not_open", "Invoice is not open.", 422);
       if (gt(amt, inv.amountDue)) throw new ServiceError("over_apply", "Allocation exceeds the invoice balance due.", 422);
       await tx.creditNoteApplication.upsert({ where: { creditNoteId_invoiceId: { creditNoteId, invoiceId: a.invoiceId } }, create: { creditNoteId, invoiceId: a.invoiceId, amount: amt }, update: { amount: { increment: amt } } });
@@ -497,6 +498,7 @@ export async function postReceipt(ctx: ActorContext, companyId: string, raw: unk
       if (!gt(amt, 0)) continue;
       const inv = await tx.salesInvoice.findUnique({ where: { id: a.invoiceId } });
       if (!inv || inv.companyId !== companyId || inv.customerId !== customer.id) throw new ServiceError("bad_invoice", "Invoice not found for this customer.", 422);
+      if (inv.currency !== currency) throw new ServiceError("currency_mismatch", `Allocation currency (${currency}) does not match invoice ${inv.currency}.`, 422);
       if (!["issued", "partially_paid"].includes(inv.status)) throw new ServiceError("not_open", `Invoice ${inv.invoiceNumber} is not open.`, 422);
       if (gt(amt, inv.amountDue)) throw new ServiceError("over_allocate", `Allocation exceeds invoice ${inv.invoiceNumber} balance.`, 422);
       await tx.receiptAllocation.create({ data: { receiptId: rec.id, invoiceId: a.invoiceId, amount: amt } });
@@ -526,6 +528,7 @@ export async function allocateReceipt(ctx: ActorContext, receiptId: string, allo
       if (gt(amt, unapplied)) throw new ServiceError("over_allocate", "Allocation exceeds the receipt's unapplied balance.", 422);
       const inv = await tx.salesInvoice.findUnique({ where: { id: a.invoiceId } });
       if (!inv || inv.companyId !== rec.companyId || inv.customerId !== rec.customerId) throw new ServiceError("bad_invoice", "Invoice not found for this customer.", 422);
+      if (inv.currency !== rec.currency) throw new ServiceError("currency_mismatch", `Allocation currency (${rec.currency}) does not match invoice ${inv.currency}.`, 422);
       if (!["issued", "partially_paid"].includes(inv.status)) throw new ServiceError("not_open", "Invoice is not open.", 422);
       if (gt(amt, inv.amountDue)) throw new ServiceError("over_allocate", "Allocation exceeds invoice balance.", 422);
       await tx.receiptAllocation.upsert({ where: { receiptId_invoiceId: { receiptId, invoiceId: a.invoiceId } }, create: { receiptId, invoiceId: a.invoiceId, amount: amt }, update: { amount: { increment: amt } } });

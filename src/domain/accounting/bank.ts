@@ -124,8 +124,13 @@ export async function createTransfer(ctx: ActorContext, companyId: string, raw: 
   if (!to || to.companyId !== companyId || to.archivedAt) throw new ServiceError("bad_account", "Destination account not found.", 422);
   if (!from.glAccountId || !to.glAccountId) throw new ServiceError("no_gl", "Both accounts must be mapped to a GL account.", 422);
 
+  // A cross-currency transfer must state the actual destination amount received; without it the
+  // destination leg (and the FX plug) would be booked at the source amount (audit FIN-03).
+  if (from.currency !== to.currency && input.toAmount == null) {
+    throw new ServiceError("to_amount_required", "A cross-currency transfer requires the destination amount (toAmount).", 422);
+  }
   const fromAmount = roundMoney(input.fromAmount, from.currency);
-  const toAmount = roundMoney(input.toAmount ?? (from.currency === to.currency ? input.fromAmount : input.fromAmount), to.currency);
+  const toAmount = roundMoney(input.toAmount ?? input.fromAmount, to.currency);
   const fromRate = from.currency === base ? 1 : await resolveExchangeRate(from.currency, base, input.date);
   const toRate = to.currency === base ? 1 : await resolveExchangeRate(to.currency, base, input.date);
   const fromBase = roundMoney(mul(fromAmount, fromRate), base, settings.roundingPolicy as never);
