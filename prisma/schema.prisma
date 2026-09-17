@@ -446,6 +446,7 @@ model RegistrationCase {
   docReqs RegistrationDocReq[]
 
   @@index([countryId, status])
+  @@index([companyId, status])
   @@index([brandId])
   @@index([productId])
   @@index([assignedToId])
