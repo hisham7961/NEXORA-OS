@@ -1,9 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import { cookies, headers } from "next/headers";
+import { Inter } from "next/font/google";
 import { Providers, ThemeScript } from "@/components/providers";
 import { dir, isLocale, type Locale } from "@/i18n";
 import { env } from "@/lib/env";
 import "./globals.css";
+
+// The design system names Inter in --font-sans; load it for real (audit UX-01).
+// `display: swap` keeps first paint fast; the CSS stack still falls back for Arabic glyphs.
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
 export const metadata: Metadata = {
   title: {
@@ -31,7 +36,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
-    <html lang={locale} dir={dir(locale)} suppressHydrationWarning>
+    <html lang={locale} dir={dir(locale)} className={inter.variable} suppressHydrationWarning>
       <head>
         <ThemeScript nonce={nonce} />
       </head>

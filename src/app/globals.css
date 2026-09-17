@@ -21,7 +21,7 @@
   /* Typography (charcoal / graphite) */
   --ink: #201e1b;
   --ink-2: #6a655d;
-  --ink-3: #9b958a;
+  --ink-3: #6c665d;
   --on-accent: #ffffff;
 
   /* Lines (thin borders) */
@@ -35,14 +35,14 @@
   --accent-ring: rgba(108, 90, 160, 0.35);
 
   /* Semantic system (§46: neutral, info, success, warning, critical) */
-  --info: #3f78b5;
-  --info-soft: rgba(63, 120, 181, 0.12);
-  --success: #4a9268;
-  --success-soft: rgba(74, 146, 104, 0.13);
-  --warning: #b5852f;
-  --warning-soft: rgba(181, 133, 47, 0.14);
-  --critical: #bd524c;
-  --critical-soft: rgba(189, 82, 76, 0.12);
+  --info: #2f6098;
+  --info-soft: rgba(47, 96, 152, 0.12);
+  --success: #2a6d47;
+  --success-soft: rgba(42, 109, 71, 0.13);
+  --warning: #7a5a10;
+  --warning-soft: rgba(122, 90, 16, 0.14);
+  --critical: #a83c36;
+  --critical-soft: rgba(168, 60, 54, 0.12);
   --neutral: #6a655d;
   --neutral-soft: rgba(106, 101, 93, 0.1);
 
@@ -56,7 +56,7 @@
   --radius: 9px;
   --radius-lg: 14px;
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+  --font-sans: var(--font-inter), "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, "Noto Sans", "Noto Sans Arabic", "Segoe UI Arabic", Tahoma, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
 }

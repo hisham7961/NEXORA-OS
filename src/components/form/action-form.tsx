@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, isValidElement, cloneElement, type ReactNode, type ReactElement } from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { AlertTriangle } from "lucide-react";
@@ -126,14 +126,21 @@ export function FormField({
   className?: string;
 }) {
   const error = useFieldError(name);
+  // Associate the label with its control for click-to-focus and reliable screen-reader
+  // announcement (audit UX-13). Inject an id into a single control child that has none,
+  // and point the label's htmlFor at it. Multi-child or already-id'd content is untouched.
+  const single = isValidElement(children) ? (children as ReactElement<{ id?: string }>) : null;
+  const controlId = single ? (single.props.id ?? `f-${name}`) : undefined;
+  const control = single && !single.props.id ? cloneElement(single, { id: controlId }) : children;
   return (
     <Field
       className={className}
+      htmlFor={controlId}
       label={required ? (<span>{label} <span className="text-critical">*</span></span>) : label}
       hint={hint}
       error={error}
     >
-      {children}
+      {control}
     </Field>
   );
 }
