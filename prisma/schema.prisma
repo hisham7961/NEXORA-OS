@@ -193,6 +193,8 @@ model Brand {
   markets      BrandMarket[]
 
   @@index([status])
+  // Trigram index for global search's ILIKE '%q%' on name (audit ARCH-09).
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "Brand_name_trgm")
 }
 
 // A brand may be associated with more than one legal company (§2).
@@ -354,6 +356,9 @@ model Product {
   claims   ProductClaim[]
 
   @@index([brandId, status])
+  // Trigram indexes for global search (audit ARCH-09).
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "Product_name_trgm")
+  @@index([sku(ops: raw("gin_trgm_ops"))], type: Gin, map: "Product_sku_trgm")
 }
 
 model ProductVariant {
@@ -451,6 +456,8 @@ model RegistrationCase {
   @@index([productId])
   @@index([assignedToId])
   @@index([expiryDate])
+  // Trigram index for global search on the registration number (audit ARCH-09).
+  @@index([registrationNumber(ops: raw("gin_trgm_ops"))], type: Gin, map: "RegistrationCase_regNumber_trgm")
 }
 
 model RegistrationEvent {
@@ -669,6 +676,8 @@ model Task {
   @@index([brandId])
   @@index([companyId])
   @@index([dueDate])
+  // Trigram index for global search (audit ARCH-09).
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "Task_title_trgm")
 }
 
 model TaskAssignee {
@@ -911,6 +920,8 @@ model Campaign {
   @@index([countryId])
   @@index([ownerId])
   @@index([companyId])
+  // Trigram index for global search (audit ARCH-09).
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "Campaign_name_trgm")
 }
 
 model CampaignProduct {
@@ -1144,6 +1155,8 @@ model Store {
   @@index([brandId])
   @@index([countryId])
   @@index([companyId])
+  // Trigram index for global search on the store name (audit ARCH-09).
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "Store_name_trgm")
 }
 
 model StoreResponsible {
@@ -1217,6 +1230,8 @@ model CustomerCase {
   @@index([assignedToId])
   @@index([companyId])
   @@index([countryId])
+  // Trigram index for global search on the case description (audit ARCH-09).
+  @@index([description(ops: raw("gin_trgm_ops"))], type: Gin, map: "CustomerCase_description_trgm")
 }
 
 model CustomerCaseNote {
@@ -1420,6 +1435,8 @@ model Message {
   mentions MessageMention[]
 
   @@index([channelId, createdAt])
+  // Trigram index for message search (audit ARCH-09).
+  @@index([body(ops: raw("gin_trgm_ops"))], type: Gin, map: "Message_body_trgm")
 }
 
 model MessageMention {
@@ -1538,6 +1555,9 @@ model Subscription {
   @@index([companyId])
   @@index([brandId])
   @@index([countryId])
+  // Trigram indexes for global search on provider/plan (audit ARCH-09).
+  @@index([provider(ops: raw("gin_trgm_ops"))], type: Gin, map: "Subscription_provider_trgm")
+  @@index([plan(ops: raw("gin_trgm_ops"))], type: Gin, map: "Subscription_plan_trgm")
 }
 
 // Employee-initiated attendance correction request + manager decision (§25).
