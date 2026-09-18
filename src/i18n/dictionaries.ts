@@ -1016,6 +1016,7 @@ const T = {
   "acct.reconcileCrumb": ["Reconcile", "التسوية"],
   "acct.statementBalance": ["Statement balance", "رصيد الكشف"],
   "acct.clearedBalance": ["Cleared balance", "الرصيد المسوّى"],
+  "acct.openingCleared": ["Carried forward", "المرحّل"],
   "acct.difference": ["Difference", "الفرق"],
   "acct.matchedByBody": ["Imported statement lines matched to unreconciled ledger lines by amount, date and reference.", "أسطر الكشف المستوردة مطابقة لأسطر الأستاذ غير المسوّاة حسب المبلغ والتاريخ والمرجع."],
   "acct.noUnreconciled": ["No unreconciled lines", "لا أسطر غير مسوّاة"],

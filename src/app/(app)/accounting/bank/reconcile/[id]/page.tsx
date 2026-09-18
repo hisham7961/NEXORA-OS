@@ -26,9 +26,12 @@ export default async function ReconcilePage({ params }: { params: Promise<{ id: 
   const num = (v: unknown) => Number(v).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 3 });
   const canManage = canAnywhere(principal, "banks.manage");
   const completed = rec.status === "completed";
-  const cleared = Number(rec.clearedBalance);
+  // Carry-inclusive figures from the service (FIN-04): the statement is a cumulative
+  // closing balance, so we compare it against opening carry + this session's cleared.
+  const opening = Number(data.openingClearedBalance);
+  const cleared = Number(data.totalClearedBalance);
   const statement = Number(rec.statementBalance);
-  const diff = statement - cleared;
+  const diff = Number(data.difference);
   const balanced = Math.abs(diff) < 0.0005;
 
   return (
@@ -38,8 +41,9 @@ export default async function ReconcilePage({ params }: { params: Promise<{ id: 
         meta={<Badge category={completed ? "success" : "warning"}>{t(`status.${rec.status}`)}</Badge>}
         actions={!completed && canManage ? <CompleteReconciliationButton id={rec.id} balanced={balanced} /> : undefined} />
 
-      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className={`mb-4 grid grid-cols-1 gap-4 ${Math.abs(opening) >= 0.0005 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
         <Metric label={t("acct.statementBalance")} value={num(statement)} />
+        {Math.abs(opening) >= 0.0005 && <Metric label={t("acct.openingCleared")} value={num(opening)} />}
         <Metric label={t("acct.clearedBalance")} value={num(cleared)} category={balanced ? "success" : "warning"} />
         <Metric label={t("acct.difference")} value={num(diff)} category={balanced ? "success" : "critical"} />
       </div>
