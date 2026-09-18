@@ -27,10 +27,13 @@ export async function companyGoLiveStatus(principal: Principal, companyId: strin
 
   const controlsMapped = !!(settings?.receivableAccountId && settings?.payableAccountId && settings?.cashAccountId);
   const items: GoLiveItem[] = [
-    { key: "accounting", label: "Accounting initialized", done: !!settings, href: "/accounting/settings", hint: "Base currency, chart of accounts and standard journals are set up.", required: true },
+    // Settings and the fiscal calendar are both managed on the accounting hub (/accounting);
+    // there is no /accounting/settings or /accounting/periods route — those hrefs 404'd and,
+    // worse, their RSC prefetch hung ~20s so the page never reached network-idle (audit RT-03).
+    { key: "accounting", label: "Accounting initialized", done: !!settings, href: "/accounting", hint: "Base currency, chart of accounts and standard journals are set up.", required: true },
     { key: "chart", label: "Chart of accounts present", done: accountCount > 0, href: "/accounting/accounts", hint: "At least one postable account exists.", required: true },
-    { key: "controls", label: "Control accounts mapped", done: controlsMapped, href: "/accounting/settings", hint: "Receivable, payable and cash control accounts are chosen.", required: true },
-    { key: "fiscal", label: "Fiscal calendar configured", done: !!fiscalYear && !!openPeriod, href: "/accounting/periods", hint: "A fiscal year with at least one open period exists.", required: true },
+    { key: "controls", label: "Control accounts mapped", done: controlsMapped, href: "/accounting", hint: "Receivable, payable and cash control accounts are chosen.", required: true },
+    { key: "fiscal", label: "Fiscal calendar configured", done: !!fiscalYear && !!openPeriod, href: "/accounting", hint: "A fiscal year with at least one open period exists.", required: true },
     { key: "opening", label: "Opening balances posted", done: opening.posted, href: "/accounting/opening-balances", hint: "Existing account balances are carried into the ledger.", required: true },
     { key: "brands", label: "Brands assigned", done: brandCount > 0, href: "/brands", hint: "At least one brand is linked to this company.", required: false },
     { key: "users", label: "Users have access", done: userCount > 0, href: "/admin/users", hint: "At least one user is assigned a role scoped to this company.", required: true },
