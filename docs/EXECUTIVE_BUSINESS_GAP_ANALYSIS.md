@@ -20,7 +20,7 @@ exists per-module but not yet as a single cross-group cockpit.
 |---|---|---|---|---|
 | **Documents have no create/upload** (DOM-01) | Regulatory needs to attach a manufacturer dossier / free-sale certificate to a market. | Document records are seed-only; users cannot add one. A compliance platform can't hold compliance docs. | Regulatory, QA | ✅ **DONE** — `createDocument` (scope-guarded, audited, session-derived owner) + `NewDocumentButton` drawer on Documents. Metadata entry first; file attachment via the existing File platform is the follow-up. |
 | **Certificates have no create/renew** (DOM-02) | A certificate expires; someone must add the renewal with a new expiry. | Expiry tracking & reminder sweeps run only over seed rows. | Regulatory | ✅ **DONE** — same path serves certificates; `renewDocument` bumps version + re-arms the reminder ledger so the expiry sweep fires on the new expiry. |
-| **Expenses read-only** (DOM-06) | An employee submits a marketing expense for approval + posting. | No `expense.create`; only a post-to-journal button on seed expenses. | Finance, all staff | **BUILD** — expense entry + approval → the posting engine already works. |
+| **Expenses read-only** (DOM-06) | An employee submits a marketing expense for approval + posting. | No `expense.create`; only a post-to-journal button on seed expenses. | Finance, all staff | ✅ **DONE** — `createExpense` files a `pending` expense (scope-guarded, session submitter); the existing approval → post-to-journal engine takes it from there. |
 | **Creative Library dead write-path** (DOM-03) | A delivered, approved design should land in a reusable asset library. | `CreativeAsset` is never written; library shows seed only, rows not clickable. | Marketing, Design | **BUILD (small)** — write `CreativeAsset` on design delivery/approval; make rows open. |
 | **Settings that don't drive behaviour** (DOM-04) | Admin sets "late threshold = 10 min" / "default currency". | 11 of ~14 settings persist + audit but are ignored at runtime. | Admin | **BUILD (wiring)** — read the settings that exist at their point of use, or remove the dead toggles (don't ship inert config). |
 
@@ -50,7 +50,7 @@ machinery that already works (File platform, posting engine, approval engine).
 
 | Area | Biggest real gap | Recommendation |
 |---|---|---|
-| Marketing | Asset library dead (DOM-03); campaign → expense → profitability loop needs expense entry (DOM-06). | BUILD the two write-paths; the campaign/publishing/WhatsApp state-machines are real. |
+| Marketing | Asset library dead (DOM-03); campaign → expense → profitability loop needs expense entry (DOM-06 ✅ done). | Creative-library write-path (DOM-03) still to BUILD; expense entry landed. Campaign/publishing/WhatsApp state-machines are real. |
 | E-commerce | Store performance entry is real; marketplace (Amazon/Noon/Shopify/Zid/Salla) integration is manual. | **KEEP MANUAL (V1)** per the manual-first decision; INTEGRATE later via API. Do not build connectors now. |
 | Regulatory | Documents/Certificates entry (DOM-01/02) — the core of the module. | ✅ DONE (above). Registration workflow itself is real. File attachment is the remaining follow-up. |
 | Customer Service | Cases/approved-answers/knowledge are real; approved-answer content correctly not auto-translated. | No V1 gap; consider adverse-event flagging later (cosmetics). |

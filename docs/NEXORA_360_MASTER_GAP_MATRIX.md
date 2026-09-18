@@ -62,7 +62,7 @@ business/authorization/core-workflow failure · P2 important workflow/security/d
 | PLAT-10/11/12 | DevOps | Root container; unslimmed image (devDeps+source, no `output:"standalone"`); `.dockerignore` leaks `.nexora-storage` dev files into image. | SECURITY/OPS (FACT) | ▢ OPEN |
 | DOM-03 | Marketing | Creative Library is a dead write-path (`CreativeAsset` never written; orphaned from Design; rows not clickable). | MISSING/BUG (FACT) | ▢ OPEN |
 | DOM-04 | Admin | System Settings control plane mostly inert — only 3 of ~14 editable settings are read at runtime (e.g. `attendance.lateThresholdMinutes`, `certificateExpiryDays`, `defaultCurrency`, `defaultTheme`, `digestEnabled` persist+audit but do nothing). | UX/BUG (FACT) | ▢ OPEN |
-| DOM-06 | Finance | Expenses read-only/seed-only — no `expense.create` anywhere; only a post-to-journal button. | MISSING FEATURE (FACT) | ▢ OPEN |
+| DOM-06 | Finance | Expenses read-only/seed-only — no `expense.create` anywhere; only a post-to-journal button. | MISSING FEATURE (FACT) | ✅ FIXED — `createExpense` (scope-guarded, money-rounded, cross-company-category guard, filed `pending` with session submitter, never touches the ledger) + `NewExpenseButton` drawer on the Expenses page; DB-gated regression + live Playwright create verified. |
 | RT-02 | Runtime | `/answers` throws React #418 hydration mismatch. | BUG (FACT) | ▢ OPEN |
 | RT-03 | Runtime | `/admin/go-live` never reaches network-idle (25s) — heavy/hanging request. | PERFORMANCE (FACT) | ▢ OPEN |
 | UX-02/03 | A11y | Token contrast fails WCAG AA in light mode: `--ink-3` 2.6–2.97:1 (table headers, hints, placeholders); status-badge text on soft fills 2.86–4.0:1 (need 4.5), 44+ sites. | ACCESSIBILITY (FACT) | ▢ OPEN |
