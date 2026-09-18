@@ -85,11 +85,12 @@ reads 2 settings per request when the policy is off (a caching optimization, not
 - **P1 open: 0** — DOM-01 Documents entry and DOM-02 Certificates entry are now built (scope-guarded
   create/renew, audited, DB-gated regression + live Playwright create verified). The UX-P1 items (font,
   contrast, form labels) were already fixed.
-- **P2 open: ~5** — the remaining are UX design-system polish (UX-07/09/10/11/14). ARCH-09 (trigram
-  search) now fixed; ARCH-10 (money `@db.Decimal` precision) assessed and deferred with a typed
-  remediation plan (non-functional tech-debt; a blind ALTER would round FX rates — §67); DEP-01
-  assessed (build/dev-only advisories, runtime not exposed). SEC-02/FIN-02/FIN-03/FIN-04/ARCH-07/
-  ARCH-03/ARCH-01, DOM-06/DOM-03/DOM-04, RT-02/RT-03, PLAT-01/02/04/09/10/11/12 all fixed.
+- **P2 open: ~2 (all assessed/deferred, none a functional defect)** — UX-09/10/11 (shared-primitive
+  consistency, a mechanical ~30-file refactor deferred to its own reviewed design-system sweep) and
+  ARCH-10 (money `@db.Decimal` precision, deferred with a typed per-column plan; a blind ALTER would
+  round FX rates — §67). DEP-01 assessed (build/dev-only advisories, runtime not exposed).
+  Everything else is fixed: SEC-02/FIN-02/FIN-03/FIN-04/ARCH-01/ARCH-03/ARCH-07/ARCH-09,
+  DOM-01/02/03/04/06, RT-02/RT-03, PLAT-01/02/04/09/10/11/12, UX-01/07/13/14.
 - **P3 open: ~24** — polish/scale/governance.
 
 ## Four verdicts (§104)
