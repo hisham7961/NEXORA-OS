@@ -901,8 +901,8 @@ model Campaign {
   startDate      DateTime?
   endDate        DateTime?
   currency       String    @default("KWD")
-  plannedBudget  Decimal?
-  actualSpend    Decimal?
+  plannedBudget  Decimal? @db.Decimal(20, 6)
+  actualSpend    Decimal? @db.Decimal(20, 6)
   status         String    @default("draft") // configurable lifecycle
   targetAudience String?
   channelsJson   String?
@@ -939,7 +939,7 @@ model CampaignMetric {
   campaignId String
   date       DateTime?
   name       String // spend|impressions|reach|clicks|ctr|cpc|cpm|leads|conversions|orders|revenue|roas|custom
-  value      Decimal
+  value      Decimal @db.Decimal(20, 6)
   unit       String?
   isTarget   Boolean   @default(false)
   note       String?
@@ -1176,21 +1176,21 @@ model StorePerformance {
   periodStart     DateTime
   periodEnd       DateTime?
   // --- INPUT components (entered) — see docs/METRIC_DICTIONARY.md ---
-  sales           Decimal? // Gross Sales (before discounts/refunds)
+  sales           Decimal? @db.Decimal(20, 6) // Gross Sales (before discounts/refunds)
   orders          Int?
   unitsSold       Int?
   returns         Int?
-  refunds         Decimal?
-  discounts       Decimal?
-  cogs            Decimal?
-  adSpend         Decimal?
-  shippingCost    Decimal?
-  conversionRate  Decimal?
+  refunds         Decimal? @db.Decimal(20, 6)
+  discounts       Decimal? @db.Decimal(20, 6)
+  cogs            Decimal? @db.Decimal(20, 6)
+  adSpend         Decimal? @db.Decimal(20, 6)
+  shippingCost    Decimal? @db.Decimal(20, 6)
+  conversionRate  Decimal? @db.Decimal(20, 6)
   // --- DERIVED, computed server-side from the inputs above ---
-  netSales        Decimal? // = sales - discounts - refunds
-  aov             Decimal? // = netSales / orders
-  grossMargin     Decimal? // Gross Profit = netSales - cogs
-  netContribution Decimal? // = grossMargin - adSpend - shippingCost
+  netSales        Decimal? @db.Decimal(20, 6) // = sales - discounts - refunds
+  aov             Decimal? @db.Decimal(20, 6) // = netSales / orders
+  grossMargin     Decimal? @db.Decimal(20, 6) // Gross Profit = netSales - cogs
+  netContribution Decimal? @db.Decimal(20, 6) // = grossMargin - adSpend - shippingCost
   campaignId      String?
   notes           String?
   createdAt       DateTime  @default(now())
@@ -1535,7 +1535,7 @@ model Subscription {
   ownerId           String?
   plan              String?
   currency          String    @default("USD")
-  cost              Decimal?
+  cost              Decimal? @db.Decimal(20, 6)
   billingCycle      String    @default("monthly") // monthly | yearly | custom
   renewalDate       DateTime?
   autoRenew         Boolean   @default(true)
@@ -1684,9 +1684,9 @@ model JournalEntry {
   status            String    @default("draft") // draft | posted | reversed | void
   currency          String    @default("KWD") // entry transaction currency
   baseCurrency      String    @default("KWD")
-  exchangeRate      Decimal?
-  totalDebitBase    Decimal   @default(0) // denormalised for fast trial balance
-  totalCreditBase   Decimal   @default(0)
+  exchangeRate      Decimal? @db.Decimal(20, 10)
+  totalDebitBase    Decimal @db.Decimal(20, 6)   @default(0) // denormalised for fast trial balance
+  totalCreditBase   Decimal @db.Decimal(20, 6)   @default(0)
   // Source traceability (§80) + reversal reciprocity (§14).
   sourceType        String? // SalesInvoice|SupplierBill|Expense|CustomerPayment|SupplierPayment|BankTransfer|CreditNote|OpeningBalance|ManualJournal
   sourceId          String?
@@ -1716,11 +1716,11 @@ model JournalLine {
   description         String?
   // Amounts are stored in BASE (company) currency — debit/credit balance and drive
   // the trial balance directly. Transaction-currency detail is kept alongside.
-  debit               Decimal   @default(0)
-  credit              Decimal   @default(0)
+  debit               Decimal @db.Decimal(20, 6)   @default(0)
+  credit              Decimal @db.Decimal(20, 6)   @default(0)
   transactionCurrency String?
-  transactionAmount   Decimal? // absolute amount in transaction currency
-  exchangeRate        Decimal?
+  transactionAmount   Decimal? @db.Decimal(20, 6) // absolute amount in transaction currency
+  exchangeRate        Decimal? @db.Decimal(20, 10)
   // analytical dimensions (§17 — Legal Company is on the entry; these are analytical):
   companyId           String?
   brandId             String?
@@ -1769,7 +1769,7 @@ model Customer {
   addressJson         String? // structured address (JSON text, §4-DB)
   taxId               String? // tax registration number
   paymentTermsDays    Int? // overrides company default terms
-  creditLimit         Decimal? // informational credit ceiling (base currency)
+  creditLimit         Decimal? @db.Decimal(20, 6) // informational credit ceiling (base currency)
   receivableAccountId String? // override AR control account (else settings.receivable)
   brandId             String?
   countryId           String?
@@ -1834,13 +1834,13 @@ model SupplierBill {
   dueDate        DateTime?
   currency       String    @default("KWD")
   baseCurrency   String    @default("KWD")
-  exchangeRate   Decimal?
-  subtotal       Decimal   @default(0)
-  taxTotal       Decimal   @default(0)
-  total          Decimal   @default(0)
-  amountPaid     Decimal   @default(0)
-  amountDue      Decimal   @default(0)
-  totalBase      Decimal   @default(0)
+  exchangeRate   Decimal? @db.Decimal(20, 10)
+  subtotal       Decimal @db.Decimal(20, 6)   @default(0)
+  taxTotal       Decimal @db.Decimal(20, 6)   @default(0)
+  total          Decimal @db.Decimal(20, 6)   @default(0)
+  amountPaid     Decimal @db.Decimal(20, 6)   @default(0)
+  amountDue      Decimal @db.Decimal(20, 6)   @default(0)
+  totalBase      Decimal @db.Decimal(20, 6)   @default(0)
   brandId        String?
   countryId      String?
   departmentId   String?
@@ -1872,12 +1872,12 @@ model SupplierBillLine {
   billId           String
   lineNo           Int     @default(0)
   description      String
-  quantity         Decimal @default(1)
-  unitPrice        Decimal @default(0)
-  discountPct      Decimal @default(0)
-  lineNet          Decimal @default(0)
+  quantity         Decimal @db.Decimal(20, 6) @default(1)
+  unitPrice        Decimal @db.Decimal(20, 6) @default(0)
+  discountPct      Decimal @db.Decimal(20, 6) @default(0)
+  lineNet          Decimal @db.Decimal(20, 6) @default(0)
   taxRateId        String?
-  taxAmount        Decimal @default(0)
+  taxAmount        Decimal @db.Decimal(20, 6) @default(0)
   expenseAccountId String? // Dr account (expense/asset/inventory); else category/settings
   productId        String?
   brandId          String?
@@ -1901,13 +1901,13 @@ model SupplierCredit {
   issueDate       DateTime
   currency        String    @default("KWD")
   baseCurrency    String    @default("KWD")
-  exchangeRate    Decimal?
-  subtotal        Decimal   @default(0)
-  taxTotal        Decimal   @default(0)
-  total           Decimal   @default(0)
-  amountApplied   Decimal   @default(0)
-  amountRemaining Decimal   @default(0)
-  totalBase       Decimal   @default(0)
+  exchangeRate    Decimal? @db.Decimal(20, 10)
+  subtotal        Decimal @db.Decimal(20, 6)   @default(0)
+  taxTotal        Decimal @db.Decimal(20, 6)   @default(0)
+  total           Decimal @db.Decimal(20, 6)   @default(0)
+  amountApplied   Decimal @db.Decimal(20, 6)   @default(0)
+  amountRemaining Decimal @db.Decimal(20, 6)   @default(0)
+  totalBase       Decimal @db.Decimal(20, 6)   @default(0)
   brandId         String?
   countryId       String?
   reason          String?
@@ -1934,11 +1934,11 @@ model SupplierCreditLine {
   creditId         String
   lineNo           Int     @default(0)
   description      String
-  quantity         Decimal @default(1)
-  unitPrice        Decimal @default(0)
-  lineNet          Decimal @default(0)
+  quantity         Decimal @db.Decimal(20, 6) @default(1)
+  unitPrice        Decimal @db.Decimal(20, 6) @default(0)
+  lineNet          Decimal @db.Decimal(20, 6) @default(0)
   taxRateId        String?
-  taxAmount        Decimal @default(0)
+  taxAmount        Decimal @db.Decimal(20, 6) @default(0)
   expenseAccountId String?
   productId        String?
   brandId          String?
@@ -1962,11 +1962,11 @@ model SupplierPayment {
   paymentDate     DateTime
   currency        String    @default("KWD")
   baseCurrency    String    @default("KWD")
-  exchangeRate    Decimal?
-  amount          Decimal   @default(0)
-  allocatedAmount Decimal   @default(0)
-  unappliedAmount Decimal   @default(0)
-  amountBase      Decimal   @default(0)
+  exchangeRate    Decimal? @db.Decimal(20, 10)
+  amount          Decimal @db.Decimal(20, 6)   @default(0)
+  allocatedAmount Decimal @db.Decimal(20, 6)   @default(0)
+  unappliedAmount Decimal @db.Decimal(20, 6)   @default(0)
+  amountBase      Decimal @db.Decimal(20, 6)   @default(0)
   bankAccountId   String? // funding account override (else settings.cash)
   method          String?
   reference       String?
@@ -1997,7 +1997,7 @@ model BillPaymentAllocation {
   id        String   @id @default(cuid())
   paymentId String
   billId    String
-  amount    Decimal
+  amount    Decimal @db.Decimal(20, 6)
   createdAt DateTime @default(now())
 
   payment SupplierPayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
@@ -2014,7 +2014,7 @@ model SupplierCreditApplication {
   id        String   @id @default(cuid())
   creditId  String
   billId    String
-  amount    Decimal
+  amount    Decimal @db.Decimal(20, 6)
   createdAt DateTime @default(now())
 
   credit SupplierCredit @relation(fields: [creditId], references: [id], onDelete: Cascade)
@@ -2034,8 +2034,8 @@ model Invoice {
   date       DateTime
   dueDate    DateTime?
   currency   String    @default("KWD")
-  amount     Decimal
-  amountPaid Decimal   @default(0)
+  amount     Decimal @db.Decimal(20, 6)
+  amountPaid Decimal @db.Decimal(20, 6)   @default(0)
   status     String    @default("open") // draft|open|paid|overdue|void
   brandId    String?
   countryId  String?
@@ -2056,7 +2056,7 @@ model Payment {
   customerId    String?
   supplierId    String?
   date          DateTime
-  amount        Decimal
+  amount        Decimal @db.Decimal(20, 6)
   currency      String   @default("KWD")
   method        String?
   bankAccountId String?
@@ -2105,9 +2105,9 @@ model BankTransfer {
   date              DateTime
   fromCurrency      String
   toCurrency        String
-  fromAmount        Decimal
-  toAmount          Decimal
-  exchangeRate      Decimal? // from→to
+  fromAmount        Decimal @db.Decimal(20, 6)
+  toAmount          Decimal @db.Decimal(20, 6)
+  exchangeRate      Decimal? @db.Decimal(20, 10) // from→to
   baseCurrency      String    @default("KWD")
   reference         String?
   notes             String?
@@ -2133,8 +2133,8 @@ model BankReconciliation {
   companyId        String
   bankAccountId    String
   statementDate    DateTime
-  statementBalance Decimal
-  clearedBalance   Decimal   @default(0)
+  statementBalance Decimal @db.Decimal(20, 6)
+  clearedBalance   Decimal @db.Decimal(20, 6)   @default(0)
   status           String    @default("open") // open | completed
   note             String?
   createdById      String?
@@ -2160,8 +2160,8 @@ model BankStatement {
   fileName       String?
   statementFrom  DateTime?
   statementTo    DateTime?
-  openingBalance Decimal?
-  closingBalance Decimal?
+  openingBalance Decimal? @db.Decimal(20, 6)
+  closingBalance Decimal? @db.Decimal(20, 6)
   lineCount      Int       @default(0)
   createdById    String?
   createdAt      DateTime  @default(now())
@@ -2181,9 +2181,9 @@ model BankStatementLine {
   valueDate            DateTime?
   description          String
   reference            String?
-  amount               Decimal // signed: + = inflow (money into the account), − = outflow
+  amount               Decimal @db.Decimal(20, 6) // signed: + = inflow (money into the account), − = outflow
   currency             String?
-  runningBalance       Decimal?
+  runningBalance       Decimal? @db.Decimal(20, 6)
   dedupeKey            String // date|amount|reference|description hash for duplicate detection
   matchedJournalLineId String? // the reconciled GL line, once matched
   reconciliationId     String?
@@ -2206,7 +2206,7 @@ model Budget {
   countryId    String?
   departmentId String?
   campaignId   String?
-  amount       Decimal   @default(0) // denormalised total of lines
+  amount       Decimal @db.Decimal(20, 6)   @default(0) // denormalised total of lines
   currency     String    @default("KWD")
   periodicity  String    @default("annual") // annual | quarterly | monthly (§Phase4-3)
   status       String    @default("draft") // draft | active | archived
@@ -2233,7 +2233,7 @@ model BudgetLine {
   budgetId    String
   accountId   String
   periodMonth Int? // 1-12 for a monthly budget; null = whole-period amount
-  amount      Decimal @default(0)
+  amount      Decimal @db.Decimal(20, 6) @default(0)
 
   budget Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
 
@@ -2260,7 +2260,7 @@ model Expense {
   campaignId       String?
   storeId          String?
   categoryId       String?
-  amount           Decimal
+  amount           Decimal @db.Decimal(20, 6)
   currency         String    @default("KWD")
   date             DateTime
   description      String?
@@ -2271,7 +2271,7 @@ model Expense {
   // GL integration (§D): once approved, an expense posts Dr Expense / Cr Cash|Payable.
   supplierId       String? // when the expense is billed by a supplier (Cr Payable)
   paymentAccountId String? // cash/bank account funding a company-paid expense
-  taxAmount        Decimal?  @default(0)
+  taxAmount        Decimal? @db.Decimal(20, 6)  @default(0)
   journalEntryId   String?
   postedById       String?
   postedAt         DateTime?
@@ -2288,7 +2288,7 @@ model ExchangeRate {
   id          String   @id @default(cuid())
   base        String // from currency
   quote       String // to currency (usually a company base currency)
-  rate        Decimal
+  rate        Decimal @db.Decimal(20, 10)
   date        DateTime // effective date
   source      String   @default("manual") // manual | api
   enteredById String?
@@ -2386,7 +2386,7 @@ model TaxRate {
   companyId          String?
   countryId          String?
   name               String
-  rate               Decimal // percentage, e.g. 5.000
+  rate               Decimal @db.Decimal(20, 6) // percentage, e.g. 5.000
   computation        String    @default("exclusive") // exclusive | inclusive
   inputTaxAccountId  String? // recoverable (on purchases)
   outputTaxAccountId String? // payable (on sales)
@@ -2416,14 +2416,14 @@ model SalesInvoice {
   documentDate   DateTime?
   currency       String    @default("KWD") // transaction currency
   baseCurrency   String    @default("KWD")
-  exchangeRate   Decimal? // txn→base at issue (historical; never recomputed §40)
+  exchangeRate   Decimal? @db.Decimal(20, 10) // txn→base at issue (historical; never recomputed §40)
   // Amounts in TRANSACTION currency; *Base mirrors in company base currency.
-  subtotal       Decimal   @default(0) // net of tax, after line discounts
-  taxTotal       Decimal   @default(0)
-  total          Decimal   @default(0) // subtotal + tax
-  amountPaid     Decimal   @default(0) // allocated from receipts + credit notes
-  amountDue      Decimal   @default(0) // total − amountPaid
-  totalBase      Decimal   @default(0)
+  subtotal       Decimal @db.Decimal(20, 6)   @default(0) // net of tax, after line discounts
+  taxTotal       Decimal @db.Decimal(20, 6)   @default(0)
+  total          Decimal @db.Decimal(20, 6)   @default(0) // subtotal + tax
+  amountPaid     Decimal @db.Decimal(20, 6)   @default(0) // allocated from receipts + credit notes
+  amountDue      Decimal @db.Decimal(20, 6)   @default(0) // total − amountPaid
+  totalBase      Decimal @db.Decimal(20, 6)   @default(0)
   // Header default analytical dimensions (lines may override).
   brandId        String?
   countryId      String?
@@ -2457,12 +2457,12 @@ model SalesInvoiceLine {
   invoiceId        String
   lineNo           Int     @default(0)
   description      String
-  quantity         Decimal @default(1)
-  unitPrice        Decimal @default(0)
-  discountPct      Decimal @default(0) // 0..100
-  lineNet          Decimal @default(0) // quantity*unitPrice*(1-discount)
+  quantity         Decimal @db.Decimal(20, 6) @default(1)
+  unitPrice        Decimal @db.Decimal(20, 6) @default(0)
+  discountPct      Decimal @db.Decimal(20, 6) @default(0) // 0..100
+  lineNet          Decimal @db.Decimal(20, 6) @default(0) // quantity*unitPrice*(1-discount)
   taxRateId        String?
-  taxAmount        Decimal @default(0)
+  taxAmount        Decimal @db.Decimal(20, 6) @default(0)
   revenueAccountId String? // override (else settings.revenue)
   productId        String?
   brandId          String?
@@ -2487,13 +2487,13 @@ model CreditNote {
   issueDate        DateTime
   currency         String    @default("KWD")
   baseCurrency     String    @default("KWD")
-  exchangeRate     Decimal?
-  subtotal         Decimal   @default(0)
-  taxTotal         Decimal   @default(0)
-  total            Decimal   @default(0)
-  amountApplied    Decimal   @default(0) // applied to invoices
-  amountRemaining  Decimal   @default(0) // unapplied customer credit
-  totalBase        Decimal   @default(0)
+  exchangeRate     Decimal? @db.Decimal(20, 10)
+  subtotal         Decimal @db.Decimal(20, 6)   @default(0)
+  taxTotal         Decimal @db.Decimal(20, 6)   @default(0)
+  total            Decimal @db.Decimal(20, 6)   @default(0)
+  amountApplied    Decimal @db.Decimal(20, 6)   @default(0) // applied to invoices
+  amountRemaining  Decimal @db.Decimal(20, 6)   @default(0) // unapplied customer credit
+  totalBase        Decimal @db.Decimal(20, 6)   @default(0)
   brandId          String?
   countryId        String?
   reason           String?
@@ -2520,11 +2520,11 @@ model CreditNoteLine {
   creditNoteId     String
   lineNo           Int     @default(0)
   description      String
-  quantity         Decimal @default(1)
-  unitPrice        Decimal @default(0)
-  lineNet          Decimal @default(0)
+  quantity         Decimal @db.Decimal(20, 6) @default(1)
+  unitPrice        Decimal @db.Decimal(20, 6) @default(0)
+  lineNet          Decimal @db.Decimal(20, 6) @default(0)
   taxRateId        String?
-  taxAmount        Decimal @default(0)
+  taxAmount        Decimal @db.Decimal(20, 6) @default(0)
   revenueAccountId String?
   productId        String?
   brandId          String?
@@ -2548,11 +2548,11 @@ model CustomerReceipt {
   receiptDate     DateTime
   currency        String    @default("KWD")
   baseCurrency    String    @default("KWD")
-  exchangeRate    Decimal?
-  amount          Decimal   @default(0) // total received
-  allocatedAmount Decimal   @default(0) // sum of allocations
-  unappliedAmount Decimal   @default(0) // amount − allocated (customer credit)
-  amountBase      Decimal   @default(0)
+  exchangeRate    Decimal? @db.Decimal(20, 10)
+  amount          Decimal @db.Decimal(20, 6)   @default(0) // total received
+  allocatedAmount Decimal @db.Decimal(20, 6)   @default(0) // sum of allocations
+  unappliedAmount Decimal @db.Decimal(20, 6)   @default(0) // amount − allocated (customer credit)
+  amountBase      Decimal @db.Decimal(20, 6)   @default(0)
   bankAccountId   String? // deposit account override (else settings.cash)
   method          String? // bank | cash | card | cheque | transfer
   reference       String?
@@ -2584,7 +2584,7 @@ model ReceiptAllocation {
   id        String   @id @default(cuid())
   receiptId String
   invoiceId String
-  amount    Decimal
+  amount    Decimal @db.Decimal(20, 6)
   createdAt DateTime @default(now())
 
   receipt CustomerReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
@@ -2602,7 +2602,7 @@ model CreditNoteApplication {
   id           String   @id @default(cuid())
   creditNoteId String
   invoiceId    String
-  amount       Decimal
+  amount       Decimal @db.Decimal(20, 6)
   createdAt    DateTime @default(now())
 
   creditNote CreditNote   @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
