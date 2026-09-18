@@ -85,12 +85,12 @@ reads 2 settings per request when the policy is off (a caching optimization, not
 - **P1 open: 0** — DOM-01 Documents entry and DOM-02 Certificates entry are now built (scope-guarded
   create/renew, audited, DB-gated regression + live Playwright create verified). The UX-P1 items (font,
   contrast, form labels) were already fixed.
-- **P2 open: ~2 (all assessed/deferred, none a functional defect)** — UX-09/10/11 (shared-primitive
-  consistency, a mechanical ~30-file refactor deferred to its own reviewed design-system sweep) and
-  ARCH-10 (money `@db.Decimal` precision, deferred with a typed per-column plan; a blind ALTER would
-  round FX rates — §67). DEP-01 assessed (build/dev-only advisories, runtime not exposed).
-  Everything else is fixed: SEC-02/FIN-02/FIN-03/FIN-04/ARCH-01/ARCH-03/ARCH-07/ARCH-09,
-  DOM-01/02/03/04/06, RT-02/RT-03, PLAT-01/02/04/09/10/11/12, UX-01/07/13/14.
+- **P2 open: ~1 (non-functional, deferred)** — UX-09/10/11 (shared-primitive consistency, a mechanical
+  ~30-file refactor deferred to its own reviewed design-system sweep). ARCH-10 (money `@db.Decimal`
+  precision) is now **fixed** — applied and value-diff-verified against a live DB. DEP-01 assessed
+  (build/dev-only advisories, runtime not exposed). Everything else is fixed:
+  SEC-02/FIN-02/FIN-03/FIN-04/ARCH-01/ARCH-03/ARCH-07/ARCH-09/ARCH-10, DOM-01/02/03/04/06,
+  RT-02/RT-03, PLAT-01/02/04/09/10/11/12, UX-01/07/13/14.
 - **P3 open: ~24** — polish/scale/governance (unchanged; out of this audit's fix scope).
 
 ### This audit's fix program — final tally
@@ -98,8 +98,9 @@ reads 2 settings per request when the policy is off (a caching optimization, not
 Landed and verified on `claude/nexora-360-audit` (each with an integration test and, for UI, a live
 runtime check): FIN-01 (P0) · SEC-02 · ARCH-01 · ARCH-03 · ARCH-07 · ARCH-09 · FIN-02 · FIN-03 · FIN-04 ·
 DOM-01/02 · DOM-03 · DOM-04 · DOM-06 · RT-02 · RT-03 · PLAT-01/02 · PLAT-04 · PLAT-08/13 · PLAT-09/10/11/12 ·
-UX-01/02/03 · UX-07 · UX-13 · UX-14. Assessed & deferred (non-functional / human decision): ARCH-10,
-UX-09/10/11, DEP-01, repo governance. Test suite grew 165 → 188 passing; tsc, prod build and (where a
+UX-01/02/03 · UX-07 · UX-13 · UX-14 · ARCH-10. Assessed & deferred (non-functional / human decision):
+UX-09/10/11 (mechanical design-system refactor), DEP-01 (build/dev-only), repo governance.
+Test suite grew 165 → 188 passing; tsc, prod build and (where a
 daemon existed) `docker compose config` all clean. Per §105: no PR opened, nothing merged, no governance
 or visibility change, not deployed — all work remains on the audit branch.
 
