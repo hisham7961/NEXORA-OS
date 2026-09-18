@@ -14,7 +14,6 @@ import { NewAnswerButton, RequestAnswerButton } from "@/components/answers/answe
 import { BrandChip } from "@/components/entity-chips";
 import { truncate } from "@/lib/utils";
 import { formatDate } from "@/lib/format";
-import Link from "next/link";
 
 export const metadata: Metadata = { title: "Approved Answers" };
 import { getServerI18n } from "@/lib/server-i18n";
@@ -37,7 +36,9 @@ export default async function AnswersPage({ searchParams }: { searchParams: Prom
   ]);
 
   const columns: Column<ApprovedAnswer>[] = [
-    { key: "q", header: t("answers.col.question"), render: (a) => <Link href={`/answers/${a.id}`} className="font-medium text-ink hover:text-accent">{truncate(a.question, 80)}</Link> },
+    // The DataTable makes the first cell the row link (getRowHref below); an inner
+    // <Link> here would nest <a> in <a> → invalid DOM reparented on hydration (React #418).
+    { key: "q", header: t("answers.col.question"), render: (a) => <span className="font-medium text-ink">{truncate(a.question, 80)}</span> },
     { key: "brand", header: t("common.brand"), render: (a) => <BrandChip name={refName(lookups.brands, a.brandId)} color={a.brandId ? lookups.brands.get(a.brandId)?.meta : null} /> },
     { key: "category", header: t("common.category"), render: (a) => <span className="capitalize text-ink-3">{a.category?.replace(/_/g, " ") ?? "—"}</span> },
     { key: "lang", header: t("common.lang"), render: (a) => <span className="uppercase text-ink-3">{a.language}</span> },
