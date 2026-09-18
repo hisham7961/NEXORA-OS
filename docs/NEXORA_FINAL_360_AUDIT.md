@@ -85,12 +85,15 @@ reads 2 settings per request when the policy is off (a caching optimization, not
 - **P1 open: 0** — DOM-01 Documents entry and DOM-02 Certificates entry are now built (scope-guarded
   create/renew, audited, DB-gated regression + live Playwright create verified). The UX-P1 items (font,
   contrast, form labels) were already fixed.
-- **P2 open: ~1 (non-functional, deferred)** — UX-09/10/11 (shared-primitive consistency, a mechanical
-  ~30-file refactor deferred to its own reviewed design-system sweep). ARCH-10 (money `@db.Decimal`
-  precision) is now **fixed** — applied and value-diff-verified against a live DB. DEP-01 assessed
-  (build/dev-only advisories, runtime not exposed). Everything else is fixed:
+- **P2 open: 0 functional.** The last item, UX-09/10/11 (shared-primitive consistency), was investigated
+  and is **mostly justified specialization, not debt**: the genuinely-simple detail headers (Task, Case)
+  are converted to `PageHeader`, while the rest hand-roll richer headers (metadata chip rows) that
+  `PageHeader` can't reproduce without a layout regression, and most of the 11 "raw tables" are editable
+  grids/matrices that `DataTable` cannot serve. Full unification needs a `PageHeader` subtitle slot — a
+  design-system enhancement tracked separately. ARCH-10 (decimal precision) is fixed and value-verified;
+  DEP-01 is assessed (build/dev-only). Everything else is fixed:
   SEC-02/FIN-02/FIN-03/FIN-04/ARCH-01/ARCH-03/ARCH-07/ARCH-09/ARCH-10, DOM-01/02/03/04/06,
-  RT-02/RT-03, PLAT-01/02/04/09/10/11/12, UX-01/07/13/14.
+  RT-02/RT-03, PLAT-01/02/04/09/10/11/12, UX-01/07/13/14 (+ UX-09 partial).
 - **P3 open: ~24** — polish/scale/governance (unchanged; out of this audit's fix scope).
 
 ### This audit's fix program — final tally
