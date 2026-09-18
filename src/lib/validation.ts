@@ -8,9 +8,13 @@ export const optionalDate = z.preprocess(
   z.coerce.date().optional(),
 );
 
-/** Optional non-empty trimmed string. */
+/** Optional non-empty trimmed string. "" / null / undefined → undefined. */
 export const optionalString = z.preprocess(
-  (v) => (typeof v === "string" ? v.trim() : v),
+  (v) => {
+    if (v == null) return undefined;
+    if (typeof v === "string") { const t = v.trim(); return t === "" ? undefined : t; }
+    return v;
+  },
   z.string().min(1).optional(),
 );
 

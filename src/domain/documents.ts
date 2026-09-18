@@ -4,6 +4,9 @@ import { prisma } from "@/lib/db";
 import { assertRecordInScope, type Principal } from "@/lib/permissions/engine";
 import { listQuerySchema } from "@/lib/api/pagination";
 import { scopedWhere, DIMS_CBC } from "@/domain/scope";
+import { assertCan, audit, type ActorContext } from "@/domain/mutation";
+import { ServiceError } from "@/lib/api/handler";
+import { optionalString, requiredString } from "@/lib/validation";
 
 /**
  * Documents & certificates with expiration tracking (§15). A Document carries
@@ -76,6 +79,89 @@ export async function getDocument(principal: Principal, id: string) {
     DIMS_CBC,
   );
   return { document };
+}
+
+/** Regulatory document types for the create form (id, name, category). */
+export async function listDocumentTypes(): Promise<{ id: string; name: string; category: string | null }[]> {
+  return prisma.documentType.findMany({ select: { id: true, name: true, category: true }, orderBy: { name: "asc" } });
+}
+
+const dateInput = z.preprocess((v) => (v === "" || v == null ? undefined : new Date(String(v))), z.date().optional());
+
+export const documentCreateSchema = z.object({
+  title: requiredString(200),
+  documentTypeId: optionalString,
+  companyId: optionalString,
+  brandId: optionalString,
+  countryId: optionalString,
+  productId: optionalString,
+  number: optionalString,
+  issueDate: dateInput,
+  expiryDate: dateInput,
+  visibility: z.enum(["internal", "restricted"]).default("internal"),
+});
+
+/** Status derived from expiry at write time; the render layer + reminder job refine it. */
+function documentStatus(expiryDate: Date | undefined | null): string {
+  if (!expiryDate) return "valid";
+  const days = Math.floor((expiryDate.getTime() - Date.now()) / 86400000);
+  if (days < 0) return "expired";
+  if (days <= 30) return "expiring";
+  return "valid";
+}
+
+/**
+ * Create a document / certificate (§15 — audit DOM-01/02). Certificates are just
+ * Documents with a regulatory DocumentType, so this one path serves both screens.
+ * Fail-closed on the NEW record's create scope, then audit.
+ */
+export async function createDocument(ctx: ActorContext, raw: unknown): Promise<Document> {
+  const input = documentCreateSchema.parse(raw);
+  const scope = { companyId: input.companyId ?? null, brandId: input.brandId ?? null, countryId: input.countryId ?? null };
+  assertCan(ctx.principal, "documents.create", scope);
+  const doc = await prisma.document.create({
+    data: {
+      ...scope,
+      documentTypeId: input.documentTypeId ?? null,
+      productId: input.productId ?? null,
+      number: input.number ?? null,
+      title: input.title,
+      issueDate: input.issueDate ?? null,
+      expiryDate: input.expiryDate ?? null,
+      visibility: input.visibility,
+      status: documentStatus(input.expiryDate),
+      ownerId: ctx.principal.userId,
+      createdById: ctx.principal.userId,
+    },
+  });
+  await audit(ctx, { action: "document.created", entityType: "Document", entityId: doc.id, summary: `Document created: ${doc.title}`, brandId: doc.brandId, companyId: doc.companyId });
+  return doc;
+}
+
+export const documentRenewSchema = z.object({ expiryDate: dateInput, number: optionalString });
+
+/**
+ * Renew a document / certificate: new expiry, bump version, reset the reminder
+ * ledger so the expiry sweep re-arms (§15/§22). Fail-closed edit-scope guard (§69).
+ */
+export async function renewDocument(ctx: ActorContext, id: string, raw: unknown): Promise<Document> {
+  const input = documentRenewSchema.parse(raw);
+  if (!input.expiryDate) throw new ServiceError("expiry_required", "A new expiry date is required to renew.", 422);
+  const existing = await prisma.document.findUnique({ where: { id } });
+  if (!existing || existing.archivedAt) throw new ServiceError("not_found", "Document not found", 404);
+  assertRecordInScope(ctx.principal, "documents.edit", { companyId: existing.companyId, brandId: existing.brandId, countryId: existing.countryId }, DIMS_CBC);
+  const doc = await prisma.document.update({
+    where: { id },
+    data: {
+      expiryDate: input.expiryDate,
+      number: input.number ?? existing.number,
+      version: { increment: 1 },
+      status: documentStatus(input.expiryDate),
+      remindersSentJson: null,
+    },
+  });
+  await audit(ctx, { action: "document.renewed", entityType: "Document", entityId: doc.id, summary: `Renewed to v${doc.version}`, brandId: doc.brandId, companyId: doc.companyId });
+  return doc;
 }
 
 /**
