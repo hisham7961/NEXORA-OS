@@ -31,7 +31,7 @@ scratchpad. Consolidated here rather than split across ten thin files.
 | Reliability | READY WITH ISSUES | 0 5xx across 74 routes; scheduler reports false state (PLAT-01/02); no graceful shutdown (PLAT-09). |
 | Data integrity | READY | Company separation, FK discipline, immutable posted journals; independent invariants hold; after FIN-01 fix, reversal nets to zero. |
 | Accounting | READY WITH ISSUES | Core correct & independently verified; FIN-01 (P0) fixed; FIN-02/03/04 (cross-currency allocation/transfer, bank-rec carry) open. |
-| Operations | PARTIAL | Ops Center truthfulness (PLAT-01/02); deploy lacked migrate (fixed); go-live page hangs (RT-03). |
+| Operations | PARTIAL | Ops Center truthfulness (PLAT-01/02); deploy lacked migrate (fixed); go-live page hang fixed (RT-03 — dead links repointed to /accounting). |
 | Marketing | REAL | Campaign/social/WhatsApp real; Creative Library write-path now built (DOM-03 fixed). Asset detail-page clickthrough is a small follow-up. |
 | Regulatory | REAL | Registration workflow real; Documents/Certificates now have a scope-guarded create/renew entry path (DOM-01/02 fixed). File attachment is a follow-up. |
 | Customer Service | READY | Cases/approved-answers/knowledge real; content correctly not auto-translated. |
@@ -85,9 +85,10 @@ reads 2 settings per request when the policy is off (a caching optimization, not
 - **P1 open: 0** — DOM-01 Documents entry and DOM-02 Certificates entry are now built (scope-guarded
   create/renew, audited, DB-gated regression + live Playwright create verified). The UX-P1 items (font,
   contrast, form labels) were already fixed.
-- **P2 open: ~16** — see master matrix (FIN-04, ARCH-01/09/10, PLAT-01/02/04/09/10/11/12, DOM-04,
-  RT-03, UX-07/09/10/11/14, DEP-01). SEC-02/FIN-02/FIN-03/ARCH-07/ARCH-03, DOM-06 (expense entry),
-  DOM-03 (creative-library write-path) and RT-02 (/answers hydration) now fixed.
+- **P2 open: ~15** — see master matrix (FIN-04, ARCH-01/09/10, PLAT-01/02/04/09/10/11/12, DOM-04,
+  UX-07/09/10/11/14, DEP-01). SEC-02/FIN-02/FIN-03/ARCH-07/ARCH-03, DOM-06 (expense entry),
+  DOM-03 (creative-library write-path), RT-02 (/answers hydration) and RT-03 (go-live dead links /
+  prefetch hang) now fixed.
 - **P3 open: ~24** — polish/scale/governance.
 
 ## Four verdicts (§104)
