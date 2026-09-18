@@ -85,9 +85,9 @@ reads 2 settings per request when the policy is off (a caching optimization, not
 - **P1 open: 0** — DOM-01 Documents entry and DOM-02 Certificates entry are now built (scope-guarded
   create/renew, audited, DB-gated regression + live Playwright create verified). The UX-P1 items (font,
   contrast, form labels) were already fixed.
-- **P2 open: ~17** — see master matrix (FIN-04, ARCH-01/09/10, PLAT-01/02/04/09/10/11/12, DOM-04,
-  RT-02/03, UX-07/09/10/11/14, DEP-01). SEC-02/FIN-02/FIN-03/ARCH-07/ARCH-03, DOM-06 (expense entry)
-  and DOM-03 (creative-library write-path) now fixed.
+- **P2 open: ~16** — see master matrix (FIN-04, ARCH-01/09/10, PLAT-01/02/04/09/10/11/12, DOM-04,
+  RT-03, UX-07/09/10/11/14, DEP-01). SEC-02/FIN-02/FIN-03/ARCH-07/ARCH-03, DOM-06 (expense entry),
+  DOM-03 (creative-library write-path) and RT-02 (/answers hydration) now fixed.
 - **P3 open: ~24** — polish/scale/governance.
 
 ## Four verdicts (§104)
