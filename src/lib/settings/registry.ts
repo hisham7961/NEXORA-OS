@@ -28,7 +28,7 @@ export interface SettingDef {
 }
 
 export const SETTING_CATEGORIES = [
-  "General", "Localization", "Notifications", "Tasks", "Attendance", "Accounting",
+  "General", "Localization", "Notifications", "Attendance", "Accounting",
   "Security", "Appearance", "Storage", "Jobs", "Integrations",
 ] as const;
 
@@ -41,10 +41,7 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "localization.defaultTimezone", category: "Localization", label: "Default timezone", description: "Default timezone for scheduling and display.", type: "string", default: "Asia/Kuwait", permission: "settings.manage" },
   { key: "localization.defaultCurrency", category: "Localization", label: "Default currency", description: "Default display currency (ISO 4217).", type: "string", default: "KWD", permission: "settings.manage" },
   // Notifications
-  { key: "notifications.digestEnabled", category: "Notifications", label: "Daily digest", description: "Send the daily notification digest.", type: "boolean", default: true, permission: "settings.manage" },
   { key: "notifications.certificateExpiryDays", category: "Notifications", label: "Certificate expiry lead (days)", description: "Days before expiry to start certificate reminders.", type: "number", default: 90, min: 1, max: 365, permission: "settings.manage" },
-  // Tasks
-  { key: "tasks.defaultReminderDays", category: "Tasks", label: "Task reminder lead (days)", description: "Default days before a due task to remind the assignee.", type: "number", default: 1, min: 0, max: 30, permission: "settings.manage" },
   // Attendance
   { key: "attendance.lateThresholdMinutes", category: "Attendance", label: "Late threshold (minutes)", description: "Minutes after expected start counted as late.", type: "number", default: 10, min: 0, max: 120, permission: "settings.manage" },
   // Accounting (global toggles only; per-company config lives in accounting settings)

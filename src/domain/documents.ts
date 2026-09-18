@@ -183,14 +183,29 @@ export async function getDocumentTypeNames(): Promise<Map<string, string>> {
 export const DEFAULT_CERT_THRESHOLDS = [180, 120, 90, 60, 30, 14, 7, 1];
 
 async function certThresholds(): Promise<number[]> {
+  let thresholds = DEFAULT_CERT_THRESHOLDS;
   const row = await prisma.systemSetting.findUnique({ where: { key: "certificates.reminderThresholds" } }).catch(() => null);
   if (row) {
     try {
       const v = JSON.parse(row.valueJson);
-      if (Array.isArray(v) && v.every((n) => typeof n === "number")) return [...v].sort((a, b) => b - a);
+      if (Array.isArray(v) && v.every((n) => typeof n === "number")) thresholds = [...v].sort((a, b) => b - a);
     } catch { /* fall through to default */ }
   }
-  return DEFAULT_CERT_THRESHOLDS;
+  // Respect the admin's "start reminders N days before expiry" lead (audit DOM-04):
+  // no reminder fires earlier than notifications.certificateExpiryDays.
+  const lead = await certificateExpiryLeadDays();
+  return lead != null ? thresholds.filter((t) => t <= lead) : thresholds;
+}
+
+/** notifications.certificateExpiryDays — max lead (days) before expiry to remind. */
+async function certificateExpiryLeadDays(): Promise<number | null> {
+  try {
+    const { getSettingValue } = await import("@/domain/settings");
+    const v = Number(await getSettingValue<number>("notifications.certificateExpiryDays"));
+    return Number.isFinite(v) && v > 0 ? v : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function generateCertificateReminders(actorId: string | null, now: Date = new Date()): Promise<{ scanned: number; notified: number }> {

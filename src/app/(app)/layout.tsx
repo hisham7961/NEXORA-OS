@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getCurrentUser, getPrincipal } from "@/lib/auth/current-user";
 import { mfaRequiredFor, isMfaEnabled } from "@/domain/mfa";
+import { getSettingValue } from "@/domain/settings";
 import { allowedNavKeys, allowedCreateCommands } from "@/lib/navigation-access";
 import { DEFAULT_ROLES } from "@/lib/permissions/catalog";
 import { prisma } from "@/lib/db";
@@ -26,6 +27,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const allowed = allowedNavKeys(principal);
+  // Brand the shell with the configured group name (audit DOM-04). Cached, so cheap.
+  const groupName = (await getSettingValue<string>("general.groupName").catch(() => "")).toString().trim() || undefined;
   const createCommands = allowedCreateCommands(principal);
 
   let roleLabel = "Employee";
@@ -42,7 +45,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <ShellProvider>
       <div className="flex h-dvh overflow-hidden bg-bg">
-        <Sidebar allowed={allowed} />
+        <Sidebar allowed={allowed} groupName={groupName} />
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar
             user={{ name: user.name, email: user.email, avatarColor: user.avatarColor, roleLabel }}

@@ -5,6 +5,17 @@ import { ServiceError } from "@/lib/api/handler";
 import { assertCan, audit, notify, type ActorContext } from "@/domain/mutation";
 import { optionalString } from "@/lib/validation";
 
+/** Configured late-grace, in minutes (System Settings → Attendance; audit DOM-04). */
+async function lateThresholdMinutes(): Promise<number> {
+  try {
+    const { getSettingValue } = await import("@/domain/settings");
+    const v = Number(await getSettingValue<number>("attendance.lateThresholdMinutes"));
+    return Number.isFinite(v) && v >= 0 ? v : 0;
+  } catch {
+    return 0;
+  }
+}
+
 /** Attendance overview (§22) — accountability, not surveillance. */
 export async function getAttendanceToday(_principal: Principal) {
   const now = new Date();
@@ -70,7 +81,11 @@ export async function checkIn(ctx: ActorContext): Promise<void> {
   if (state !== "out") throw new ServiceError("already_in", "You are already checked in today.", 409);
   const now = new Date();
   const expectedStart = record?.expectedStart ?? null;
-  const lateMinutes = expectedStart ? mins(now, expectedStart) : 0;
+  // Grace period from System Settings (audit DOM-04): only past the configured
+  // threshold does a check-in count as late.
+  const graceMinutes = await lateThresholdMinutes();
+  const minutesPast = expectedStart ? mins(now, expectedStart) : 0;
+  const lateMinutes = minutesPast > graceMinutes ? minutesPast : 0;
 
   await prisma.attendanceRecord.upsert({
     where: { userId_date: { userId: ctx.principal.userId, date } },

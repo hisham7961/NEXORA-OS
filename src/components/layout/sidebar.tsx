@@ -13,7 +13,7 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(href + "/");
 }
 
-export function Sidebar({ allowed }: { allowed: string[] }) {
+export function Sidebar({ allowed, groupName }: { allowed: string[]; groupName?: string }) {
   const { t } = useI18n();
   const pathname = usePathname();
   const { mobileNavOpen, setMobileNavOpen } = useShell();
@@ -66,7 +66,7 @@ export function Sidebar({ allowed }: { allowed: string[] }) {
         N
       </div>
       <div className="min-w-0 leading-tight">
-        <div className="truncate text-[13px] font-semibold text-ink">{t("app.name")}</div>
+        <div className="truncate text-[13px] font-semibold text-ink">{groupName || t("app.name")}</div>
         <div className="truncate text-[10.5px] text-ink-3">{t("app.tagline")}</div>
       </div>
     </div>
