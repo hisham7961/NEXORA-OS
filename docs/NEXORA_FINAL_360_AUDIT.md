@@ -33,7 +33,7 @@ scratchpad. Consolidated here rather than split across ten thin files.
 | Accounting | READY WITH ISSUES | Core correct & independently verified; FIN-01 (P0) fixed; FIN-02/03/04 (cross-currency allocation/transfer, bank-rec carry) open. |
 | Operations | PARTIAL | Ops Center truthfulness (PLAT-01/02); deploy lacked migrate (fixed); go-live page hangs (RT-03). |
 | Marketing | READY WITH ISSUES | Campaign/social/WhatsApp real; Creative Library write-path dead (DOM-03). |
-| Regulatory | PARTIAL | Registration workflow real; **Documents/Certificates have no entry path** (DOM-01/02). |
+| Regulatory | REAL | Registration workflow real; Documents/Certificates now have a scope-guarded create/renew entry path (DOM-01/02 fixed). File attachment is a follow-up. |
 | Customer Service | READY | Cases/approved-answers/knowledge real; content correctly not auto-translated. |
 | People Ops | READY WITH ISSUES | Attendance real; offboarding access-revocation + leave partial. |
 | Reporting | READY WITH ISSUES | Report Builder + CSV real; global search non-sargable at scale (ARCH-09). |
@@ -82,8 +82,9 @@ reads 2 settings per request when the policy is off (a caching optimization, not
 ## Remaining P0/P1/P2/P3 (§88) — after the fixes above
 
 - **P0 open: 0.**
-- **P1 open: 2** — DOM-01 Documents entry, DOM-02 Certificates entry (business data-entry paths). The UX-P1
-  items (font, contrast, form labels) are now fixed.
+- **P1 open: 0** — DOM-01 Documents entry and DOM-02 Certificates entry are now built (scope-guarded
+  create/renew, audited, DB-gated regression + live Playwright create verified). The UX-P1 items (font,
+  contrast, form labels) were already fixed.
 - **P2 open: ~20** — see master matrix (FIN-04, ARCH-01/03/09/10, PLAT-01/02/04/09/10/11/12, DOM-03/04/06,
   RT-02/03, UX-07/09/10/11/14, DEP-01). SEC-02/FIN-02/FIN-03/ARCH-07 now fixed.
 - **P3 open: ~24** — polish/scale/governance.
