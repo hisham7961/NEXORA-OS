@@ -4,3 +4,10 @@ node_modules
 .env
 .env.*
 npm-debug.log*
+# Dev/runtime artifacts that must never leak into the image (audit PLAT-12).
+.nexora-storage
+*.log
+coverage
+.DS_Store
+.vscode
+.claude
