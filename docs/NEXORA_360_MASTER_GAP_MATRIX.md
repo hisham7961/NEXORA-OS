@@ -52,7 +52,7 @@ business/authorization/core-workflow failure · P2 important workflow/security/d
 | FIN-03 | Accounting | Cross-currency transfer with omitted `toAmount` posts wrong destination amount (`bank.ts` dead ternary). | FINANCE (FACT) | ▢ OPEN |
 | FIN-04 | Accounting | Bank reconciliation can't balance from a 2nd statement (no prior-cleared carry). | FINANCE (FACT) | ▢ OPEN |
 | ARCH-01 | Data | Dead legacy `Invoice`/`Payment` models (0 rows); finance dashboard "open invoices" counts the empty legacy table, disconnected from real AR (`SalesInvoice`). | DATA/BUG (FACT) | ▢ OPEN |
-| ARCH-03 | Security | Record comments authorize with scope-less `can()` and never `assertRecordInScope` the parent (§69) → scoped users mis-gated. | SECURITY (FACT) | ▢ OPEN |
+| ARCH-03 | Security | Record comments authorize with scope-less `can()` and never `assertRecordInScope` the parent (§69) → scoped users mis-gated. | SECURITY (FACT) | ✅ FIXED — read/post now load the referenced record and `assertRecordInScope` on its real dims (per-entity resolver); fail-closed on missing; also fixed the dead `creative.view`→`design.view` mapping. DB-gated cross-scope IDOR test (Brand A blocked from Brand B task comments). |
 | ARCH-07 | Perf | `RegistrationCase.companyId` unindexed on a hot scoped list. | PERFORMANCE (FACT) | ▢ OPEN (same pattern as ARCH-06). |
 | ARCH-09 | Perf | Global search = leading-wildcard `ILIKE` across ~12 tables, no `pg_trgm` — non-sargable at scale. | PERFORMANCE (FACT) | ▢ OPEN |
 | ARCH-10 | Data | No `@db.Decimal(p,s)` declared → all money is `NUMERIC(65,30)`. | DATA/TECH DEBT (FACT) | ▢ OPEN |

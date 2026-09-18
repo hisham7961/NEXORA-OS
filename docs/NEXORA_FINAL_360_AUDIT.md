@@ -85,9 +85,9 @@ reads 2 settings per request when the policy is off (a caching optimization, not
 - **P1 open: 0** — DOM-01 Documents entry and DOM-02 Certificates entry are now built (scope-guarded
   create/renew, audited, DB-gated regression + live Playwright create verified). The UX-P1 items (font,
   contrast, form labels) were already fixed.
-- **P2 open: ~18** — see master matrix (FIN-04, ARCH-01/03/09/10, PLAT-01/02/04/09/10/11/12, DOM-04,
-  RT-02/03, UX-07/09/10/11/14, DEP-01). SEC-02/FIN-02/FIN-03/ARCH-07, DOM-06 (expense entry) and
-  DOM-03 (creative-library write-path) now fixed.
+- **P2 open: ~17** — see master matrix (FIN-04, ARCH-01/09/10, PLAT-01/02/04/09/10/11/12, DOM-04,
+  RT-02/03, UX-07/09/10/11/14, DEP-01). SEC-02/FIN-02/FIN-03/ARCH-07/ARCH-03, DOM-06 (expense entry)
+  and DOM-03 (creative-library write-path) now fixed.
 - **P3 open: ~24** — polish/scale/governance.
 
 ## Four verdicts (§104)
@@ -125,7 +125,7 @@ data-entry paths and a few security/UX gaps — most of which are modest, well-s
    global-search `pg_trgm` (ARCH-09), dead legacy `Invoice`/`Payment` models + finance-dashboard KPI (ARCH-01). (Reliability/perf)
 8. **Design-system v2 consistency** — route hand-rolled headers/tables through `PageHeader`/`DataTable`,
    mirror RTL directional icons, drawer focus trap (UX-07/09/10/11/14). (Polish)
-9. **Wire Creative Library write-path** (DOM-03) + record-comments scope guard (ARCH-03). (Feature/security)
+9. ✅ **Creative Library write-path** (DOM-03) + record-comments scope guard (ARCH-03) — both landed. (Feature/security)
 10. **Governance & hygiene** — decide repo visibility, real default branch + branch protection, `npm audit fix`. (Governance)
 
 ## Deliverables (§102 mapping)
