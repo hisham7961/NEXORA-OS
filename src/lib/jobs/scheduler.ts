@@ -9,6 +9,9 @@ import { JOB_DEFINITIONS, jobByName, type JobDefinition } from "./registry";
  * matches the current minute. Every run is recorded in BackgroundJobRun (history,
  * duration, error) and reflected on the job's BackgroundJob row, so the Admin
  * Operations Center shows real state — nothing runs invisibly. Runners are idempotent.
+ * A run row is born "running" and only becomes "success" once the runner returns, and
+ * `recoverOrphanedRuns()` at startup marks any job/run stranded "running" by a crash as
+ * "failed" — so the Ops Center never shows a false success or a forever-running job.
  *
  * Multi-instance safety: before a SCHEDULED run, the instance claims a unique
  * (jobName, minute) row in JobRunClaim. The DB unique constraint means only one
@@ -58,6 +61,31 @@ export function getSchedulerHeartbeat(): { started: boolean; lastTickAt: Date | 
   return { started: state.started, lastTickAt: state.lastTickAt };
 }
 
+/**
+ * Crash recovery (audit PLAT-01): a job/run left "running" by a crashed or restarted
+ * process would otherwise show as forever-running in the Ops Center. At startup we mark
+ * such orphans "failed". We only touch rows older than STALE_RUN_MS so a genuinely
+ * in-flight run on another fleet instance is never reaped (these jobs finish in seconds).
+ */
+const STALE_RUN_MS = 15 * 60_000;
+export async function recoverOrphanedRuns(now: Date = new Date()): Promise<{ runs: number; jobs: number }> {
+  const cutoff = new Date(now.getTime() - STALE_RUN_MS);
+  const runs = await prisma.backgroundJobRun
+    .updateMany({
+      where: { status: "running", finishedAt: null, startedAt: { lt: cutoff } },
+      data: { status: "failed", finishedAt: now, error: "Interrupted (server restart or crash); no completion was recorded." },
+    })
+    .catch(() => ({ count: 0 }));
+  const jobs = await prisma.backgroundJob
+    .updateMany({
+      where: { status: "running", lastRunAt: { lt: cutoff } },
+      data: { status: "failed", lastError: "Interrupted (server restart or crash)." },
+    })
+    .catch(() => ({ count: 0 }));
+  if (runs.count || jobs.count) log.warn("recovered orphaned job state", { runs: runs.count, jobs: jobs.count });
+  return { runs: runs.count, jobs: jobs.count };
+}
+
 async function systemActorId(): Promise<string | null> {
   try {
     const admin = await prisma.user.findFirst({ where: { isSuperAdmin: true, archivedAt: null }, select: { id: true } });
@@ -81,8 +109,11 @@ export async function runJob(def: JobDefinition, trigger: "scheduled" | "manual"
   const started = new Date();
 
   const jobRow = await prisma.backgroundJob.findFirst({ where: { name: def.name } }).catch(() => null);
+  // Born "running", not "success" (audit PLAT-02): the run only becomes "success" once
+  // def.run() actually returns. A crash mid-run therefore leaves a truthful "running" row
+  // that the startup reaper (recoverOrphanedRuns) later marks "failed" — never a false success.
   const run = await prisma.backgroundJobRun.create({
-    data: { jobId: jobRow?.id ?? null, jobName: def.name, trigger, status: "success", startedAt: started },
+    data: { jobId: jobRow?.id ?? null, jobName: def.name, trigger, status: "running", startedAt: started },
   }).catch(() => null);
   if (jobRow) await prisma.backgroundJob.update({ where: { id: jobRow.id }, data: { status: "running", lastRunAt: started, scheduleCron: def.cron } }).catch(() => {});
 
@@ -141,8 +172,9 @@ export function startScheduler(): void {
   }
   state.started = true;
 
-  // Seed nextRunAt for display, best-effort.
+  // Recover any job/run left "running" by a previous crash, then seed nextRunAt.
   void (async () => {
+    await recoverOrphanedRuns().catch(() => {});
     for (const def of JOB_DEFINITIONS) {
       const row = await prisma.backgroundJob.findFirst({ where: { name: def.name } }).catch(() => null);
       if (row) await prisma.backgroundJob.update({ where: { id: row.id }, data: { nextRunAt: nextRun(def.cron), scheduleCron: def.cron } }).catch(() => {});

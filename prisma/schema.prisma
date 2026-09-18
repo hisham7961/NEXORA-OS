@@ -2948,7 +2948,7 @@ model BackgroundJobRun {
   jobId      String?
   jobName    String
   trigger    String    @default("scheduled") // scheduled | manual
-  status     String // success | failed
+  status     String // running | success | failed  (born "running"; a crash-stranded run is reaped to "failed")
   startedAt  DateTime  @default(now())
   finishedAt DateTime?
   durationMs Int?
