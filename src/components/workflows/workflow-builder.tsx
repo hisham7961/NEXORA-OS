@@ -80,12 +80,12 @@ export function WorkflowBuilder({
 
       {/* Transitions (flow) */}
       <Panel>
-        <PanelHeader title={tx("wf.transitions")} icon={<ArrowRight className="h-4 w-4" />} action={editable ? <Button size="sm" variant="ghost" disabled={spec.stages.length < 1} onClick={() => setTransEdit({ index: -1, tr: { key: "", name: "", from: spec.stages[0]?.key ?? "", to: spec.stages[0]?.key ?? "" } })}><Plus className="h-3.5 w-3.5" /> {tx("wf.addTransition")}</Button> : undefined} />
+        <PanelHeader title={tx("wf.transitions")} icon={<ArrowRight className="h-4 w-4 flip-x" />} action={editable ? <Button size="sm" variant="ghost" disabled={spec.stages.length < 1} onClick={() => setTransEdit({ index: -1, tr: { key: "", name: "", from: spec.stages[0]?.key ?? "", to: spec.stages[0]?.key ?? "" } })}><Plus className="h-3.5 w-3.5" /> {tx("wf.addTransition")}</Button> : undefined} />
         <ul className="divide-y divide-line">
           {spec.transitions.map((t, i) => (
             <li key={t.key || i} className="flex flex-wrap items-center gap-2 px-4 py-2.5">
               <Badge category="neutral">{t.from === "*" ? tx("wf.anyStage") : stageName(t.from)}</Badge>
-              <ArrowRight className="h-3.5 w-3.5 text-ink-3" />
+              <ArrowRight className="h-3.5 w-3.5 text-ink-3 flip-x" />
               <Badge category="info">{stageName(t.to)}</Badge>
               <span className="text-[13px] text-ink">{t.name}</span>
               {t.permission && <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-ink-2">{t.permission}</span>}

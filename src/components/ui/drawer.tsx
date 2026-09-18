@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/components/providers";
+
+const FOCUSABLE = 'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 /**
  * Side drawer for quick create/edit and detail peeks (§43, §78 — never a giant
@@ -27,14 +29,35 @@ export function Drawer({
   width?: string;
 }) {
   const { t } = useI18n();
+  const panelRef = useRef<HTMLElement>(null);
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    // Remember what had focus so we can restore it on close (audit UX-14).
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+    const visibleFocusable = () =>
+      Array.from(panel?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []).filter((el) => el.offsetParent !== null);
+
+    // Move focus into the drawer.
+    (visibleFocusable()[0] ?? panel)?.focus();
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { onClose(); return; }
+      if (e.key !== "Tab" || !panel) return;
+      // Trap Tab within the drawer.
+      const nodes = visibleFocusable();
+      if (nodes.length === 0) { e.preventDefault(); panel.focus(); return; }
+      const first = nodes[0], last = nodes[nodes.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || active === panel)) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
+    };
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
+      previouslyFocused?.focus?.(); // restore focus to the trigger
     };
   }, [open, onClose]);
 
@@ -44,9 +67,11 @@ export function Drawer({
     <div className="fixed inset-0 z-[70] flex justify-end">
       <div className="absolute inset-0 bg-[var(--overlay)] animate-fade-in" onClick={onClose} />
       <aside
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
-        className="relative flex h-full w-full flex-col border-s border-line bg-surface shadow-lg animate-slide-up"
+        tabIndex={-1}
+        className="relative flex h-full w-full flex-col border-s border-line bg-surface shadow-lg animate-slide-up focus:outline-none"
         style={{ maxWidth: width }}
       >
         <header className="flex items-start justify-between gap-3 border-b border-line px-5 py-3.5">

@@ -33,7 +33,7 @@ export function TransitionControls({ instanceId, transitions }: { instanceId: st
         {transitions.map((tr) => (
           <Button key={tr.key} size="sm" variant="secondary" disabled={pending}
             onClick={() => (tr.requiredFields.length ? setActive(active?.key === tr.key ? null : tr) : run(tr))}>
-            {tr.name} <ArrowRight className="h-3.5 w-3.5" />
+            {tr.name} <ArrowRight className="h-3.5 w-3.5 flip-x" />
           </Button>
         ))}
       </div>

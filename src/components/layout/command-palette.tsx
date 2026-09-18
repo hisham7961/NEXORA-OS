@@ -61,8 +61,11 @@ export function CommandPalette({ allowed, createCommands = [] }: { allowed: stri
 
   const results = useMemo(() => (query.trim() ? [...filteredCreate, ...filteredNav, ...hits] : [...filteredCreate, ...bookmarks, ...filteredNav]), [filteredCreate, filteredNav, hits, bookmarks, query]);
 
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (commandOpen) {
+      // Remember the trigger so focus returns to it on close (audit UX-14).
+      restoreFocusRef.current = document.activeElement as HTMLElement | null;
       setQuery("");
       setHits([]);
       setActive(0);
@@ -75,6 +78,10 @@ export function CommandPalette({ allowed, createCommands = [] }: { allowed: stri
         const favKeys = new Set(favHits.map((h) => h.href));
         setBookmarks([...favHits, ...recHits.filter((h) => !favKeys.has(h.href))]);
       });
+    } else if (restoreFocusRef.current) {
+      // Return focus to whatever opened the palette (audit UX-14).
+      restoreFocusRef.current.focus?.();
+      restoreFocusRef.current = null;
     }
   }, [commandOpen]);
 
@@ -165,7 +172,7 @@ export function CommandPalette({ allowed, createCommands = [] }: { allowed: stri
                     )}
                   >
                     <span className="flex h-6 w-6 items-center justify-center rounded bg-surface-2 text-ink-3">
-                      {hit.type === "create" ? <Plus className="h-3.5 w-3.5" /> : hit.type === "nav" ? <ArrowRight className="h-3.5 w-3.5" /> : <Search className="h-3.5 w-3.5" />}
+                      {hit.type === "create" ? <Plus className="h-3.5 w-3.5" /> : hit.type === "nav" ? <ArrowRight className="h-3.5 w-3.5 flip-x" /> : <Search className="h-3.5 w-3.5" />}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13px] font-medium text-ink">{hit.title}</span>

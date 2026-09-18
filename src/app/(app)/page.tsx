@@ -67,7 +67,7 @@ export default async function CommandCenterPage() {
                       <span className={`rounded-full px-2 py-0.5 text-xs font-semibold tabular ${TONE_CHIP[card.tone]}`}>
                         {card.count}
                       </span>
-                      <ChevronRight className="h-4 w-4 text-ink-3" />
+                      <ChevronRight className="h-4 w-4 text-ink-3 flip-x" />
                     </Link>
                   </li>
                 ))}
