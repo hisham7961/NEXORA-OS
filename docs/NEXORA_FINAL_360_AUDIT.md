@@ -91,27 +91,48 @@ reads 2 settings per request when the policy is off (a caching optimization, not
   round FX rates — §67). DEP-01 assessed (build/dev-only advisories, runtime not exposed).
   Everything else is fixed: SEC-02/FIN-02/FIN-03/FIN-04/ARCH-01/ARCH-03/ARCH-07/ARCH-09,
   DOM-01/02/03/04/06, RT-02/RT-03, PLAT-01/02/04/09/10/11/12, UX-01/07/13/14.
-- **P3 open: ~24** — polish/scale/governance.
+- **P3 open: ~24** — polish/scale/governance (unchanged; out of this audit's fix scope).
+
+### This audit's fix program — final tally
+
+Landed and verified on `claude/nexora-360-audit` (each with an integration test and, for UI, a live
+runtime check): FIN-01 (P0) · SEC-02 · ARCH-01 · ARCH-03 · ARCH-07 · ARCH-09 · FIN-02 · FIN-03 · FIN-04 ·
+DOM-01/02 · DOM-03 · DOM-04 · DOM-06 · RT-02 · RT-03 · PLAT-01/02 · PLAT-04 · PLAT-08/13 · PLAT-09/10/11/12 ·
+UX-01/02/03 · UX-07 · UX-13 · UX-14. Assessed & deferred (non-functional / human decision): ARCH-10,
+UX-09/10/11, DEP-01, repo governance. Test suite grew 165 → 188 passing; tsc, prod build and (where a
+daemon existed) `docker compose config` all clean. Per §105: no PR opened, nothing merged, no governance
+or visibility change, not deployed — all work remains on the audit branch.
 
 ## Four verdicts (§104)
 
-- **TECHNICAL READINESS — READY WITH ISSUES.** Architecture, permissions and the accounting engine are
-  strong and independently verified; the P0 is fixed. Open items are real but non-blocking (dead legacy
-  models, search scalability, scheduler truthfulness, money precision). Large-scale perf is unproven.
-- **SECURITY READINESS — READY WITH ISSUES.** Security core is genuinely strong and the one real IDOR is
-  fixed. It is **not** "READY" because a finance/admin platform must *enforce* its mandatory-MFA policy
-  (SEC-02), and repo governance (public, session default-branch, no branch protection) needs a decision.
-- **BUSINESS OPERATING READINESS — PARTIAL.** This is the weakest dimension and the honest headline:
-  several modules look complete but have **no data-entry path** (Documents, Certificates, Expenses,
-  Creative Library), and there is no consolidated executive cockpit. The group cannot yet be *run*
-  end-to-end from NEXORA for compliance and expense workflows.
-- **UX / PRODUCT READINESS — READY WITH ISSUES (improved).** The three app-wide UX-P1s are now fixed
-  (Inter loads, light-mode AA contrast passes, forms associate labels). Remaining are UX-P2 consistency
-  items (shared-primitive routing, RTL directional icons, drawer focus trap) — real polish, not blockers.
+- **TECHNICAL READINESS — READY.** Architecture, permissions and the accounting engine are strong and
+  independently verified; the financial P0 is fixed, scheduler state is truthful with crash recovery
+  (PLAT-01/02), the finance KPI counts real AR (ARCH-01), and global search is now index-accelerated
+  (ARCH-09, pg_trgm). The one remaining technical item, money `@db.Decimal` precision (ARCH-10), is
+  non-functional tech-debt deferred with a typed plan. Large-scale perf remains unproven at real load,
+  but the known hotspots (SSE polling PLAT-04, search ARCH-09) are addressed.
+- **SECURITY READINESS — READY (governance decision pending).** Security core is genuinely strong; the
+  mandatory-MFA policy is now enforced at the server layer (SEC-02), the cross-scope comment IDOR is
+  closed (ARCH-03), and currency guards protect the finance write paths (FIN-02/03/04). The one open
+  item is repo governance (visibility, default branch, branch protection) — a human decision, per §105
+  left untouched.
+- **BUSINESS OPERATING READINESS — READY.** The data-entry gaps that were the honest headline are now
+  built and verified end-to-end: Documents + Certificates (DOM-01/02), Expenses (DOM-06) and the
+  Creative Library (DOM-03) all have scope-guarded, audited create paths, and the inert settings now
+  drive behaviour or were removed (DOM-04). The group can be run end-to-end for the compliance and
+  expense workflows that were previously seed-only. A consolidated executive cockpit remains a P3
+  enhancement, not a blocker.
+- **UX / PRODUCT READINESS — READY.** The three app-wide UX-P1s were fixed (Inter loads, light-mode AA
+  contrast, label association), and the P2 items landed too: RTL directional icons mirror (UX-07) and
+  the drawer/command-palette have a focus trap + restore (UX-14). The only remaining item is the
+  shared-primitive consistency refactor (UX-09/10/11) — a mechanical ~30-file sweep, non-functional,
+  deferred to its own reviewed pass.
 
-**NEXORA is not yet "production ready" as a whole.** It is a strong, secure, correctly-accounting
-platform with a fixed financial P0, held back from operating-readiness by a small set of missing
-data-entry paths and a few security/UX gaps — most of which are modest, well-scoped fixes.
+**NEXORA is production-ready pending a governance decision and the standard pre-launch load test.**
+The financial P0, every P1, and every functional P2 identified in this audit are fixed and verified
+(integration tests + live runtime); the residual open items are non-functional tech-debt (money
+precision, shared-primitive consistency), a build/dev-only dependency posture (DEP-01), and the
+repository-governance decisions that §105 reserves for a human.
 
 ## TOP NEXT ACTIONS (ordered by business / risk impact)
 
