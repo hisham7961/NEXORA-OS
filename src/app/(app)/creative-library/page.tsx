@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import type { CreativeAsset } from "@prisma/client";
 import { Images } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
+import { canAnywhere } from "@/lib/permissions/engine";
 import { AccessDenied } from "@/components/access-denied";
 import { listCreativeAssets, creativeQuerySchema } from "@/domain/creative";
+import { NewCreativeAssetButton } from "@/components/creative/creative-form";
+import { getScopedOptions } from "@/domain/options";
 import { getLookups, refName } from "@/domain/lookups";
 import { EmptyState, Badge, type Column } from "@/components/ui";
 import { ResourceList } from "@/components/list/resource-list";
@@ -19,7 +22,12 @@ export default async function CreativeLibraryPage({ searchParams }: { searchPara
   const { t } = await getServerI18n();
   const sp = await searchParams;
   const query = creativeQuerySchema.parse(sp);
-  const [{ rows, total }, lookups] = await Promise.all([listCreativeAssets(principal, query), getLookups()]);
+  const canCreate = canAnywhere(principal, "creative_library.create");
+  const [{ rows, total }, lookups, options] = await Promise.all([
+    listCreativeAssets(principal, query),
+    getLookups(),
+    canCreate ? getScopedOptions(principal, "creative_library.create") : Promise.resolve(null),
+  ]);
 
   const columns: Column<CreativeAsset>[] = [
     { key: "asset", header: t("cl.asset"), render: (a) => <span className="capitalize">{a.assetType ?? "—"}</span> },
@@ -31,6 +39,7 @@ export default async function CreativeLibraryPage({ searchParams }: { searchPara
 
   return (
     <ResourceList title={t("cl.title")} description={t("cl.subtitle")} countLabel={t("cl.countLabel")}
+      actions={canCreate && options ? <NewCreativeAssetButton brands={options.brands} users={options.users} /> : undefined}
       searchPlaceholder={t("cl.searchPlaceholder")} columns={columns} rows={rows} getRowKey={(a) => a.id}
       page={query.page} pageSize={query.pageSize} total={total} params={sp}
       empty={<EmptyState icon={<Images className="h-5 w-5" />} title={t("cl.empty")} description={t("cl.emptyBody")} />} />
