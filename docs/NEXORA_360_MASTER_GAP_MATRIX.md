@@ -56,7 +56,7 @@ business/authorization/core-workflow failure · P2 important workflow/security/d
 | ARCH-07 | Perf | `RegistrationCase.companyId` unindexed on a hot scoped list. | PERFORMANCE (FACT) | ▢ OPEN (same pattern as ARCH-06). |
 | ARCH-09 | Perf | Global search = leading-wildcard `ILIKE` across ~12 tables, no `pg_trgm` — non-sargable at scale. | PERFORMANCE (FACT) | ▢ OPEN |
 | ARCH-10 | Data | No `@db.Decimal(p,s)` declared → all money is `NUMERIC(65,30)`. | DATA/TECH DEBT (FACT) | ▢ OPEN |
-| PLAT-01/02 | Ops | Scheduler claims a minute before running with no crash recovery; run rows born `success`; jobs stick `running` on crash → Ops Center shows false state. | OPERATIONS (FACT) | ▢ OPEN |
+| PLAT-01/02 | Ops | Scheduler claims a minute before running with no crash recovery; run rows born `success`; jobs stick `running` on crash → Ops Center shows false state. | OPERATIONS (FACT) | ✅ FIXED — run rows now born `running` (→ `success` only on return); `recoverOrphanedRuns()` at startup reaps crash-stranded `running` job/run rows to `failed` (15-min fleet-safe threshold). DB-gated test. ("claims a minute before" did not reproduce — tick claims+runs the same minute.) |
 | PLAT-04 | Perf | SSE polls DB per-connection every 3s, unbounded. | PERFORMANCE (FACT) | ▢ OPEN |
 | PLAT-09 | Ops | No graceful shutdown; npm as PID 1 swallows SIGTERM → rollouts SIGKILL in-flight jobs. | OPERATIONS (FACT) | ▢ OPEN |
 | PLAT-10/11/12 | DevOps | Root container; unslimmed image (devDeps+source, no `output:"standalone"`); `.dockerignore` leaks `.nexora-storage` dev files into image. | SECURITY/OPS (FACT) | ▢ OPEN |
