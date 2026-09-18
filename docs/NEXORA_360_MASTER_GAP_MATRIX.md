@@ -69,7 +69,7 @@ business/authorization/core-workflow failure · P2 important workflow/security/d
 | UX-07 | RTL | Directional icons not mirrored (only 3/10 use `.flip-x`) → arrows point wrong way in Arabic. | UX (FACT) | ▢ OPEN |
 | UX-09/10/11 | Design | Shared primitives bypassed: 20/30 detail pages hand-roll header instead of `PageHeader`; raw `<table>` in 11 files bypasses `DataTable`; `TabBar` in only 5. | DESIGN/TECH DEBT (FACT) | ▢ OPEN |
 | UX-14 | A11y | `Drawer`/`CommandPalette` have no focus trap/restore. | ACCESSIBILITY (FACT) | ▢ OPEN |
-| DEP-01 | Security | 10 npm advisories (1 critical, 5 high) — concentrated in **dev/build** tooling (vitest, vite, esbuild, postcss, prisma-config); limited production runtime exposure. | SECURITY (FACT) | ▢ OPEN — `npm audit fix`; evaluate next@16 separately. |
+| DEP-01 | Security | 10 npm advisories (1 critical, 5 high) — concentrated in **dev/build** tooling (vitest, vite, esbuild, postcss, prisma-config); limited production runtime exposure. | SECURITY (FACT) | ◑ ASSESSED — `npm audit fix` (non-breaking) resolves **none**: every advisory needs a major bump (`next@16` or the pinned vitest/vite/esbuild chain). Verified none of the vulnerable packages are among the 8 production deps (`@prisma/client, clsx, lucide-react, next, react, react-dom, tailwind-merge, zod`); they execute only at build/test time, so the running server is not exposed. `next@16` upgrade is tracked as a separate, test-gated change — not force-applied blind. |
 
 ## P3 — polish / scale (summary)
 
