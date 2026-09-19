@@ -1,9 +1,17 @@
 import type { Metadata, Viewport } from "next";
 import { cookies, headers } from "next/headers";
+import { Inter } from "next/font/google";
 import { Providers, ThemeScript } from "@/components/providers";
 import { dir, isLocale, type Locale } from "@/i18n";
 import { env } from "@/lib/env";
 import "./globals.css";
+
+// The design system names Inter in --font-sans; load it for real (audit UX-01).
+// `display: swap` keeps first paint fast; the CSS stack still falls back for Arabic glyphs.
+// adjustFontFallback:false — otherwise next/font injects a Latin-metric (Arial-based)
+// fallback face at the front of the stack that can capture Arabic glyphs on some systems,
+// distorting Arabic typography in this first-class-RTL app (audit verification, UX-01).
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap", adjustFontFallback: false });
 
 export const metadata: Metadata = {
   title: {
@@ -31,7 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
-    <html lang={locale} dir={dir(locale)} suppressHydrationWarning>
+    <html lang={locale} dir={dir(locale)} className={inter.variable} suppressHydrationWarning>
       <head>
         <ThemeScript nonce={nonce} />
       </head>

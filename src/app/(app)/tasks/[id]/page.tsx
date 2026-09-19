@@ -8,7 +8,7 @@ import { getTask } from "@/domain/tasks";
 import { getActivity } from "@/domain/mutation";
 import { getScopedOptions } from "@/domain/options";
 import { getLookups, refName } from "@/domain/lookups";
-import { Panel, PanelHeader, PanelBody, StatusBadge, Badge } from "@/components/ui";
+import { Panel, PanelHeader, PanelBody, StatusBadge, Badge, PageHeader } from "@/components/ui";
 import { BrandChip, UserChip, CountryChip } from "@/components/entity-chips";
 import { ActivityTimeline, type TimelineEntry } from "@/components/activity-timeline";
 import { TaskDrawerForm, type TaskDefaults } from "@/components/tasks/task-drawer-form";
@@ -71,16 +71,18 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <>
-      <div className="mb-1 text-xs text-ink-3"><Link href="/tasks" className="hover:text-ink-2">{t("dp.tasksNav")}</Link> / {task.title}</div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-lg font-semibold tracking-tight text-ink">{task.title}</h1>
-        <div className="flex items-center gap-2">
-          <Badge category={PRIORITY_CATEGORY[task.priority] ?? "neutral"}>{t(`priority.${task.priority}`)}</Badge>
-          {canEdit ? <StatusControl taskId={task.id} status={task.status} /> : <StatusBadge module="task" status={task.status} />}
-          {canEdit && options && <TaskDrawerForm mode="edit" options={options} defaults={editDefaults} variant="secondary" label={t("actions.edit")} />}
-          {canDelete && <ArchiveTaskButton taskId={task.id} />}
-        </div>
-      </div>
+      <PageHeader
+        breadcrumb={<><Link href="/tasks" className="hover:text-ink-2">{t("dp.tasksNav")}</Link> / {task.title}</>}
+        title={task.title}
+        actions={
+          <div className="flex items-center gap-2">
+            <Badge category={PRIORITY_CATEGORY[task.priority] ?? "neutral"}>{t(`priority.${task.priority}`)}</Badge>
+            {canEdit ? <StatusControl taskId={task.id} status={task.status} /> : <StatusBadge module="task" status={task.status} />}
+            {canEdit && options && <TaskDrawerForm mode="edit" options={options} defaults={editDefaults} variant="secondary" label={t("actions.edit")} />}
+            {canDelete && <ArchiveTaskButton taskId={task.id} />}
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">

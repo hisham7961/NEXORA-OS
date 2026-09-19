@@ -124,8 +124,13 @@ export async function createTransfer(ctx: ActorContext, companyId: string, raw: 
   if (!to || to.companyId !== companyId || to.archivedAt) throw new ServiceError("bad_account", "Destination account not found.", 422);
   if (!from.glAccountId || !to.glAccountId) throw new ServiceError("no_gl", "Both accounts must be mapped to a GL account.", 422);
 
+  // A cross-currency transfer must state the actual destination amount received; without it the
+  // destination leg (and the FX plug) would be booked at the source amount (audit FIN-03).
+  if (from.currency !== to.currency && input.toAmount == null) {
+    throw new ServiceError("to_amount_required", "A cross-currency transfer requires the destination amount (toAmount).", 422);
+  }
   const fromAmount = roundMoney(input.fromAmount, from.currency);
-  const toAmount = roundMoney(input.toAmount ?? (from.currency === to.currency ? input.fromAmount : input.fromAmount), to.currency);
+  const toAmount = roundMoney(input.toAmount ?? input.fromAmount, to.currency);
   const fromRate = from.currency === base ? 1 : await resolveExchangeRate(from.currency, base, input.date);
   const toRate = to.currency === base ? 1 : await resolveExchangeRate(to.currency, base, input.date);
   const fromBase = roundMoney(mul(fromAmount, fromRate), base, settings.roundingPolicy as never);
@@ -194,6 +199,31 @@ export async function listReconciliations(principal: Principal, companyId: strin
   return prisma.bankReconciliation.findMany({ where: { companyId }, orderBy: { statementDate: "desc" }, take: 100, include: { bankAccount: { select: { name: true } } } });
 }
 
+/**
+ * Prior-cleared carry (audit FIN-04). The bank statement's closing balance is
+ * cumulative, but a reconciliation's `clearedBalance` counts only the lines cleared
+ * to THAT session. Without carrying the balance already cleared on earlier
+ * reconciliations, a 2nd+ statement can never balance. This is that opening carry:
+ * sum(debit − credit) of GL lines for the bank account cleared on ANY OTHER
+ * reconciliation, dated on/before this statement.
+ */
+async function openingClearedBalance(rec: { id: string; companyId: string; statementDate: Date; bankAccount: { glAccountId: string | null } }) {
+  const glAccountId = rec.bankAccount.glAccountId;
+  if (!glAccountId) return ZERO;
+  const g = await prisma.journalLine.groupBy({
+    by: ["accountId"],
+    where: {
+      companyId: rec.companyId,
+      accountId: glAccountId,
+      reconciliationId: { not: null },
+      NOT: { reconciliationId: rec.id },
+      entry: { status: "posted", postingDate: { lte: rec.statementDate } },
+    },
+    _sum: { debit: true, credit: true },
+  });
+  return g[0] ? sub(D(g[0]._sum.debit ?? 0), D(g[0]._sum.credit ?? 0)) : ZERO;
+}
+
 export async function createReconciliation(ctx: ActorContext, companyId: string, raw: unknown) {
   assertCan(ctx.principal, "banks.manage", { companyId });
   const input = reconciliationSchema.parse(raw);
@@ -215,7 +245,12 @@ export async function getReconciliation(principal: Principal, id: string) {
     include: { entry: { select: { journalNumber: true, postingDate: true, memo: true } } },
     orderBy: { entry: { postingDate: "asc" } },
   }) : [];
-  return { rec, lines };
+  // Carry from earlier reconciliations so the statement (a cumulative closing balance)
+  // is compared against opening + this session's cleared, not this session alone (FIN-04).
+  const opening = await openingClearedBalance(rec);
+  const totalCleared = add(opening, D(rec.clearedBalance));
+  const difference = sub(D(rec.statementBalance), totalCleared);
+  return { rec, lines, openingClearedBalance: opening.toString(), totalClearedBalance: totalCleared.toString(), difference: difference.toString() };
 }
 
 export async function setLineReconciled(ctx: ActorContext, reconciliationId: string, journalLineId: string, cleared: boolean) {
@@ -231,16 +266,23 @@ export async function setLineReconciled(ctx: ActorContext, reconciliationId: str
   const g = await prisma.journalLine.groupBy({ by: ["reconciliationId"], where: { reconciliationId }, _sum: { debit: true, credit: true } });
   const clearedBalance = g[0] ? sub(D(g[0]._sum.debit ?? 0), D(g[0]._sum.credit ?? 0)) : ZERO;
   await prisma.bankReconciliation.update({ where: { id: reconciliationId }, data: { clearedBalance } });
-  return { clearedBalance: clearedBalance.toString() };
+  const opening = await openingClearedBalance(rec);
+  const totalCleared = add(opening, clearedBalance);
+  const difference = sub(D(rec.statementBalance), totalCleared);
+  return { clearedBalance: clearedBalance.toString(), openingClearedBalance: opening.toString(), totalClearedBalance: totalCleared.toString(), difference: difference.toString() };
 }
 
 export async function completeReconciliation(ctx: ActorContext, id: string, opts: { force?: boolean } = {}) {
-  const rec = await prisma.bankReconciliation.findUnique({ where: { id } });
+  const rec = await prisma.bankReconciliation.findUnique({ where: { id }, include: { bankAccount: true } });
   if (!rec) throw new ServiceError("not_found", "Reconciliation not found", 404);
   assertCan(ctx.principal, "banks.manage", { companyId: rec.companyId });
   if (rec.status === "completed") throw new ServiceError("completed", "Already completed.", 422);
-  const diff = sub(rec.statementBalance, rec.clearedBalance);
-  if (!isZero(diff) && !opts.force) throw new ServiceError("unbalanced", `Cleared balance (${rec.clearedBalance}) does not match the statement (${rec.statementBalance}); difference ${diff}.`, 422);
+  // Balance against opening carry + this session's cleared, so a 2nd+ statement can
+  // reconcile against its cumulative closing balance (FIN-04).
+  const opening = await openingClearedBalance(rec);
+  const totalCleared = add(opening, D(rec.clearedBalance));
+  const diff = sub(D(rec.statementBalance), totalCleared);
+  if (!isZero(diff) && !opts.force) throw new ServiceError("unbalanced", `Cleared balance (${totalCleared}, incl. ${opening} carried forward) does not match the statement (${rec.statementBalance}); difference ${diff}.`, 422);
   const updated = await prisma.bankReconciliation.update({ where: { id }, data: { status: "completed", completedById: ctx.principal.userId, completedAt: new Date() } });
   await audit(ctx, { action: "reconciliation.completed", entityType: "BankReconciliation", entityId: id, summary: `cleared ${rec.clearedBalance}${opts.force && !isZero(diff) ? ` (forced, diff ${diff})` : ""}`, companyId: rec.companyId });
   return updated;

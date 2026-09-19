@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import type { KnowledgeArticle } from "@prisma/client";
-import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
@@ -35,7 +34,8 @@ export default async function KnowledgePage({ searchParams }: { searchParams: Pr
   const now = new Date();
 
   const columns: Column<KnowledgeArticle>[] = [
-    { key: "title", header: t("knowledge.col.article"), render: (a) => <Link href={`/knowledge/${a.id}`} className="font-medium text-ink hover:text-accent">{a.title}</Link> },
+    // First cell is the row link via getRowHref below; an inner <Link> would nest <a> in <a> (React #418).
+    { key: "title", header: t("knowledge.col.article"), render: (a) => <span className="font-medium text-ink">{a.title}</span> },
     { key: "category", header: t("common.category"), render: (a) => <span className="capitalize text-ink-3">{a.category?.replace(/_/g, " ") ?? "—"}</span> },
     { key: "brand", header: t("common.brand"), render: (a) => <BrandChip name={refName(lookups.brands, a.brandId)} color={a.brandId ? lookups.brands.get(a.brandId)?.meta : null} /> },
     { key: "ver", header: t("common.version"), align: "center", render: (a) => <span className="tabular text-ink-3">v{a.version}</span> },

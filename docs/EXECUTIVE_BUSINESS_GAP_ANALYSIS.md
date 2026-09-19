@@ -18,11 +18,11 @@ exists per-module but not yet as a single cross-group cockpit.
 
 | Gap | Real scenario | Current impact | Who | Recommendation |
 |---|---|---|---|---|
-| **Documents have no create/upload** (DOM-01) | Regulatory needs to attach a manufacturer dossier / free-sale certificate to a market. | Document records are seed-only; users cannot add one. A compliance platform can't hold compliance docs. | Regulatory, QA | **BUILD** — reuse the existing File platform (File/FileVersion, which *is* real) as the upload path; wire Documents to it. Small, high value. |
-| **Certificates have no create/renew** (DOM-02) | A certificate expires; someone must add the renewal with a new expiry. | Expiry tracking & reminder sweeps run only over seed rows. | Regulatory | **BUILD** — create/renew form + link to File platform. |
-| **Expenses read-only** (DOM-06) | An employee submits a marketing expense for approval + posting. | No `expense.create`; only a post-to-journal button on seed expenses. | Finance, all staff | **BUILD** — expense entry + approval → the posting engine already works. |
-| **Creative Library dead write-path** (DOM-03) | A delivered, approved design should land in a reusable asset library. | `CreativeAsset` is never written; library shows seed only, rows not clickable. | Marketing, Design | **BUILD (small)** — write `CreativeAsset` on design delivery/approval; make rows open. |
-| **Settings that don't drive behaviour** (DOM-04) | Admin sets "late threshold = 10 min" / "default currency". | 11 of ~14 settings persist + audit but are ignored at runtime. | Admin | **BUILD (wiring)** — read the settings that exist at their point of use, or remove the dead toggles (don't ship inert config). |
+| **Documents have no create/upload** (DOM-01) | Regulatory needs to attach a manufacturer dossier / free-sale certificate to a market. | Document records are seed-only; users cannot add one. A compliance platform can't hold compliance docs. | Regulatory, QA | ✅ **DONE** — `createDocument` (scope-guarded, audited, session-derived owner) + `NewDocumentButton` drawer on Documents. Metadata entry first; file attachment via the existing File platform is the follow-up. |
+| **Certificates have no create/renew** (DOM-02) | A certificate expires; someone must add the renewal with a new expiry. | Expiry tracking & reminder sweeps run only over seed rows. | Regulatory | ✅ **DONE** — same path serves certificates; `renewDocument` bumps version + re-arms the reminder ledger so the expiry sweep fires on the new expiry. |
+| **Expenses read-only** (DOM-06) | An employee submits a marketing expense for approval + posting. | No `expense.create`; only a post-to-journal button on seed expenses. | Finance, all staff | ✅ **DONE** — `createExpense` files a `pending` expense (scope-guarded, session submitter); the existing approval → post-to-journal engine takes it from there. |
+| **Creative Library dead write-path** (DOM-03) | A delivered, approved design should land in a reusable asset library. | `CreativeAsset` is never written; library shows seed only, rows not clickable. | Marketing, Design | ✅ **DONE (write-path)** — `createCreativeAsset` + approve; assets can now be entered and approved. Making rows open (detail page) is a small follow-up. |
+| **Settings that don't drive behaviour** (DOM-04) | Admin sets "late threshold = 10 min" / "default currency". | 11 of ~14 settings persist + audit but are ignored at runtime. | Admin | ◑ **PARTLY DONE** — wired late-threshold (check-in grace), certificate lead cap and group-name branding; removed two dead toggles (digest, task-reminder) that had no subsystem. The rest await consumer surfaces (user-invite flow, theme column, posting-policy gate) and are left in place rather than faked. |
 
 These are the difference between "demo-complete" and "operable". None is large; all reuse
 machinery that already works (File platform, posting engine, approval engine).
@@ -50,9 +50,9 @@ machinery that already works (File platform, posting engine, approval engine).
 
 | Area | Biggest real gap | Recommendation |
 |---|---|---|
-| Marketing | Asset library dead (DOM-03); campaign → expense → profitability loop needs expense entry (DOM-06). | BUILD the two write-paths; the campaign/publishing/WhatsApp state-machines are real. |
+| Marketing | Asset library write-path (DOM-03 ✅ done); campaign → expense → profitability loop expense entry (DOM-06 ✅ done). | Both write-paths landed. Campaign/publishing/WhatsApp state-machines are real. Asset detail-page clickthrough is a small follow-up. |
 | E-commerce | Store performance entry is real; marketplace (Amazon/Noon/Shopify/Zid/Salla) integration is manual. | **KEEP MANUAL (V1)** per the manual-first decision; INTEGRATE later via API. Do not build connectors now. |
-| Regulatory | Documents/Certificates entry (DOM-01/02) — the core of the module. | BUILD (above). Registration workflow itself is real. |
+| Regulatory | Documents/Certificates entry (DOM-01/02) — the core of the module. | ✅ DONE (above). Registration workflow itself is real. File attachment is the remaining follow-up. |
 | Customer Service | Cases/approved-answers/knowledge are real; approved-answer content correctly not auto-translated. | No V1 gap; consider adverse-event flagging later (cosmetics). |
 | Logistics/Ops | No internal shipment/sample-tracking workflow. | **DO NOT BUILD in V1** — out of scope; INTEGRATE a warehouse/3PL later if a real scenario proves it. |
 | HR/People Ops | Attendance real; leave/offboarding/access-revocation partial. | BUILD access-revocation on offboarding (security-relevant); leave management near-term. Avoid employee-surveillance features. |

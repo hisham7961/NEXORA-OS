@@ -1,35 +1,23 @@
 import type { NextRequest } from "next/server";
 import { getPrincipal } from "@/lib/auth/current-user";
 import { getChannel } from "@/domain/discussions";
-import { prisma } from "@/lib/db";
+import { subscribeChannelSignal } from "@/lib/realtime/channel-hub";
 import { ForbiddenError } from "@/lib/permissions/engine";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/v1/discussions/:id/live — Server-Sent Events stream for live channel
- * updates (§21-22 realtime). Poll-backed (no external pub/sub infra): every few
- * seconds it re-reads a cheap change signal for the channel — the newest message
- * timestamp plus the message count, which together catch new messages and
- * deletions — and pushes a `change` event when it advances. The client then pulls
- * the authoritative message list via the RSC route (router.refresh()). Access is
- * enforced through getChannel() exactly like the read routes; the first `sync`
- * event is a baseline the client ignores. Heartbeat comments keep the connection
- * from idling out.
+ * updates (§21-22 realtime). Poll-backed (no external pub/sub infra), but the DB
+ * poll is SHARED across all viewers of a channel via the channel hub (audit
+ * PLAT-04): one aggregate per channel per interval, fanned out to every connection,
+ * instead of one query per connection. On a change the client pulls the
+ * authoritative message list via the RSC route. Access is enforced through
+ * getChannel() exactly like the read routes; the first `sync` event is a baseline
+ * the client ignores. A per-connection heartbeat (no DB) keeps the socket alive.
  */
-const POLL_MS = 3000;
+const HEARTBEAT_MS = 15000; // socket keep-alive only — does NO database work
 const MAX_MS = 25 * 60 * 1000; // hard cap; the client reconnects (EventSource auto-retries)
-
-async function changeSignal(channelId: string): Promise<string> {
-  const agg = await prisma.message.aggregate({
-    where: { channelId, archivedAt: null },
-    _max: { createdAt: true, editedAt: true },
-    _count: { _all: true },
-  });
-  const created = agg._max.createdAt?.getTime() ?? 0;
-  const edited = agg._max.editedAt?.getTime() ?? 0;
-  return `${created}:${edited}:${agg._count._all}`;
-}
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -45,8 +33,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   const encoder = new TextEncoder();
   let closed = false;
-  let timer: ReturnType<typeof setInterval> | undefined;
-  const stop = () => { closed = true; if (timer) clearInterval(timer); };
+  let heartbeat: ReturnType<typeof setInterval> | undefined;
+  let unsubscribe: (() => void) | undefined;
+  const stop = () => {
+    closed = true;
+    if (heartbeat) clearInterval(heartbeat);
+    unsubscribe?.();
+  };
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -55,20 +48,20 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
         try { controller.enqueue(encoder.encode(`event: ${event}\ndata: ${data}\n\n`)); }
         catch { stop(); }
       };
-      let last = "";
-      try { last = await changeSignal(id); } catch { /* transient */ }
-      send("sync", last); // baseline the client records but does not act on
+
+      // Share this channel's DB poll with every other viewer (PLAT-04). A changed
+      // signal is pushed to us by the hub; we do no polling of our own.
+      const sub = subscribeChannelSignal(id, (signal) => send("change", signal));
+      unsubscribe = sub.unsubscribe;
+      sub.primed.then((baseline) => send("sync", baseline)); // client records, does not act
 
       const started = Date.now();
-      timer = setInterval(async () => {
+      heartbeat = setInterval(() => {
         if (closed) return;
         if (Date.now() - started > MAX_MS) { send("bye", "1"); stop(); try { controller.close(); } catch { /* already closed */ } return; }
-        try {
-          const cur = await changeSignal(id);
-          if (cur !== last) { last = cur; send("change", cur); }
-          else controller.enqueue(encoder.encode(`: ping\n\n`)); // heartbeat comment
-        } catch { /* keep the stream alive across transient DB blips */ }
-      }, POLL_MS);
+        try { controller.enqueue(encoder.encode(`: ping\n\n`)); } // keep-alive only; no DB
+        catch { stop(); }
+      }, HEARTBEAT_MS);
     },
     cancel() { stop(); },
   });

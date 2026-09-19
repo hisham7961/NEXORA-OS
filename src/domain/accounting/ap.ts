@@ -346,6 +346,7 @@ export async function applySupplierCredit(ctx: ActorContext, creditId: string, a
       if (gt(amt, remaining)) throw new ServiceError("over_apply", "Allocation exceeds the credit's remaining balance.", 422);
       const bill = await tx.supplierBill.findUnique({ where: { id: a.billId } });
       if (!bill || bill.companyId !== cr.companyId || bill.supplierId !== cr.supplierId) throw new ServiceError("bad_bill", "Bill not found for this supplier.", 422);
+      if (bill.currency !== cr.currency) throw new ServiceError("currency_mismatch", `Allocation currency (${cr.currency}) does not match bill ${bill.currency}.`, 422);
       if (!["open", "partially_paid"].includes(bill.status)) throw new ServiceError("not_open", "Bill is not open.", 422);
       if (gt(amt, bill.amountDue)) throw new ServiceError("over_apply", "Allocation exceeds the bill balance due.", 422);
       await tx.supplierCreditApplication.upsert({ where: { creditId_billId: { creditId, billId: a.billId } }, create: { creditId, billId: a.billId, amount: amt }, update: { amount: { increment: amt } } });
@@ -440,6 +441,7 @@ export async function postPayment(ctx: ActorContext, companyId: string, raw: unk
       if (!gt(amt, 0)) continue;
       const bill = await tx.supplierBill.findUnique({ where: { id: a.billId } });
       if (!bill || bill.companyId !== companyId || bill.supplierId !== supplier.id) throw new ServiceError("bad_bill", "Bill not found for this supplier.", 422);
+      if (bill.currency !== currency) throw new ServiceError("currency_mismatch", `Allocation currency (${currency}) does not match bill ${bill.currency}.`, 422);
       if (!["open", "partially_paid"].includes(bill.status)) throw new ServiceError("not_open", `Bill ${bill.billNumber} is not open.`, 422);
       if (gt(amt, bill.amountDue)) throw new ServiceError("over_allocate", `Allocation exceeds bill ${bill.billNumber} balance.`, 422);
       await tx.billPaymentAllocation.create({ data: { paymentId: pay.id, billId: a.billId, amount: amt } });
@@ -468,6 +470,7 @@ export async function allocatePayment(ctx: ActorContext, paymentId: string, allo
       if (gt(amt, unapplied)) throw new ServiceError("over_allocate", "Allocation exceeds the payment's unapplied balance.", 422);
       const bill = await tx.supplierBill.findUnique({ where: { id: a.billId } });
       if (!bill || bill.companyId !== pay.companyId || bill.supplierId !== pay.supplierId) throw new ServiceError("bad_bill", "Bill not found for this supplier.", 422);
+      if (bill.currency !== pay.currency) throw new ServiceError("currency_mismatch", `Allocation currency (${pay.currency}) does not match bill ${bill.currency}.`, 422);
       if (!["open", "partially_paid"].includes(bill.status)) throw new ServiceError("not_open", "Bill is not open.", 422);
       if (gt(amt, bill.amountDue)) throw new ServiceError("over_allocate", "Allocation exceeds bill balance.", 422);
       await tx.billPaymentAllocation.upsert({ where: { paymentId_billId: { paymentId, billId: a.billId } }, create: { paymentId, billId: a.billId, amount: amt }, update: { amount: { increment: amt } } });

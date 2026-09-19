@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getCurrentUser, getPrincipal } from "@/lib/auth/current-user";
+import { mfaRequiredFor, isMfaEnabled } from "@/domain/mfa";
+import { getSettingValue } from "@/domain/settings";
 import { allowedNavKeys, allowedCreateCommands } from "@/lib/navigation-access";
 import { DEFAULT_ROLES } from "@/lib/permissions/catalog";
 import { prisma } from "@/lib/db";
@@ -12,7 +15,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const [user, principal] = await Promise.all([getCurrentUser(), getPrincipal()]);
   if (!user || !principal) redirect("/login");
 
+  // Mandatory-MFA policy enforcement (audit SEC-02). A user covered by
+  // security.mfaRequiredForAdmins/Finance who has not enrolled is forced to the MFA
+  // setup page before reaching anything else. The enrollment page (and its API) are
+  // exempt so the requirement is satisfiable rather than a lock-out loop.
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  const onEnrollmentPage = pathname === "/settings/profile" || pathname.startsWith("/settings/profile/");
+  if (!onEnrollmentPage) {
+    const [required, enrolled] = await Promise.all([mfaRequiredFor(principal), isMfaEnabled(user.id)]);
+    if (required && !enrolled) redirect("/settings/profile?mfa=required");
+  }
+
   const allowed = allowedNavKeys(principal);
+  // Brand the shell with the configured group name (audit DOM-04). Cached, so cheap.
+  const groupName = (await getSettingValue<string>("general.groupName").catch(() => "")).toString().trim() || undefined;
   const createCommands = allowedCreateCommands(principal);
 
   let roleLabel = "Employee";
@@ -29,7 +45,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <ShellProvider>
       <div className="flex h-dvh overflow-hidden bg-bg">
-        <Sidebar allowed={allowed} />
+        <Sidebar allowed={allowed} groupName={groupName} />
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar
             user={{ name: user.name, email: user.email, avatarColor: user.avatarColor, roleLabel }}

@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import type { Document } from "@prisma/client";
 import { FileText } from "lucide-react";
 import { pageGuard } from "@/lib/page-guard";
+import { canAnywhere } from "@/lib/permissions/engine";
 import { AccessDenied } from "@/components/access-denied";
-import { listDocuments, getDocumentTypeNames, documentQuerySchema } from "@/domain/documents";
+import { listDocuments, getDocumentTypeNames, listDocumentTypes, documentQuerySchema } from "@/domain/documents";
+import { getScopedOptions } from "@/domain/options";
 import { getLookups, refName } from "@/domain/lookups";
+import { NewDocumentButton } from "@/components/documents/document-form";
 import { StatusBadge, EmptyState, type Column } from "@/components/ui";
 import { ResourceList } from "@/components/list/resource-list";
 import { CountryChip } from "@/components/entity-chips";
@@ -20,7 +23,14 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
   const { t } = await getServerI18n();
   const sp = await searchParams;
   const query = documentQuerySchema.parse(sp);
-  const [{ rows, total }, lookups, typeNames] = await Promise.all([listDocuments(principal, query), getLookups(), getDocumentTypeNames()]);
+  const canCreate = canAnywhere(principal, "documents.create");
+  const [{ rows, total }, lookups, typeNames, options, docTypes] = await Promise.all([
+    listDocuments(principal, query),
+    getLookups(),
+    getDocumentTypeNames(),
+    canCreate ? getScopedOptions(principal, "documents.create") : Promise.resolve(null),
+    canCreate ? listDocumentTypes() : Promise.resolve([]),
+  ]);
 
   const columns: Column<Document>[] = [
     { key: "title", header: t("documents.col.document"), render: (d) => d.title },
@@ -32,6 +42,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
 
   return (
     <ResourceList title={t("documents.title")} description={t("documents.subtitle")} countLabel={t("documents.count")} savedViewsModule="documents"
+      actions={canCreate && options ? <NewDocumentButton companies={options.companies} brands={options.brands} countries={options.countries} documentTypes={docTypes} /> : undefined}
       searchPlaceholder={t("documents.searchPlaceholder")}
       filters={[{ name: "status", label: t("common.status"), options: ["valid", "expiring", "expired", "renewal_started", "replaced", "archived"].map((v) => ({ value: v, label: t(`status.${v}`) })) }]}
       columns={columns} rows={rows} getRowKey={(d) => d.id}

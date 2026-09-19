@@ -31,9 +31,16 @@ export type ActionResult<T = unknown> =
   | { ok: true; data?: T }
   | { ok: false; error: string; fieldErrors?: Record<string, string[]> };
 
-export async function runAction<T>(fn: (ctx: ActorContext) => Promise<T>): Promise<ActionResult<T>> {
+export async function runAction<T>(fn: (ctx: ActorContext) => Promise<T>, opts?: { mfaExempt?: boolean }): Promise<ActionResult<T>> {
   try {
     const ctx = await actorContext();
+    // Mandatory-MFA gate (audit SEC-02): block every mutating server action for a
+    // covered-but-un-enrolled user. `mfaExempt` is passed only by the MFA-enrollment
+    // actions so the requirement is satisfiable, not a lock-out.
+    if (!opts?.mfaExempt) {
+      const { assertMfaEnrolled } = await import("@/domain/mfa");
+      await assertMfaEnrolled(ctx.principal);
+    }
     // Blanket per-user throttle on all mutating server actions (§1) — defense in
     // depth alongside the per-endpoint API limits. Generous; abuse is logged.
     const { rateLimit } = await import("@/lib/ratelimit");

@@ -4,6 +4,9 @@ import { prisma } from "@/lib/db";
 import { assertRecordInScope, type Principal } from "@/lib/permissions/engine";
 import { listQuerySchema } from "@/lib/api/pagination";
 import { scopedWhere, DIMS_CBC } from "@/domain/scope";
+import { assertCan, audit, type ActorContext } from "@/domain/mutation";
+import { ServiceError } from "@/lib/api/handler";
+import { optionalString, requiredString } from "@/lib/validation";
 
 /**
  * Documents & certificates with expiration tracking (§15). A Document carries
@@ -78,6 +81,89 @@ export async function getDocument(principal: Principal, id: string) {
   return { document };
 }
 
+/** Regulatory document types for the create form (id, name, category). */
+export async function listDocumentTypes(): Promise<{ id: string; name: string; category: string | null }[]> {
+  return prisma.documentType.findMany({ select: { id: true, name: true, category: true }, orderBy: { name: "asc" } });
+}
+
+const dateInput = z.preprocess((v) => (v === "" || v == null ? undefined : new Date(String(v))), z.date().optional());
+
+export const documentCreateSchema = z.object({
+  title: requiredString(200),
+  documentTypeId: optionalString,
+  companyId: optionalString,
+  brandId: optionalString,
+  countryId: optionalString,
+  productId: optionalString,
+  number: optionalString,
+  issueDate: dateInput,
+  expiryDate: dateInput,
+  visibility: z.enum(["internal", "restricted"]).default("internal"),
+});
+
+/** Status derived from expiry at write time; the render layer + reminder job refine it. */
+function documentStatus(expiryDate: Date | undefined | null): string {
+  if (!expiryDate) return "valid";
+  const days = Math.floor((expiryDate.getTime() - Date.now()) / 86400000);
+  if (days < 0) return "expired";
+  if (days <= 30) return "expiring";
+  return "valid";
+}
+
+/**
+ * Create a document / certificate (§15 — audit DOM-01/02). Certificates are just
+ * Documents with a regulatory DocumentType, so this one path serves both screens.
+ * Fail-closed on the NEW record's create scope, then audit.
+ */
+export async function createDocument(ctx: ActorContext, raw: unknown): Promise<Document> {
+  const input = documentCreateSchema.parse(raw);
+  const scope = { companyId: input.companyId ?? null, brandId: input.brandId ?? null, countryId: input.countryId ?? null };
+  assertCan(ctx.principal, "documents.create", scope);
+  const doc = await prisma.document.create({
+    data: {
+      ...scope,
+      documentTypeId: input.documentTypeId ?? null,
+      productId: input.productId ?? null,
+      number: input.number ?? null,
+      title: input.title,
+      issueDate: input.issueDate ?? null,
+      expiryDate: input.expiryDate ?? null,
+      visibility: input.visibility,
+      status: documentStatus(input.expiryDate),
+      ownerId: ctx.principal.userId,
+      createdById: ctx.principal.userId,
+    },
+  });
+  await audit(ctx, { action: "document.created", entityType: "Document", entityId: doc.id, summary: `Document created: ${doc.title}`, brandId: doc.brandId, companyId: doc.companyId });
+  return doc;
+}
+
+export const documentRenewSchema = z.object({ expiryDate: dateInput, number: optionalString });
+
+/**
+ * Renew a document / certificate: new expiry, bump version, reset the reminder
+ * ledger so the expiry sweep re-arms (§15/§22). Fail-closed edit-scope guard (§69).
+ */
+export async function renewDocument(ctx: ActorContext, id: string, raw: unknown): Promise<Document> {
+  const input = documentRenewSchema.parse(raw);
+  if (!input.expiryDate) throw new ServiceError("expiry_required", "A new expiry date is required to renew.", 422);
+  const existing = await prisma.document.findUnique({ where: { id } });
+  if (!existing || existing.archivedAt) throw new ServiceError("not_found", "Document not found", 404);
+  assertRecordInScope(ctx.principal, "documents.edit", { companyId: existing.companyId, brandId: existing.brandId, countryId: existing.countryId }, DIMS_CBC);
+  const doc = await prisma.document.update({
+    where: { id },
+    data: {
+      expiryDate: input.expiryDate,
+      number: input.number ?? existing.number,
+      version: { increment: 1 },
+      status: documentStatus(input.expiryDate),
+      remindersSentJson: null,
+    },
+  });
+  await audit(ctx, { action: "document.renewed", entityType: "Document", entityId: doc.id, summary: `Renewed to v${doc.version}`, brandId: doc.brandId, companyId: doc.companyId });
+  return doc;
+}
+
 /**
  * DocumentType id -> display name. Types are a small master set, resolved in
  * bulk for name rendering (avoids N+1) — they are not part of the global lookups.
@@ -97,14 +183,29 @@ export async function getDocumentTypeNames(): Promise<Map<string, string>> {
 export const DEFAULT_CERT_THRESHOLDS = [180, 120, 90, 60, 30, 14, 7, 1];
 
 async function certThresholds(): Promise<number[]> {
+  let thresholds = DEFAULT_CERT_THRESHOLDS;
   const row = await prisma.systemSetting.findUnique({ where: { key: "certificates.reminderThresholds" } }).catch(() => null);
   if (row) {
     try {
       const v = JSON.parse(row.valueJson);
-      if (Array.isArray(v) && v.every((n) => typeof n === "number")) return [...v].sort((a, b) => b - a);
+      if (Array.isArray(v) && v.every((n) => typeof n === "number")) thresholds = [...v].sort((a, b) => b - a);
     } catch { /* fall through to default */ }
   }
-  return DEFAULT_CERT_THRESHOLDS;
+  // Respect the admin's "start reminders N days before expiry" lead (audit DOM-04):
+  // no reminder fires earlier than notifications.certificateExpiryDays.
+  const lead = await certificateExpiryLeadDays();
+  return lead != null ? thresholds.filter((t) => t <= lead) : thresholds;
+}
+
+/** notifications.certificateExpiryDays — max lead (days) before expiry to remind. */
+async function certificateExpiryLeadDays(): Promise<number | null> {
+  try {
+    const { getSettingValue } = await import("@/domain/settings");
+    const v = Number(await getSettingValue<number>("notifications.certificateExpiryDays"));
+    return Number.isFinite(v) && v > 0 ? v : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function generateCertificateReminders(actorId: string | null, now: Date = new Date()): Promise<{ scanned: number; notified: number }> {

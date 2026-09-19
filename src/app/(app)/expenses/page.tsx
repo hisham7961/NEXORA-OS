@@ -5,7 +5,9 @@ import { pageGuard } from "@/lib/page-guard";
 import { AccessDenied } from "@/components/access-denied";
 import { canAnywhere } from "@/lib/permissions/engine";
 import { PostExpenseButton } from "@/components/accounting/ap-controls";
-import { listExpenses, expenseQuerySchema } from "@/domain/expenses";
+import { NewExpenseButton } from "@/components/accounting/expense-form";
+import { listExpenses, listExpenseCategories, expenseQuerySchema } from "@/domain/expenses";
+import { getScopedOptions } from "@/domain/options";
 import { getLookups, refName } from "@/domain/lookups";
 import { StatusBadge, EmptyState, type Column } from "@/components/ui";
 import { ResourceList } from "@/components/list/resource-list";
@@ -21,7 +23,13 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   const { t } = await getServerI18n();
   const sp = await searchParams;
   const query = expenseQuerySchema.parse(sp);
-  const [{ rows, total, showValues }, lookups] = await Promise.all([listExpenses(principal, query), getLookups()]);
+  const canCreate = canAnywhere(principal, "expenses.create");
+  const [{ rows, total, showValues }, lookups, options, categories] = await Promise.all([
+    listExpenses(principal, query),
+    getLookups(),
+    canCreate ? getScopedOptions(principal, "expenses.create") : Promise.resolve(null),
+    canCreate ? listExpenseCategories() : Promise.resolve([]),
+  ]);
   const canPost = canAnywhere(principal, "accounting.post");
 
   const columns: Column<Expense>[] = [
@@ -35,7 +43,8 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
 
   return (
     <ResourceList title={t("expenses.title")} description={t("expenses.subtitle")} countLabel={t("expenses.count")} savedViewsModule="expenses"
-      searchPlaceholder="Search expenses…"
+      actions={canCreate && options ? <NewExpenseButton companies={options.companies} brands={options.brands} countries={options.countries} categories={categories} /> : undefined}
+      searchPlaceholder={t("expenses.searchPlaceholder")}
       filters={[{ name: "status", label: t("common.status"), options: ["draft", "pending", "approved", "rejected", "paid"].map((v) => ({ value: v, label: t(`status.${v}`) })) }]}
       columns={columns} rows={rows} getRowKey={(e) => e.id}
       page={query.page} pageSize={query.pageSize} total={total} params={sp}

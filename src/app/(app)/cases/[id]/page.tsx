@@ -8,7 +8,7 @@ import { getCase } from "@/domain/cases";
 import { getActivity } from "@/domain/mutation";
 import { getScopedOptions } from "@/domain/options";
 import { getLookups, refName } from "@/domain/lookups";
-import { Panel, PanelHeader, PanelBody, StatusBadge, Badge } from "@/components/ui";
+import { Panel, PanelHeader, PanelBody, StatusBadge, Badge, PageHeader } from "@/components/ui";
 import { BrandChip, CountryChip, UserChip } from "@/components/entity-chips";
 import { ActivityTimeline, type TimelineEntry } from "@/components/activity-timeline";
 import { EntityFiles } from "@/components/files/entity-files";
@@ -48,11 +48,11 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <>
-      <div className="mb-1 text-xs text-ink-3"><Link href="/cases" className="hover:text-ink-2">{t("dp.casesNav")}</Link> / {humanize(c.type)}</div>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h1 className="text-lg font-semibold tracking-tight text-ink">{humanize(c.type)}</h1>
-        <div className="flex items-center gap-2"><Badge className="capitalize">{t(`priority.${c.priority}`)}</Badge><StatusBadge module="customer_case" status={c.status} /></div>
-      </div>
+      <PageHeader
+        breadcrumb={<><Link href="/cases" className="hover:text-ink-2">{t("dp.casesNav")}</Link> / {humanize(c.type)}</>}
+        title={humanize(c.type)}
+        actions={<div className="flex items-center gap-2"><Badge className="capitalize">{t(`priority.${c.priority}`)}</Badge><StatusBadge module="customer_case" status={c.status} /></div>}
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
