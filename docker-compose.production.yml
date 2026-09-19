@@ -26,31 +26,9 @@ services:
       NEXORA_SESSION_SECRET: ${NEXORA_SESSION_SECRET}
       NEXORA_APP_NAME: NEXORA OS
       NEXORA_DEFAULT_LOCALE: en
-    # Apply pending migrations to the (healthy) database before serving, then start.
-    # A fresh production DB would otherwise never be schema-migrated and the app
-    # would fail on first query (audit finding PLAT-08). Deployment uses migrations,
-    # never `prisma db push` (per CLAUDE.md). `exec` hands the container over to Next
-    # so it (not the shell) receives SIGTERM; with `init: true` below that gives a
-    # graceful shutdown on rollout instead of a SIGKILL of in-flight work (PLAT-09).
-    #
-    # Resilience: a migration hiccup (e.g. a managed Postgres role lacking CREATE
-    # EXTENSION for pg_trgm) must NOT take the whole app down. We log loudly and start
-    # anyway on the existing schema — the app runs without the perf/precision-only
-    # migrations. Resolve the migration state separately, don't 502 the site over it.
-    command: ["sh", "-c", "npx prisma migrate deploy || echo 'WARN: prisma migrate deploy failed — starting app on the existing schema; resolve migrations separately'; exec node_modules/.bin/next start -p 3000"]
-    # Docker-provided init (tini) as PID 1: forwards signals and reaps zombies (PLAT-09).
-    init: true
     depends_on:
       db:
         condition: service_healthy
-    healthcheck:
-      # Liveness endpoint confirmed at /api/v1/health/live (audit PLAT-13). node is
-      # always present in the image; curl/wget are not on the slim base.
-      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/api/v1/health/live',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 40s
     ports:
       - "127.0.0.1:3001:3000"
 
