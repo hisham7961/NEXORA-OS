@@ -32,7 +32,12 @@ services:
     # never `prisma db push` (per CLAUDE.md). `exec` hands the container over to Next
     # so it (not the shell) receives SIGTERM; with `init: true` below that gives a
     # graceful shutdown on rollout instead of a SIGKILL of in-flight work (PLAT-09).
-    command: ["sh", "-c", "npx prisma migrate deploy && exec node_modules/.bin/next start -p 3000"]
+    #
+    # Resilience: a migration hiccup (e.g. a managed Postgres role lacking CREATE
+    # EXTENSION for pg_trgm) must NOT take the whole app down. We log loudly and start
+    # anyway on the existing schema — the app runs without the perf/precision-only
+    # migrations. Resolve the migration state separately, don't 502 the site over it.
+    command: ["sh", "-c", "npx prisma migrate deploy || echo 'WARN: prisma migrate deploy failed — starting app on the existing schema; resolve migrations separately'; exec node_modules/.bin/next start -p 3000"]
     # Docker-provided init (tini) as PID 1: forwards signals and reaps zombies (PLAT-09).
     init: true
     depends_on:
